@@ -108,7 +108,7 @@ const Index = () => {
 
       // Set status based on whether file is provided
       if (fileUrl) {
-        setStatusText("Processing document...");
+        setStatusText("The Librarian is reading...");
       } else {
         setStatusText("Initializing Council...");
       }

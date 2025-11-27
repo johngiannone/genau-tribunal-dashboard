@@ -68,33 +68,14 @@ async function fetchWithTimeoutAndRetry(url: string, options: RequestInit, label
   throw new Error(`${label} failed after all retries`);
 }
 
-// Helper to download and process file from URL
-async function processFileFromUrl(fileUrl: string): Promise<{ type: 'text' | 'image', content: string }> {
-  console.log("Downloading file from URL:", fileUrl);
+// Helper to process file URL with Gemini Pro 1.5
+async function processFileWithGemini(fileUrl: string, prompt: string): Promise<string> {
+  console.log("Processing file URL with Gemini Pro 1.5:", fileUrl);
   
-  const response = await fetch(fileUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to download file: ${response.status}`);
-  }
-  
-  const contentType = response.headers.get('content-type') || '';
-  console.log("File content type:", contentType);
-  
-  if (contentType.includes('application/pdf')) {
-    // For PDFs, use Gemini Flash to extract text
-    const arrayBuffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    
-    // Convert to base64
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    
-    console.log("Processing PDF with Gemini Flash");
-    
-    const visionResponse = await fetchWithTimeoutAndRetry(
+  try {
+    // Try passing URL directly to Gemini Pro 1.5
+    console.log("Attempting direct URL processing...");
+    const directResponse = await fetchWithTimeoutAndRetry(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
@@ -103,19 +84,19 @@ async function processFileFromUrl(fileUrl: string): Promise<{ type: 'text' | 'im
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-flash-1.5",
+          model: "google/gemini-pro-1.5",
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: "Extract all text from this PDF document. Transcribe it exactly and preserve all important information, dates, and structure."
+                  text: `${prompt}\n\nAnalyze this document and extract all relevant information.`
                 },
                 {
                   type: "image_url",
                   image_url: {
-                    url: `data:application/pdf;base64,${base64}`
+                    url: fileUrl
                   }
                 }
               ]
@@ -123,15 +104,24 @@ async function processFileFromUrl(fileUrl: string): Promise<{ type: 'text' | 'im
           ],
         }),
       },
-      "Gemini Flash PDF"
+      "Gemini Pro 1.5 (Direct URL)",
+      0 // No retry for direct attempt
     );
     
-    const visionData = await visionResponse.json();
-    const extractedText = visionData.choices[0].message.content;
+    const directData = await directResponse.json();
+    return directData.choices[0].message.content;
+  } catch (error) {
+    // Fallback: Download and convert to base64
+    console.log("Direct URL failed, falling back to base64 conversion...");
     
-    return { type: 'text', content: extractedText };
-  } else if (contentType.includes('image/')) {
-    // For images, convert to base64
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download file: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    console.log("File content type:", contentType);
+    
     const arrayBuffer = await response.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     
@@ -141,9 +131,49 @@ async function processFileFromUrl(fileUrl: string): Promise<{ type: 'text' | 'im
     }
     const base64 = btoa(binary);
     
-    return { type: 'image', content: base64 };
-  } else {
-    throw new Error(`Unsupported file type: ${contentType}`);
+    // Determine data URL prefix
+    let dataUrlPrefix = 'data:image/jpeg;base64,';
+    if (contentType.includes('application/pdf')) {
+      dataUrlPrefix = 'data:application/pdf;base64,';
+    } else if (contentType.includes('image/png')) {
+      dataUrlPrefix = 'data:image/png;base64,';
+    }
+    
+    console.log("Processing with base64 fallback...");
+    const fallbackResponse = await fetchWithTimeoutAndRetry(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-pro-1.5",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `${prompt}\n\nAnalyze this document and extract all relevant information.`
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `${dataUrlPrefix}${base64}`
+                  }
+                }
+              ]
+            }
+          ],
+        }),
+      },
+      "Gemini Pro 1.5 (Base64 Fallback)"
+    );
+    
+    const fallbackData = await fallbackResponse.json();
+    return fallbackData.choices[0].message.content;
   }
 }
 
@@ -212,60 +242,13 @@ serve(async (req) => {
     let draftB: string;
     let contextForModels = prompt;
 
-    // If file_url provided, download and process it
+    // If file_url provided, process it with Gemini Pro 1.5
     if (file_url) {
       console.log("File processing mode activated");
       
-      const { type, content } = await processFileFromUrl(file_url);
-      
-      if (type === 'text') {
-        // Use extracted text directly
-        contextForModels = `${prompt}\n\nDocument Content:\n${content}`;
-        console.log("Text extracted from file, proceeding with consensus");
-      } else {
-        // For images, use Gemini Flash Vision first
-        console.log("Processing image with Gemini Flash Vision");
-        
-        const visionResponse = await fetchWithTimeoutAndRetry(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-flash-1.5",
-              messages: [
-                {
-                  role: "system",
-                  content: "Analyze this image of a document. Transcribe and summarize it."
-                },
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: prompt
-                    },
-                    {
-                      type: "image_url",
-                      image_url: {
-                        url: `data:image/jpeg;base64,${content}`
-                      }
-                    }
-                  ]
-                }
-              ],
-            }),
-          },
-          "Gemini Flash Vision"
-        );
-
-        const visionData = await visionResponse.json();
-        contextForModels = `${prompt}\n\nDocument Analysis:\n${visionData.choices[0].message.content}`;
-        console.log("Vision analysis complete");
-      }
+      const documentAnalysis = await processFileWithGemini(file_url, prompt);
+      contextForModels = `${prompt}\n\nDocument Analysis:\n${documentAnalysis}`;
+      console.log("Document analysis complete");
     } else {
       console.log("Text Mode activated");
     }
