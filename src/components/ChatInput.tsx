@@ -3,25 +3,63 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js worker dynamically
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface ChatInputProps {
-  onSend: (message: string, fileData?: { name: string; base64: string; type: string }) => void;
+  onSend: (message: string, fileData?: { name: string; base64: string; type: string; images?: string[] }) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ name: string; base64: string; type: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; base64: string; type: string; images?: string[] } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const convertPdfToImages = async (file: File): Promise<string[]> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = Math.min(pdf.numPages, 10); // First 10 pages only
+    const images: string[] = [];
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) continue;
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+        canvas: canvas,
+      }).promise;
+
+      // Convert to base64 JPEG
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+      images.push(imageBase64);
+      
+      setUploadStatus(`📸 Photographing page ${pageNum}/${numPages}...`);
+    }
+
+    return images;
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Check file size limit (6MB)
-    const maxSize = 6 * 1024 * 1024; // 6MB in bytes
+    const maxSize = 6 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "File Too Large",
@@ -36,38 +74,56 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
 
     console.log("File selected:", file.name, "Type:", file.type, "Size:", file.size);
     setIsUploading(true);
+    setUploadStatus("Preparing file...");
     
     try {
-      // Convert file to Base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Extract base64 data (remove data URL prefix)
-          const base64Data = result.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-      });
-      
-      reader.readAsDataURL(file);
-      const base64Data = await base64Promise;
-      
-      setSelectedFile({ 
-        name: file.name, 
-        base64: base64Data,
-        type: file.type 
-      });
-      
-      toast({
-        title: "File Ready",
-        description: `${file.name} ready to upload to Tribunal Secure Core.`,
-      });
+      // For PDFs: render to images (Vision-First strategy)
+      if (file.type === "application/pdf") {
+        setUploadStatus("📸 Photographing document pages...");
+        const images = await convertPdfToImages(file);
+        
+        setSelectedFile({ 
+          name: file.name, 
+          base64: "", // Not needed for PDFs
+          type: file.type,
+          images 
+        });
+        
+        toast({
+          title: "Document Photographed",
+          description: `${file.name} converted to ${images.length} images for vision analysis.`,
+        });
+      } else {
+        // For text files: convert to Base64
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64Data = result.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+        });
+        
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+        
+        setSelectedFile({ 
+          name: file.name, 
+          base64: base64Data,
+          type: file.type 
+        });
+        
+        toast({
+          title: "File Ready",
+          description: `${file.name} ready to upload to Tribunal Secure Core.`,
+        });
+      }
     } catch (error) {
-      console.error("File read error:", error);
+      console.error("File processing error:", error);
       toast({
         title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to read file.",
+        description: error instanceof Error ? error.message : "Failed to process file.",
         variant: "destructive",
       });
       
@@ -76,11 +132,13 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       }
     } finally {
       setIsUploading(false);
+      setUploadStatus("");
     }
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
+    setUploadStatus("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -111,8 +169,10 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         {/* File Pill */}
         {selectedFile && (
           <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
-            📄 {selectedFile.name} 
-            <span className="text-primary/70">(Ready for Upload)</span>
+            {selectedFile.images ? '📸' : '📄'} {selectedFile.name} 
+            <span className="text-primary/70">
+              {selectedFile.images ? `(${selectedFile.images.length} images)` : '(Ready for Upload)'}
+            </span>
             <button
               onClick={handleRemoveFile}
               className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
@@ -120,6 +180,11 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               <X className="h-3 w-3" />
             </button>
           </div>
+        )}
+        
+        {/* Upload Status */}
+        {uploadStatus && (
+          <div className="mb-2 text-xs text-primary/70 font-mono">{uploadStatus}</div>
         )}
 
         <form onSubmit={handleSubmit} className="relative">
@@ -148,7 +213,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             </Button>
 
             {isUploading && (
-              <span className="text-xs text-muted-foreground font-mono">Preparing file...</span>
+              <span className="text-xs text-muted-foreground font-mono">{uploadStatus || "Preparing file..."}</span>
             )}
 
             <Textarea

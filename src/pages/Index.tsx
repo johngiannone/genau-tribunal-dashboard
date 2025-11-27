@@ -77,7 +77,7 @@ const Index = () => {
     setUsage(data);
   };
 
-  const handleSendMessage = async (userPrompt: string, fileData?: { name: string; base64: string; type: string }) => {
+  const handleSendMessage = async (userPrompt: string, fileData?: { name: string; base64: string; type: string; images?: string[] }) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -97,7 +97,13 @@ const Index = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
-    setStatusText(fileData ? "Uploading to Tribunal Secure Core..." : "Initializing Council...");
+    setStatusText(
+      fileData?.images 
+        ? "📸 Sending images to Vision Engine..." 
+        : fileData 
+          ? "Uploading to Tribunal Secure Core..." 
+          : "Initializing Council..."
+    );
 
     try {
       // Get current session token for authenticated request
