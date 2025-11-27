@@ -126,9 +126,8 @@ serve(async (req) => {
   try {
     // Get auth token from request header
     const authHeader = req.headers.get('Authorization');
-    console.log("Auth header present:", !!authHeader);
     
-    // Create Supabase client (JWT verification is handled by config.toml)
+    // Create Supabase client
     const supabase = createClient(
       SUPABASE_URL, 
       SUPABASE_ANON_KEY,
@@ -149,8 +148,6 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("Authenticated user:", user.id);
 
     // Check usage limits
     const { data: usage, error: usageError } = await supabase
@@ -173,32 +170,68 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'Usage limit reached',
           limitReached: true,
-          message: 'You have reached your daily limit of 5 free audits. Upgrade to premium for unlimited access.'
+          message: 'You have reached your daily limit of 5 free audits.'
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { prompt, fileData } = await req.json();
+    const { prompt, image_data } = await req.json();
 
     console.log("Received prompt:", prompt);
-    console.log("File data provided:", !!fileData);
+    console.log("Image data provided:", !!image_data);
 
     let draftA: string;
     let draftB: string;
-    let librarianContext = "";
+    let visionSummary = "";
 
-    // VISION-FIRST LOGIC: If fileData with images is provided, use Gemini Vision
-    if (fileData?.images && fileData.images.length > 0) {
-      console.log(`Processing ${fileData.images.length} document images with Vision Mode`);
+    // If image_data provided, send to Gemini Flash 1.5 first
+    if (image_data) {
+      console.log("Processing image with Gemini Flash 1.5");
       
-      // Send images directly to Gemini Vision
-      librarianContext = await processImagesWithVision(fileData.images, fileData.name, prompt);
+      const visionResponse = await fetchWithTimeoutAndRetry(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-flash-1.5",
+            messages: [
+              {
+                role: "system",
+                content: "Analyze this image of a document. Transcribe and summarize it."
+              },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: prompt
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:image/jpeg;base64,${image_data}`
+                    }
+                  }
+                ]
+              }
+            ],
+          }),
+        },
+        "Gemini Flash Vision"
+      );
+
+      const visionData = await visionResponse.json();
+      visionSummary = visionData.choices[0].message.content;
       console.log("Vision analysis complete");
 
-      // Pass Vision analysis to Draft models
+      // Now send vision summary to the two draft models
       const fetchModelWithContext = async (model: string, label: string) => {
-        console.log(`Fetching ${label} with Vision context...`);
+        console.log(`Fetching ${label} with vision context...`);
         const response = await fetchWithTimeoutAndRetry(
           "https://openrouter.ai/api/v1/chat/completions",
           {
@@ -212,7 +245,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `Vision analysis of the document:\n\n${librarianContext}`
+                  content: `Document analysis:\n\n${visionSummary}`
                 },
                 {
                   role: "user",
@@ -225,51 +258,6 @@ serve(async (req) => {
         );
         
         const data = await response.json();
-        console.log(`${label} response received`);
-        return data.choices[0].message.content;
-      };
-
-      [draftA, draftB] = await Promise.all([
-        fetchModelWithContext("meta-llama/llama-3-70b-instruct", "Llama 3"),
-        fetchModelWithContext("anthropic/claude-3.5-sonnet", "Claude 3.5"),
-      ]);
-    } else if (fileData?.base64 && fileData.type.startsWith("text/")) {
-      // Handle text files
-      console.log("Processing text file:", fileData.name);
-      const binaryData = atob(fileData.base64);
-      const extractedText = new TextDecoder().decode(new Uint8Array([...binaryData].map(c => c.charCodeAt(0))));
-      
-      librarianContext = extractedText;
-      
-      const fetchModelWithContext = async (model: string, label: string) => {
-        console.log(`Fetching ${label} with text context...`);
-        const response = await fetchWithTimeoutAndRetry(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                {
-                  role: "system",
-                  content: `Document content:\n\n${librarianContext}`
-                },
-                {
-                  role: "user",
-                  content: prompt
-                }
-              ],
-            }),
-          },
-          label
-        );
-        
-        const data = await response.json();
-        console.log(`${label} response received`);
         return data.choices[0].message.content;
       };
 
@@ -278,7 +266,7 @@ serve(async (req) => {
         fetchModelWithContext("anthropic/claude-3.5-sonnet", "Claude 3.5"),
       ]);
     } else {
-      // Standard flow without file context
+      // Standard flow without image
       const fetchModel = async (model: string, label: string) => {
         console.log(`Fetching ${label}...`);
         const response = await fetchWithTimeoutAndRetry(
@@ -298,18 +286,16 @@ serve(async (req) => {
         );
         
         const data = await response.json();
-        console.log(`${label} response received`);
         return data.choices[0].message.content;
       };
 
-      console.log("Starting parallel requests for Draft A and Draft B...");
       [draftA, draftB] = await Promise.all([
         fetchModel("meta-llama/llama-3-70b-instruct", "Llama 3"),
         fetchModel("anthropic/claude-3.5-sonnet", "Claude 3.5"),
       ]);
     }
 
-    // 3. The Auditor (DeepSeek R1) - The "Judge"
+    // The Auditor (DeepSeek R1)
     console.log("Starting Auditor (DeepSeek R1) request...");
     const auditResponse = await fetchWithTimeoutAndRetry(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -338,20 +324,12 @@ serve(async (req) => {
 
     const auditData = await auditResponse.json();
     const verdict = auditData.choices[0].message.content;
-    
-    console.log("All requests completed successfully");
 
     // Increment usage count
-    const { error: updateError } = await supabase
+    await supabase
       .from('user_usage')
       .update({ audit_count: usage.audit_count + 1 })
       .eq('user_id', user.id);
-
-    if (updateError) {
-      console.error("Error updating usage:", updateError);
-    }
-
-    console.log("Usage incremented to:", usage.audit_count + 1);
 
     return new Response(
       JSON.stringify({ 
@@ -369,8 +347,9 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in chat-consensus function:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error occurred' }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { 

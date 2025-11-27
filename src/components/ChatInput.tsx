@@ -5,133 +5,134 @@ import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker dynamically
+// Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface ChatInputProps {
-  onSend: (message: string, fileData?: { name: string; base64: string; type: string; images?: string[] }) => void;
+  onSend: (message: string, imageData?: string) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ name: string; base64: string; type: string; images?: string[] } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; imageData: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const convertPdfToImages = async (file: File): Promise<string[]> => {
+  // Resize image to max 800px width
+  const resizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error("Failed to get canvas context"));
+            return;
+          }
+
+          // Calculate new dimensions
+          let width = img.width;
+          let height = img.height;
+          if (width > 800) {
+            height = (height * 800) / width;
+            width = 800;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to Base64 JPEG
+          const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+          resolve(base64);
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Extract ONLY page 1 from PDF as image
+  const extractPdfPage1 = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const numPages = Math.min(pdf.numPages, 4); // First 4 pages only
-    const images: string[] = [];
-
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1.5 });
-      
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      if (!context) continue;
-      
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-        canvas: canvas,
-      }).promise;
-
-      // Convert to base64 JPEG with 0.6 quality for smaller file size
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-      images.push(imageBase64);
-      
-      setUploadStatus(`📸 Photographing page ${pageNum}/${numPages}...`);
-    }
-
-    // Check total payload size (estimate: base64 is ~1.33x original size)
-    const totalSizeBytes = images.reduce((sum, img) => sum + (img.length * 0.75), 0);
-    const totalSizeMB = totalSizeBytes / (1024 * 1024);
     
-    if (totalSizeMB > 5) {
-      throw new Error("Document too large. Please upload a smaller snippet.");
-    }
+    // Get only page 1
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error("Failed to get canvas context");
+    
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
 
-    return images;
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+      canvas: canvas,
+    }).promise;
+
+    // Convert to Base64 JPEG
+    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    return base64;
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file size limit (6MB)
-    const maxSize = 6 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast({
-        title: "File Too Large",
-        description: "File too large for Beta. Please upgrade to Supreme Court tier.",
-        variant: "destructive",
-      });
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return;
-    }
-
-    console.log("File selected:", file.name, "Type:", file.type, "Size:", file.size);
     setIsUploading(true);
-    setUploadStatus("Preparing file...");
+    setUploadStatus("Processing file...");
     
     try {
-      // For PDFs: render to images (Vision-First strategy)
+      let imageData: string;
+
+      // Check file type
       if (file.type === "application/pdf") {
-        setUploadStatus("📸 Photographing document pages...");
-        const images = await convertPdfToImages(file);
+        setUploadStatus("Extracting Page 1...");
+        imageData = await extractPdfPage1(file);
         
         setSelectedFile({ 
-          name: file.name, 
-          base64: "", // Not needed for PDFs
-          type: file.type,
-          images 
+          name: `${file.name} (Page 1)`, 
+          imageData 
         });
         
         toast({
-          title: "Document Photographed",
-          description: `${file.name} converted to ${images.length} images for vision analysis.`,
+          title: "PDF Ready",
+          description: "Page 1 extracted and ready for analysis.",
+        });
+      } else if (file.type.startsWith("image/")) {
+        setUploadStatus("Resizing image...");
+        imageData = await resizeImage(file);
+        
+        setSelectedFile({ 
+          name: file.name, 
+          imageData 
+        });
+        
+        toast({
+          title: "Image Ready",
+          description: "Image resized and ready for analysis.",
         });
       } else {
-        // For text files: convert to Base64
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64Data = result.split(',')[1];
-            resolve(base64Data);
-          };
-          reader.onerror = reject;
-        });
-        
-        reader.readAsDataURL(file);
-        const base64Data = await base64Promise;
-        
-        setSelectedFile({ 
-          name: file.name, 
-          base64: base64Data,
-          type: file.type 
-        });
-        
-        toast({
-          title: "File Ready",
-          description: `${file.name} ready to upload to Tribunal Secure Core.`,
-        });
+        throw new Error("Unsupported file type. Please upload an image or PDF.");
       }
     } catch (error) {
       console.error("File processing error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to process file.";
+      
       toast({
         title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to process file.",
+        description: `Error: ${errorMessage}`,
         variant: "destructive",
       });
       
@@ -155,7 +156,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSend(message.trim(), selectedFile || undefined);
+      onSend(message.trim(), selectedFile?.imageData);
       setMessage("");
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -177,10 +178,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         {/* File Pill */}
         {selectedFile && (
           <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
-            {selectedFile.images ? '📸' : '📄'} {selectedFile.name} 
-            <span className="text-primary/70">
-              {selectedFile.images ? `(${selectedFile.images.length} images)` : '(Ready for Upload)'}
-            </span>
+            📸 {selectedFile.name}
             <button
               onClick={handleRemoveFile}
               className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
@@ -202,7 +200,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.txt,.md,.csv"
+              accept=".pdf,.png,.jpg,.jpeg"
               onChange={handleFileSelect}
               className="hidden"
               disabled={disabled || isUploading}
