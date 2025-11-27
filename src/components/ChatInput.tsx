@@ -3,109 +3,63 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as pdfjs from 'pdfjs-dist';
-
-// Configure PDF.js worker for Vite
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatInputProps {
-  onSend: (message: string, imageData?: string, fileImages?: string[]) => void;
+  onSend: (message: string, fileUrl?: string) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imageData, setImageData] = useState<string | null>(null);
-  const [fileImages, setFileImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Resize image to max 800px width
-  const resizeImage = (file: File): Promise<string> => {
+  // Resize image helper
+  const resizeImage = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error("Failed to get canvas context"));
-            return;
-          }
-
-          // Calculate new dimensions
-          let width = img.width;
-          let height = img.height;
-          if (width > 800) {
-            height = (height * 800) / width;
-            width = 800;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Convert to Base64 JPEG
-          const base64 = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(base64);
-        };
-        img.onerror = () => reject(new Error("Failed to load image"));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Extract ALL pages from PDF as images
-  const extractPdfPages = async (file: File): Promise<string[]> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    const numPages = pdf.numPages;
-    const images: string[] = [];
-    
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1.5 });
-      
+      const img = new Image();
       const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error("Failed to get canvas context");
+      const ctx = canvas.getContext('2d');
       
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-        canvas: canvas,
-      }).promise;
-
-      // Convert to Base64 data URL
-      const base64 = canvas.toDataURL('image/jpeg', 0.8);
-      images.push(base64);
-    }
-    
-    return images;
+      img.onload = () => {
+        const maxWidth = 1500;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to resize image'));
+        }, file.type, 0.9);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file size before processing (6MB limit)
-    const maxSize = 6 * 1024 * 1024;
+    // Check file size (10MB limit before processing)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "File Too Large",
-        description: "File too large. Please upload a smaller document (max 6MB).",
+        description: "Please upload a file smaller than 10MB.",
         variant: "destructive",
       });
       if (fileInputRef.current) {
@@ -114,77 +68,83 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       return;
     }
 
-    setIsUploading(true);
-    setUploadStatus("Processing file...");
-    
-    try {
-      // Check file type
-      if (file.type === "application/pdf") {
-        setUploadStatus("Extracting PDF pages...");
-        const pageImages = await extractPdfPages(file);
-        setFileImages(pageImages);
-        setImageData(null);
-        setSelectedFile(file);
-        setUploadStatus(`PDF ready (${pageImages.length} pages)`);
-        
-        toast({
-          title: "PDF Ready",
-          description: `${pageImages.length} pages extracted and ready for analysis.`,
-        });
-      } else if (file.type.startsWith("image/")) {
-        setUploadStatus("Resizing image...");
-        const resized = await resizeImage(file);
-        setImageData(resized);
-        setFileImages([]);
-        setSelectedFile(file);
-        setUploadStatus("Image ready");
-        
-        toast({
-          title: "Image Ready",
-          description: "Image resized and ready for analysis.",
-        });
-      } else {
-        throw new Error("Unsupported file type. Please upload an image or PDF.");
-      }
-    } catch (error) {
-      console.error("File processing error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to process file.";
-      
-      toast({
-        title: "Upload Failed",
-        description: `Error: ${errorMessage}`,
-        variant: "destructive",
-      });
-      
-      setSelectedFile(null);
-      setImageData(null);
-      setFileImages([]);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } finally {
-      setIsUploading(false);
-      setUploadStatus("");
-    }
+    setSelectedFile(file);
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
-    setImageData(null);
-    setFileImages([]);
     setUploadStatus("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && !disabled) {
-      onSend(message.trim(), imageData || undefined, fileImages.length > 0 ? fileImages : undefined);
-      setMessage("");
-      handleRemoveFile();
+    if (!message.trim() && !selectedFile) return;
+    if (disabled || isUploading) return;
+
+    let fileUrl: string | undefined;
+
+    if (selectedFile) {
+      setIsUploading(true);
+      setUploadStatus("Uploading to secure storage...");
+      
+      try {
+        let fileToUpload: File | Blob = selectedFile;
+        
+        // Resize images before upload
+        if (selectedFile.type.startsWith("image/")) {
+          setUploadStatus("Resizing image...");
+          fileToUpload = await resizeImage(selectedFile);
+        }
+        
+        // Get user ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("Not authenticated");
+        }
+        
+        // Upload to Supabase Storage
+        const fileName = `${Date.now()}_${selectedFile.name}`;
+        const filePath = `${user.id}/${fileName}`;
+        
+        setUploadStatus("Uploading file...");
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('audits')
+          .upload(filePath, fileToUpload);
+        
+        if (uploadError) {
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('audits')
+          .getPublicUrl(uploadData.path);
+        
+        fileUrl = publicUrl;
+        setUploadStatus("File uploaded!");
+      } catch (error) {
+        console.error("File upload error:", error);
+        toast({
+          title: "Upload Failed",
+          description: error instanceof Error ? error.message : "Failed to upload file",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+        setUploadStatus("");
+        return;
+      }
     }
+
+    // Send message
+    onSend(message.trim(), fileUrl);
+    setMessage("");
+    handleRemoveFile();
+    setIsUploading(false);
+    setUploadStatus("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -200,8 +160,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         {/* File Pill */}
         {selectedFile && (
           <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
-            📸 {selectedFile.name}
-            {fileImages.length > 0 && ` (${fileImages.length} pages)`}
+            📎 {selectedFile.name}
             <button
               onClick={handleRemoveFile}
               className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
@@ -259,7 +218,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             {message.trim() && (
               <button
                 type="submit"
-                disabled={disabled}
+                disabled={disabled || isUploading}
                 className="shrink-0 w-7 h-7 rounded-lg bg-primary/90 hover:bg-primary flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50"
               >
                 <ArrowUp className="w-4 h-4 text-primary-foreground" />
