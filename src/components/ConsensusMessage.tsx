@@ -60,7 +60,7 @@ export const ConsensusMessage = ({
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 <span className="text-foreground font-semibold">MODEL_A</span>
               </div>
-              <span className="text-muted-foreground text-[10px]">GPT-4o</span>
+              <span className="text-muted-foreground text-[10px]">Llama 3</span>
             </div>
             <div className="p-4">
               {isLoading && !modelAResponse ? (
