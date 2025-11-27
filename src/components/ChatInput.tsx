@@ -24,7 +24,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const convertPdfToImages = async (file: File): Promise<string[]> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const numPages = Math.min(pdf.numPages, 10); // First 10 pages only
+    const numPages = Math.min(pdf.numPages, 4); // First 4 pages only
     const images: string[] = [];
 
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
@@ -44,11 +44,19 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         canvas: canvas,
       }).promise;
 
-      // Convert to base64 JPEG
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+      // Convert to base64 JPEG with 0.6 quality for smaller file size
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
       images.push(imageBase64);
       
       setUploadStatus(`📸 Photographing page ${pageNum}/${numPages}...`);
+    }
+
+    // Check total payload size (estimate: base64 is ~1.33x original size)
+    const totalSizeBytes = images.reduce((sum, img) => sum + (img.length * 0.75), 0);
+    const totalSizeMB = totalSizeBytes / (1024 * 1024);
+    
+    if (totalSizeMB > 5) {
+      throw new Error("Document too large. Please upload a smaller snippet.");
     }
 
     return images;
