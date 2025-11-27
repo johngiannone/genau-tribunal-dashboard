@@ -87,29 +87,34 @@ const Index = () => {
         <ScrollArea className="flex-1">
           <div className="max-w-5xl mx-auto px-6 py-8">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center">
-                <div className="bg-primary/10 p-6 rounded mb-6 border border-primary/20">
-                  <Zap className="w-16 h-16 text-primary" />
-                </div>
-                <h2 className="text-3xl font-bold text-foreground mb-3 font-mono">
-                  GENAU
-                </h2>
-                <p className="text-muted-foreground max-w-md mb-6 leading-relaxed text-sm">
-                  Precision consensus engine. Submit queries for multi-model analysis and synthesis. 
-                  Fast. Accurate. Neutral.
-                </p>
-                <div className="flex gap-3 text-xs font-mono">
-                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-border">
-                    <Zap className="w-3 h-3 text-primary" />
-                    <span>MODEL_A</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-border">
-                    <Zap className="w-3 h-3 text-primary" />
-                    <span>MODEL_B</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-primary">
-                    <Zap className="w-3 h-3 text-primary" />
-                    <span>SYNTHESIS</span>
+              <div className="relative flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center">
+                {/* Geometric Background Pattern */}
+                <div className="geometric-grid" />
+                <div className="geometric-mesh" />
+                
+                {/* Hero Content */}
+                <div className="relative z-10">
+                  <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text font-sans tracking-tight">
+                    Ask once. Get the consensus.
+                  </h1>
+                  <p className="text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed text-base font-mono">
+                    Running Llama 3, Claude 3.5, and GPT-4o in parallel for precision auditing.
+                  </p>
+                  
+                  {/* Model Indicators */}
+                  <div className="flex flex-wrap justify-center gap-3 text-xs font-mono">
+                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      <span className="text-foreground/80">LLAMA_3</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.2s' }} />
+                      <span className="text-foreground/80">CLAUDE_3.5</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }} />
+                      <span className="text-foreground/80">GPT_4o</span>
+                    </div>
                   </div>
                 </div>
               </div>
