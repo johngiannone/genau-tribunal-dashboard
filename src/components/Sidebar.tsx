@@ -22,7 +22,8 @@ export const Sidebar = () => {
       {/* New Session Button */}
       <div className="p-4">
         <Button 
-          className="w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground font-semibold transition-all font-mono"
+          variant="ghost"
+          className="w-full border border-sidebar-primary text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground font-semibold transition-all font-mono"
         >
           <Plus className="w-4 h-4 mr-2" />
           New Session
@@ -31,36 +32,33 @@ export const Sidebar = () => {
 
       {/* Session History */}
       <ScrollArea className="flex-1 px-4">
-        <div className="space-y-1">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 font-mono">
+        <div className="space-y-0.5">
+          <h3 className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2 font-mono">
             Recent Sessions
           </h3>
           {sampleChats.map((chat) => (
             <button
               key={chat.id}
-              className="w-full text-left p-3 rounded hover:bg-sidebar-accent transition-all group"
+              className="w-full text-left px-2 py-2 rounded hover:bg-sidebar-accent/50 transition-all group flex items-center justify-between gap-2"
             >
-              <div className="flex items-start gap-2">
-                <Cpu className="w-4 h-4 text-muted-foreground mt-0.5 group-hover:text-primary transition-colors" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-sidebar-foreground truncate font-medium">
-                    {chat.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-                    {chat.time}
-                  </p>
-                </div>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Cpu className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0" />
+                <p className="text-xs text-muted-foreground/70 group-hover:text-sidebar-foreground truncate">
+                  {chat.title}
+                </p>
               </div>
+              <span className="text-[10px] text-muted-foreground/50 font-mono flex-shrink-0">
+                {chat.time}
+              </span>
             </button>
           ))}
         </div>
       </ScrollArea>
 
       {/* Settings at Bottom */}
-      <div className="p-4 border-t border-sidebar-border">
-        <button className="w-full flex items-center gap-2 p-3 rounded hover:bg-sidebar-accent transition-all text-sidebar-foreground">
+      <div className="p-3 border-t border-sidebar-border">
+        <button className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground">
           <Settings className="w-4 h-4" />
-          <span className="text-sm font-medium font-mono">SETTINGS</span>
         </button>
       </div>
     </aside>
