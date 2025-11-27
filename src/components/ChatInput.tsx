@@ -93,6 +93,20 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check file size before processing (6MB limit)
+    const maxSize = 6 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "File too large. Please upload a smaller document (max 6MB).",
+        variant: "destructive",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     setIsUploading(true);
     setUploadStatus("Processing file...");
     

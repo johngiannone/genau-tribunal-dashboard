@@ -118,14 +118,30 @@ async function processImagesWithVision(images: string[], fileName: string, promp
 }
 
 serve(async (req) => {
+  console.log("Processing started...");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Log payload size
+    const contentLength = req.headers.get('content-length');
+    console.log("Payload size:", contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : "unknown");
+    
+    // Check payload size limit (6MB)
+    if (contentLength && parseInt(contentLength) > 6 * 1024 * 1024) {
+      console.error("Payload too large:", contentLength);
+      return new Response(
+        JSON.stringify({ error: 'File too large. Please upload a smaller document.' }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     // Get auth token from request header
     const authHeader = req.headers.get('Authorization');
+    console.log("Auth header present:", !!authHeader);
     
     // Create Supabase client
     const supabase = createClient(
@@ -180,6 +196,9 @@ serve(async (req) => {
 
     console.log("Received prompt:", prompt);
     console.log("Image data provided:", !!image_data);
+    if (image_data) {
+      console.log("Image data size:", (image_data.length * 0.75 / 1024 / 1024).toFixed(2), "MB (estimated)");
+    }
 
     let draftA: string;
     let draftB: string;
@@ -187,6 +206,7 @@ serve(async (req) => {
 
     // If image_data provided, send to Gemini Flash 1.5 first
     if (image_data) {
+      console.log("Vision Mode activated");
       console.log("Processing image with Gemini Flash 1.5");
       
       const visionResponse = await fetchWithTimeoutAndRetry(
@@ -267,6 +287,7 @@ serve(async (req) => {
       ]);
     } else {
       // Standard flow without image
+      console.log("Text Mode activated");
       const fetchModel = async (model: string, label: string) => {
         console.log(`Fetching ${label}...`);
         const response = await fetchWithTimeoutAndRetry(
