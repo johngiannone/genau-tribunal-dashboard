@@ -5,8 +5,8 @@ import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker from a fixed CDN version to avoid loading hangs
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+// Configure PDF.js worker dynamically to match installed version
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface ChatInputProps {
   onSend: (message: string, fileContext?: string) => void;
