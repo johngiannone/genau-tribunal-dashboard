@@ -24,7 +24,6 @@ async function fetchWithTimeoutAndRetry(url: string, options: RequestInit, label
 
       clearTimeout(timeoutId);
 
-      // Log status and check for specific error codes
       console.log(`${label} - Status: ${response.status}`);
       
       if (!response.ok) {
@@ -56,7 +55,6 @@ async function fetchWithTimeoutAndRetry(url: string, options: RequestInit, label
         }
       }
 
-      // Retry on other errors
       if (attempt < retries) {
         console.log(`${label} - Retrying after 1 second... (Attempt ${attempt + 1}/${retries})`);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -70,80 +68,96 @@ async function fetchWithTimeoutAndRetry(url: string, options: RequestInit, label
   throw new Error(`${label} failed after all retries`);
 }
 
-// Helper to process images with Gemini Vision
-async function processImagesWithVision(images: string[], fileName: string, prompt: string): Promise<string> {
-  console.log(`Processing ${images.length} images with Gemini Vision`);
+// Helper to download and process file from URL
+async function processFileFromUrl(fileUrl: string): Promise<{ type: 'text' | 'image', content: string }> {
+  console.log("Downloading file from URL:", fileUrl);
   
-  // Build content array with text prompt and all images
-  const content: any[] = [
-    {
-      type: "text",
-      text: `I am providing images of a document (${fileName}). Analyze them thoroughly and extract all key information. User query: ${prompt}`
-    }
-  ];
-
-  // Add each image
-  for (const imageBase64 of images) {
-    content.push({
-      type: "image_url",
-      image_url: {
-        url: `data:image/jpeg;base64,${imageBase64}`
-      }
-    });
+  const response = await fetch(fileUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download file: ${response.status}`);
   }
-
-  const visionResponse = await fetchWithTimeoutAndRetry(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
+  
+  const contentType = response.headers.get('content-type') || '';
+  console.log("File content type:", contentType);
+  
+  if (contentType.includes('application/pdf')) {
+    // For PDFs, use Gemini Flash to extract text
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    
+    // Convert to base64
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    
+    console.log("Processing PDF with Gemini Flash");
+    
+    const visionResponse = await fetchWithTimeoutAndRetry(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-flash-1.5",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract all text from this PDF document. Transcribe it exactly and preserve all important information, dates, and structure."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:application/pdf;base64,${base64}`
+                  }
+                }
+              ]
+            }
+          ],
+        }),
       },
-      body: JSON.stringify({
-        model: "google/gemini-pro-1.5",
-        messages: [
-          {
-            role: "user",
-            content
-          }
-        ],
-      }),
-    },
-    "Gemini Vision"
-  );
-
-  const visionData = await visionResponse.json();
-  return visionData.choices[0].message.content;
+      "Gemini Flash PDF"
+    );
+    
+    const visionData = await visionResponse.json();
+    const extractedText = visionData.choices[0].message.content;
+    
+    return { type: 'text', content: extractedText };
+  } else if (contentType.includes('image/')) {
+    // For images, convert to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    
+    return { type: 'image', content: base64 };
+  } else {
+    throw new Error(`Unsupported file type: ${contentType}`);
+  }
 }
 
 serve(async (req) => {
   console.log("Processing started...");
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Log payload size
-    const contentLength = req.headers.get('content-length');
-    console.log("Payload size:", contentLength ? `${(parseInt(contentLength) / 1024 / 1024).toFixed(2)} MB` : "unknown");
-    
-    // Check payload size limit (6MB)
-    if (contentLength && parseInt(contentLength) > 6 * 1024 * 1024) {
-      console.error("Payload too large:", contentLength);
-      return new Response(
-        JSON.stringify({ error: 'File too large. Please upload a smaller document.' }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    // Get auth token from request header
     const authHeader = req.headers.get('Authorization');
     console.log("Auth header present:", !!authHeader);
     
-    // Create Supabase client
     const supabase = createClient(
       SUPABASE_URL, 
       SUPABASE_ANON_KEY,
@@ -154,7 +168,6 @@ serve(async (req) => {
       }
     );
 
-    // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -165,7 +178,6 @@ serve(async (req) => {
       );
     }
 
-    // Check usage limits
     const { data: usage, error: usageError } = await supabase
       .from('user_usage')
       .select('*')
@@ -180,7 +192,6 @@ serve(async (req) => {
       );
     }
 
-    // Enforce limits: 5 free audits for non-premium users
     if (!usage.is_premium && usage.audit_count >= 5) {
       return new Response(
         JSON.stringify({ 
@@ -192,33 +203,79 @@ serve(async (req) => {
       );
     }
 
-    const { prompt, image_data, document_text } = await req.json();
+    const { prompt, file_url } = await req.json();
 
     console.log("Received prompt:", prompt);
-    console.log("Image data provided:", !!image_data);
-    console.log("Document text provided:", !!document_text);
-    if (image_data) {
-      console.log("Image data size:", (image_data.length * 0.75 / 1024 / 1024).toFixed(2), "MB (estimated)");
-    }
-    if (document_text) {
-      console.log("Document text size:", (document_text.length / 1024).toFixed(2), "KB");
-    }
+    console.log("File URL provided:", !!file_url);
 
     let draftA: string;
     let draftB: string;
     let contextForModels = prompt;
 
-    // If document_text provided (from chunked processing), use it directly
-    if (document_text) {
-      console.log("Using pre-extracted document text");
-      contextForModels = `${prompt}\n\nDocument Content:\n${document_text}`;
-    }
-    // If image_data provided, send to Gemini Flash 1.5 first
-    else if (image_data) {
-      console.log("Vision Mode activated");
-      console.log("Processing image with Gemini Flash 1.5");
+    // If file_url provided, download and process it
+    if (file_url) {
+      console.log("File processing mode activated");
       
-      const visionResponse = await fetchWithTimeoutAndRetry(
+      const { type, content } = await processFileFromUrl(file_url);
+      
+      if (type === 'text') {
+        // Use extracted text directly
+        contextForModels = `${prompt}\n\nDocument Content:\n${content}`;
+        console.log("Text extracted from file, proceeding with consensus");
+      } else {
+        // For images, use Gemini Flash Vision first
+        console.log("Processing image with Gemini Flash Vision");
+        
+        const visionResponse = await fetchWithTimeoutAndRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-flash-1.5",
+              messages: [
+                {
+                  role: "system",
+                  content: "Analyze this image of a document. Transcribe and summarize it."
+                },
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: prompt
+                    },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:image/jpeg;base64,${content}`
+                      }
+                    }
+                  ]
+                }
+              ],
+            }),
+          },
+          "Gemini Flash Vision"
+        );
+
+        const visionData = await visionResponse.json();
+        contextForModels = `${prompt}\n\nDocument Analysis:\n${visionData.choices[0].message.content}`;
+        console.log("Vision analysis complete");
+      }
+    } else {
+      console.log("Text Mode activated");
+    }
+
+    // Fetch drafts from models
+    console.log("Fetching drafts from Llama 3 and Claude 3.5...");
+    
+    const fetchModel = async (model: string, label: string) => {
+      console.log(`Fetching ${label}...`);
+      const response = await fetchWithTimeoutAndRetry(
         "https://openrouter.ai/api/v1/chat/completions",
         {
           method: "POST",
@@ -227,97 +284,21 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-flash-1.5",
-            messages: [
-              {
-                role: "system",
-                content: "Analyze this image of a document. Transcribe and summarize it."
-              },
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: prompt
-                  },
-                  {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:image/jpeg;base64,${image_data}`
-                    }
-                  }
-                ]
-              }
-            ],
+            model: model,
+            messages: [{ role: "user", content: contextForModels }],
           }),
         },
-        "Gemini Flash Vision"
+        label
       );
+      
+      const data = await response.json();
+      return data.choices[0].message.content;
+    };
 
-      const visionData = await visionResponse.json();
-      contextForModels = `${prompt}\n\nDocument Analysis:\n${visionData.choices[0].message.content}`;
-      console.log("Vision analysis complete");
-    }
-
-    // Fetch drafts from models with appropriate context
-    if (document_text || image_data) {
-      // Send with context
-      const fetchModelWithContext = async (model: string, label: string) => {
-        console.log(`Fetching ${label} with context...`);
-        const response = await fetchWithTimeoutAndRetry(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [{ role: "user", content: contextForModels }],
-            }),
-          },
-          label
-        );
-        
-        const data = await response.json();
-        return data.choices[0].message.content;
-      };
-
-      [draftA, draftB] = await Promise.all([
-        fetchModelWithContext("meta-llama/llama-3-70b-instruct", "Llama 3"),
-        fetchModelWithContext("anthropic/claude-3.5-sonnet", "Claude 3.5"),
-      ]);
-    } else {
-      // Standard flow without image
-      console.log("Text Mode activated");
-      const fetchModel = async (model: string, label: string) => {
-        console.log(`Fetching ${label}...`);
-        const response = await fetchWithTimeoutAndRetry(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [{ role: "user", content: prompt }],
-            }),
-          },
-          label
-        );
-        
-        const data = await response.json();
-        return data.choices[0].message.content;
-      };
-
-      [draftA, draftB] = await Promise.all([
-        fetchModel("meta-llama/llama-3-70b-instruct", "Llama 3"),
-        fetchModel("anthropic/claude-3.5-sonnet", "Claude 3.5"),
-      ]);
-    }
+    [draftA, draftB] = await Promise.all([
+      fetchModel("meta-llama/llama-3-70b-instruct", "Llama 3"),
+      fetchModel("anthropic/claude-3.5-sonnet", "Claude 3.5"),
+    ]);
 
     // The Auditor (DeepSeek R1)
     console.log("Starting Auditor (DeepSeek R1) request...");

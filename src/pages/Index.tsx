@@ -77,7 +77,7 @@ const Index = () => {
     setUsage(data);
   };
 
-  const handleSendMessage = async (userPrompt: string, imageData?: string, fileImages?: string[]) => {
+  const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -97,8 +97,6 @@ const Index = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
-    
-    let fullDocumentText = "";
 
     try {
       // Get current session token for authenticated request
@@ -108,51 +106,18 @@ const Index = () => {
         throw new Error("Not authenticated");
       }
 
-      // If multiple file images, process them one by one
-      if (fileImages && fileImages.length > 0) {
-        setStatusText(`Analyzing Page 1 of ${fileImages.length}...`);
-        
-        for (let i = 0; i < fileImages.length; i++) {
-          const pageNumber = i + 1;
-          setStatusText(`Analyzing Page ${pageNumber} of ${fileImages.length}...`);
-          
-          console.log(`Processing page ${pageNumber}/${fileImages.length}`);
-          
-          const { data: pageData, error: pageError } = await supabase.functions.invoke('analyze-page', {
-            body: { 
-              image: fileImages[i],
-              pageNumber 
-            },
-            headers: {
-              Authorization: `Bearer ${currentSession.access_token}`
-            }
-          });
-
-          if (pageError) {
-            console.error(`Error analyzing page ${pageNumber}:`, pageError);
-            throw new Error(`Failed to analyze page ${pageNumber}: ${pageError.message}`);
-          }
-
-          fullDocumentText += pageData.text + "\n\n";
-          console.log(`Page ${pageNumber} completed`);
-        }
-        
-        console.log("All pages analyzed, starting consensus...");
-        setStatusText("Initializing Council...");
+      // Set status based on whether file is provided
+      if (fileUrl) {
+        setStatusText("Processing document...");
       } else {
-        setStatusText(
-          imageData 
-            ? "Sending to Vision Engine..." 
-            : "Initializing Council..."
-        );
+        setStatusText("Initializing Council...");
       }
 
-      // Now send to consensus with extracted text or single image
+      // Send to consensus with file URL if provided
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
         body: { 
           prompt: userPrompt,
-          image_data: fullDocumentText ? undefined : imageData,
-          document_text: fullDocumentText || undefined
+          file_url: fileUrl
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
