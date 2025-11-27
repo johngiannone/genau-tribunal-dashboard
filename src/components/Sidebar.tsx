@@ -6,14 +6,21 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 
-const sampleChats = [
-  { id: 1, title: "Code Review Analysis", time: "2h ago" },
-  { id: 2, title: "Research Synthesis", time: "5h ago" },
-  { id: 3, title: "Data Quality Check", time: "1d ago" },
-];
+interface Conversation {
+  id: string;
+  title: string;
+  updated_at: string;
+}
 
-export const Sidebar = () => {
+interface SidebarProps {
+  onNewSession: () => void;
+  onLoadConversation: (conversationId: string) => void;
+  currentConversationId: string | null;
+}
+
+export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationId }: SidebarProps) => {
   const [session, setSession] = useState<Session | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +36,43 @@ export const Sidebar = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchConversations();
+    }
+  }, [session]);
+
+  const fetchConversations = async () => {
+    if (!session?.user) return;
+
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('id, title, updated_at')
+      .eq('user_id', session.user.id)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("Error fetching conversations:", error);
+      return;
+    }
+
+    setConversations(data || []);
+  };
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -49,6 +93,7 @@ export const Sidebar = () => {
       <div className="p-4">
         <Button 
           variant="ghost"
+          onClick={onNewSession}
           className="w-full border border-sidebar-primary text-sidebar-primary hover:bg-sidebar-primary hover:text-sidebar-primary-foreground font-semibold transition-all font-mono"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -62,22 +107,29 @@ export const Sidebar = () => {
           <h3 className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2 font-mono">
             Recent Sessions
           </h3>
-          {sampleChats.map((chat) => (
-            <button
-              key={chat.id}
-              className="w-full text-left px-2 py-2 rounded hover:bg-sidebar-accent/50 transition-all group flex items-center justify-between gap-2"
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Cpu className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0" />
-                <p className="text-xs text-muted-foreground/70 group-hover:text-sidebar-foreground truncate">
-                  {chat.title}
-                </p>
-              </div>
-              <span className="text-[10px] text-muted-foreground/50 font-mono flex-shrink-0">
-                {chat.time}
-              </span>
-            </button>
-          ))}
+          {conversations.length === 0 ? (
+            <p className="text-xs text-muted-foreground/50 px-2 py-2">No sessions yet</p>
+          ) : (
+            conversations.map((conversation) => (
+              <button
+                key={conversation.id}
+                onClick={() => onLoadConversation(conversation.id)}
+                className={`w-full text-left px-2 py-2 rounded hover:bg-sidebar-accent/50 transition-all group flex items-center justify-between gap-2 ${
+                  currentConversationId === conversation.id ? 'bg-sidebar-accent/30' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Cpu className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground/70 group-hover:text-sidebar-foreground truncate">
+                    {conversation.title}
+                  </p>
+                </div>
+                <span className="text-[10px] text-muted-foreground/50 font-mono flex-shrink-0">
+                  {formatTime(conversation.updated_at)}
+                </span>
+              </button>
+            ))
+          )}
         </div>
       </ScrollArea>
 

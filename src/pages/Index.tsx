@@ -27,6 +27,7 @@ const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [usage, setUsage] = useState<{ audit_count: number; is_premium: boolean } | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -77,6 +78,75 @@ const Index = () => {
     setUsage(data);
   };
 
+  const createNewConversation = async (title: string) => {
+    if (!session?.user) return null;
+
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert({
+        title,
+        user_id: session.user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating conversation:", error);
+      return null;
+    }
+
+    return data.id;
+  };
+
+  const saveMessage = async (conversationId: string, message: Message) => {
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        role: 'user',
+        content: message.userPrompt,
+        model_a_response: message.modelAResponse,
+        model_b_response: message.modelBResponse,
+        synthesis: message.synthesisResponse,
+        confidence: message.confidenceScore,
+      });
+
+    if (error) {
+      console.error("Error saving message:", error);
+    }
+  };
+
+  const loadConversation = async (conversationId: string) => {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error("Error loading conversation:", error);
+      return;
+    }
+
+    const loadedMessages: Message[] = data.map((msg) => ({
+      id: Date.now() + Math.random(),
+      userPrompt: msg.content,
+      modelAResponse: msg.model_a_response || undefined,
+      modelBResponse: msg.model_b_response || undefined,
+      synthesisResponse: msg.synthesis || undefined,
+      confidenceScore: msg.confidence || undefined,
+      isLoading: false,
+    }));
+
+    setMessages(loadedMessages);
+    setCurrentConversationId(conversationId);
+  };
+
+  const handleNewSession = () => {
+    setMessages([]);
+    setCurrentConversationId(null);
+  };
+
   const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
     if (!session?.user) {
       navigate("/auth");
@@ -87,6 +157,22 @@ const Index = () => {
     if (usage && !usage.is_premium && usage.audit_count >= 5) {
       setShowUpgradeModal(true);
       return;
+    }
+
+    // Create conversation if this is the first message
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      const title = userPrompt.substring(0, 50) + (userPrompt.length > 50 ? '...' : '');
+      conversationId = await createNewConversation(title);
+      if (!conversationId) {
+        toast({
+          title: "Error",
+          description: "Failed to create conversation",
+          variant: "destructive",
+        });
+        return;
+      }
+      setCurrentConversationId(conversationId);
     }
 
     const newMessage: Message = {
@@ -143,20 +229,25 @@ const Index = () => {
       }
 
       // Update message with all responses
+      const updatedMessage = {
+        ...newMessage,
+        modelAResponse: data.draftA,
+        modelBResponse: data.draftB,
+        synthesisResponse: data.verdict,
+        confidenceScore: 99,
+        isLoading: false,
+      };
+
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === newMessage.id
-            ? {
-                ...msg,
-                modelAResponse: data.draftA,
-                modelBResponse: data.draftB,
-                synthesisResponse: data.verdict,
-                confidenceScore: 99,
-                isLoading: false,
-              }
-            : msg
+          msg.id === newMessage.id ? updatedMessage : msg
         )
       );
+
+      // Save message to database
+      if (conversationId) {
+        await saveMessage(conversationId, updatedMessage);
+      }
       
       // Refresh usage after successful audit
       fetchUsage();
@@ -200,7 +291,11 @@ const Index = () => {
       <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
       
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar 
+        onNewSession={handleNewSession}
+        onLoadConversation={loadConversation}
+        currentConversationId={currentConversationId}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
