@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_usage: {
+        Row: {
+          audit_count: number
+          created_at: string | null
+          id: string
+          is_premium: boolean
+          last_reset_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audit_count?: number
+          created_at?: string | null
+          id?: string
+          is_premium?: boolean
+          last_reset_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audit_count?: number
+          created_at?: string | null
+          id?: string
+          is_premium?: boolean
+          last_reset_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
