@@ -57,16 +57,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        verdict: {
-          border: "hsl(var(--verdict-border))",
+        synthesis: {
+          border: "hsl(var(--synthesis-border))",
         },
-        draft: {
-          chairman: "hsl(var(--draft-chairman))",
-          critic: "hsl(var(--draft-critic))",
+        model: {
+          a: "hsl(var(--model-a))",
+          b: "hsl(var(--model-b))",
+        },
+        confidence: {
+          bg: "hsl(var(--confidence-bg))",
+          fg: "hsl(var(--confidence-fg))",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

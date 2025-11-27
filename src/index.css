@@ -8,64 +8,68 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Deep Navy Background - Legal Tech Dark Mode */
-    --background: 210 70% 11%;
-    --foreground: 210 20% 98%;
+    /* Matte Charcoal Background - Precision Engineering */
+    --background: 240 6% 9%;
+    --foreground: 240 5% 96%;
 
-    /* Card surfaces slightly lighter than background */
-    --card: 210 60% 14%;
-    --card-foreground: 210 20% 98%;
+    /* Terminal surfaces */
+    --card: 240 5% 12%;
+    --card-foreground: 240 5% 96%;
 
     /* Popover surfaces */
-    --popover: 210 60% 14%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 240 5% 12%;
+    --popover-foreground: 240 5% 96%;
 
-    /* Gold Primary - Authority & Premium */
-    --primary: 51 100% 50%;
-    --primary-foreground: 210 70% 11%;
+    /* Electric Teal Primary - High-Tech Accent */
+    --primary: 180 85% 55%;
+    --primary-foreground: 240 6% 9%;
 
-    /* Slate Blue Secondary */
-    --secondary: 215 25% 35%;
-    --secondary-foreground: 210 20% 98%;
+    /* Secondary for subtle elements */
+    --secondary: 240 4% 20%;
+    --secondary-foreground: 240 5% 96%;
 
-    /* Muted surfaces for draft columns */
-    --muted: 210 50% 18%;
-    --muted-foreground: 215 15% 65%;
+    /* Muted surfaces for model output blocks */
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 4% 60%;
 
-    /* Accent - Lighter slate for hover states */
-    --accent: 215 30% 25%;
-    --accent-foreground: 210 20% 98%;
+    /* Accent - Hover states */
+    --accent: 240 5% 18%;
+    --accent-foreground: 240 5% 96%;
 
     /* Destructive */
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 240 5% 96%;
 
-    /* Borders - Subtle gold tint */
-    --border: 210 40% 22%;
-    --input: 210 40% 22%;
-    --ring: 51 100% 50%;
+    /* Borders - Crisp 1px precision */
+    --border: 240 4% 20%;
+    --input: 240 4% 20%;
+    --ring: 180 85% 55%;
 
-    /* Verdict border - Gold */
-    --verdict-border: 51 100% 50%;
+    /* Synthesis border - Electric Teal */
+    --synthesis-border: 180 85% 55%;
 
-    /* Draft column backgrounds */
-    --draft-chairman: 210 45% 16%;
-    --draft-critic: 210 45% 16%;
+    /* Model output backgrounds - Terminal style */
+    --model-a: 240 5% 13%;
+    --model-b: 240 5% 13%;
 
-    --radius: 0.75rem;
+    /* Confidence badge */
+    --confidence-bg: 180 85% 55%;
+    --confidence-fg: 240 6% 9%;
 
-    /* Sidebar - Darker than main */
-    --sidebar-background: 210 75% 9%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 51 100% 50%;
-    --sidebar-primary-foreground: 210 70% 11%;
-    --sidebar-accent: 210 60% 13%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 210 50% 16%;
-    --sidebar-ring: 51 100% 50%;
+    --radius: 0.375rem;
+
+    /* Sidebar - Slightly darker */
+    --sidebar-background: 240 7% 8%;
+    --sidebar-foreground: 240 5% 90%;
+    --sidebar-primary: 180 85% 55%;
+    --sidebar-primary-foreground: 240 6% 9%;
+    --sidebar-accent: 240 6% 11%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 5% 15%;
+    --sidebar-ring: 180 85% 55%;
 
     /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
