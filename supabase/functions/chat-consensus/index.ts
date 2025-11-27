@@ -10,6 +10,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to fetch with timeout and retry
+async function fetchWithTimeoutAndRetry(url: string, options: RequestInit, label: string, retries = 1): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // Log status and check for specific error codes
+      console.log(`${label} - Status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`${label} - Error (${response.status}):`, errorText);
+        
+        if (response.status === 402) {
+          throw new Error("PAYMENT_REQUIRED");
+        }
+        
+        throw new Error(`${label} failed with status ${response.status}: ${errorText}`);
+      }
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error(`${label} - Request timeout after 60 seconds`);
+          if (attempt < retries) {
+            console.log(`${label} - Retrying after 1 second...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          throw new Error("The Council is taking too long to deliberate. Please try again.");
+        }
+        
+        if (error.message === "PAYMENT_REQUIRED") {
+          throw new Error("System out of credits.");
+        }
+      }
+
+      // Retry on other errors
+      if (attempt < retries) {
+        console.log(`${label} - Retrying after 1 second... (Attempt ${attempt + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`${label} failed after all retries`);
+}
+
 // Helper to process images with Gemini Vision
 async function processImagesWithVision(images: string[], fileName: string, prompt: string): Promise<string> {
   console.log(`Processing ${images.length} images with Gemini Vision`);
@@ -32,28 +92,26 @@ async function processImagesWithVision(images: string[], fileName: string, promp
     });
   }
 
-  const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
+  const visionResponse = await fetchWithTimeoutAndRetry(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-pro-1.5",
+        messages: [
+          {
+            role: "user",
+            content
+          }
+        ],
+      }),
     },
-    body: JSON.stringify({
-      model: "google/gemini-pro-1.5",
-      messages: [
-        {
-          role: "user",
-          content
-        }
-      ],
-    }),
-  });
-
-  if (!visionResponse.ok) {
-    const errorText = await visionResponse.text();
-    console.error("Gemini Vision error:", errorText);
-    throw new Error("Failed to process document images with Vision Mode");
-  }
+    "Gemini Vision"
+  );
 
   const visionData = await visionResponse.json();
   return visionData.choices[0].message.content;
@@ -141,32 +199,30 @@ serve(async (req) => {
       // Pass Vision analysis to Draft models
       const fetchModelWithContext = async (model: string, label: string) => {
         console.log(`Fetching ${label} with Vision context...`);
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
+        const response = await fetchWithTimeoutAndRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: "system",
+                  content: `Vision analysis of the document:\n\n${librarianContext}`
+                },
+                {
+                  role: "user",
+                  content: prompt
+                }
+              ],
+            }),
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              {
-                role: "system",
-                content: `Vision analysis of the document:\n\n${librarianContext}`
-              },
-              {
-                role: "user",
-                content: prompt
-              }
-            ],
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Error from ${label}:`, errorText);
-          throw new Error(`${label} request failed: ${response.status}`);
-        }
+          label
+        );
         
         const data = await response.json();
         console.log(`${label} response received`);
@@ -187,32 +243,30 @@ serve(async (req) => {
       
       const fetchModelWithContext = async (model: string, label: string) => {
         console.log(`Fetching ${label} with text context...`);
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
+        const response = await fetchWithTimeoutAndRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: "system",
+                  content: `Document content:\n\n${librarianContext}`
+                },
+                {
+                  role: "user",
+                  content: prompt
+                }
+              ],
+            }),
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              {
-                role: "system",
-                content: `Document content:\n\n${librarianContext}`
-              },
-              {
-                role: "user",
-                content: prompt
-              }
-            ],
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Error from ${label}:`, errorText);
-          throw new Error(`${label} request failed: ${response.status}`);
-        }
+          label
+        );
         
         const data = await response.json();
         console.log(`${label} response received`);
@@ -227,23 +281,21 @@ serve(async (req) => {
       // Standard flow without file context
       const fetchModel = async (model: string, label: string) => {
         console.log(`Fetching ${label}...`);
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
+        const response = await fetchWithTimeoutAndRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [{ role: "user", content: prompt }],
+            }),
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Error from ${label}:`, errorText);
-          throw new Error(`${label} request failed: ${response.status}`);
-        }
+          label
+        );
         
         const data = await response.json();
         console.log(`${label} response received`);
@@ -259,32 +311,30 @@ serve(async (req) => {
 
     // 3. The Auditor (DeepSeek R1) - The "Judge"
     console.log("Starting Auditor (DeepSeek R1) request...");
-    const auditResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
+    const auditResponse = await fetchWithTimeoutAndRetry(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "deepseek/deepseek-r1", 
+          messages: [
+            {
+              role: "system",
+              content: "You are an Auditor. Compare Draft A and Draft B. Identify errors. Write a final, corrected verdict."
+            },
+            {
+              role: "user",
+              content: `User Query: ${prompt}\n\nDraft A: ${draftA}\n\nDraft B: ${draftB}`
+            }
+          ],
+        }),
       },
-      body: JSON.stringify({
-        model: "deepseek/deepseek-r1", 
-        messages: [
-          {
-            role: "system",
-            content: "You are an Auditor. Compare Draft A and Draft B. Identify errors. Write a final, corrected verdict."
-          },
-          {
-            role: "user",
-            content: `User Query: ${prompt}\n\nDraft A: ${draftA}\n\nDraft B: ${draftB}`
-          }
-        ],
-      }),
-    });
-
-    if (!auditResponse.ok) {
-      const errorText = await auditResponse.text();
-      console.error("Error from Auditor:", errorText);
-      throw new Error(`Auditor request failed: ${auditResponse.status}`);
-    }
+      "Auditor (DeepSeek R1)"
+    );
 
     const auditData = await auditResponse.json();
     const verdict = auditData.choices[0].message.content;
