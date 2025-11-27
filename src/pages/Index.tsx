@@ -77,7 +77,7 @@ const Index = () => {
     setUsage(data);
   };
 
-  const handleSendMessage = async (userPrompt: string, fileData?: { name: string; base64: string; type: string; images?: string[] }) => {
+  const handleSendMessage = async (userPrompt: string, imageData?: string) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -98,11 +98,9 @@ const Index = () => {
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
     setStatusText(
-      fileData?.images 
-        ? "📸 Sending images to Vision Engine..." 
-        : fileData 
-          ? "Uploading to Tribunal Secure Core..." 
-          : "Initializing Council..."
+      imageData 
+        ? "Sending Page 1 to Vision Engine..." 
+        : "Initializing Council..."
     );
 
     try {
@@ -115,7 +113,7 @@ const Index = () => {
 
       // Call the chat-consensus edge function with auth header
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
-        body: { prompt: userPrompt, fileData },
+        body: { prompt: userPrompt, image_data: imageData },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
         }
@@ -159,10 +157,11 @@ const Index = () => {
       // Remove the failed message
       setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
       
-      // Show error toast
+      // Show error toast with exact error message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast({
         title: "Connection Error",
-        description: "Failed to reach the consensus engine. Please try again.",
+        description: `Error: ${errorMessage}`,
         variant: "destructive",
       });
       
