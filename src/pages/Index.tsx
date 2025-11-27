@@ -120,6 +120,9 @@ const Index = () => {
       });
 
       if (error) {
+        console.error("Edge function error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        
         // Check if it's a usage limit error
         if (error.message?.includes('Usage limit reached') || error.context?.limitReached) {
           setShowUpgradeModal(true);
@@ -128,7 +131,10 @@ const Index = () => {
           setIsProcessing(false);
           return;
         }
-        throw error;
+        
+        // Extract the actual error message
+        const errorMessage = error.message || error.error || JSON.stringify(error);
+        throw new Error(errorMessage);
       }
 
       // Update message with all responses
@@ -153,12 +159,19 @@ const Index = () => {
       setStatusText("");
     } catch (error) {
       console.error("Error calling chat-consensus:", error);
+      console.error("Full error object:", JSON.stringify(error, null, 2));
       
       // Remove the failed message
       setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
       
       // Show error toast with exact error message
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      let errorMessage = "Unknown error occurred";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error);
+      }
+      
       toast({
         title: "Connection Error",
         description: `Error: ${errorMessage}`,
