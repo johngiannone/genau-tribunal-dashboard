@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ChatInputProps {
@@ -27,29 +26,32 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   };
 
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="max-w-4xl mx-auto px-6 py-6">
+    <div className="fixed bottom-0 left-0 right-0 pb-6 pointer-events-none">
+      <div className="max-w-[700px] mx-auto px-6 pointer-events-auto">
         <form onSubmit={handleSubmit} className="relative">
-          <div className="flex gap-3 items-end bg-card border border-border rounded p-2 focus-within:border-primary transition-all">
+          {/* Floating Command Bar */}
+          <div className="flex gap-2 items-center bg-card/50 backdrop-blur-xl border border-primary/40 rounded-xl px-4 py-2 shadow-lg shadow-primary/5 hover:border-primary/60 focus-within:border-primary transition-all">
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Enter query..."
               disabled={disabled}
-              className="min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground text-sm"
+              className="min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/60 text-sm leading-relaxed"
               rows={1}
             />
-            <Button
-              type="submit"
-              disabled={disabled || !message.trim()}
-              size="icon"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 h-9 w-9 rounded transition-all disabled:opacity-50"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+            {/* Minimal Arrow Icon - only shows when typing */}
+            {message.trim() && (
+              <button
+                type="submit"
+                disabled={disabled}
+                className="shrink-0 w-7 h-7 rounded-lg bg-primary/90 hover:bg-primary flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50"
+              >
+                <ArrowUp className="w-4 h-4 text-primary-foreground" />
+              </button>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground text-center mt-2 font-mono">
+          <p className="text-[10px] text-muted-foreground/50 text-center mt-2 font-mono">
             ENTER to send • SHIFT+ENTER for new line
           </p>
         </form>

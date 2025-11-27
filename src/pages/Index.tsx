@@ -85,7 +85,7 @@ const Index = () => {
       <div className="flex-1 flex flex-col">
         {/* Chat Messages */}
         <ScrollArea className="flex-1">
-          <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="max-w-5xl mx-auto px-6 py-8 pb-32">{/* Added pb-32 for floating input space */}
             {messages.length === 0 ? (
               <div className="relative flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center">
                 {/* Geometric Background Pattern */}
