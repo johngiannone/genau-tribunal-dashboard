@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Button } from "./ui/button";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -9,6 +13,48 @@ interface ConsensusMessageProps {
   confidenceScore?: number;
   isLoading?: boolean;
 }
+
+const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const code = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return !inline && match ? (
+    <div className="relative group my-4">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="absolute right-2 top-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleCopy}
+      >
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+      </Button>
+      <SyntaxHighlighter
+        style={vscDarkPlus}
+        language={match[1]}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          borderRadius: "0.5rem",
+          fontSize: "0.875rem",
+        }}
+        {...props}
+      >
+        {code}
+      </SyntaxHighlighter>
+    </div>
+  ) : (
+    <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+      {children}
+    </code>
+  );
+};
 
 export const ConsensusMessage = ({
   userPrompt,
@@ -70,9 +116,15 @@ export const ConsensusMessage = ({
                   <div className="h-2 bg-muted/20 rounded w-3/4 animate-shimmer" style={{ animationDelay: '0.2s' }} />
                 </div>
               ) : (
-                <p className="text-foreground/90 leading-relaxed">
-                  {modelAResponse || "Processing..."}
-                </p>
+                <div className="text-foreground/90 leading-relaxed prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      code: CodeBlock,
+                    }}
+                  >
+                    {modelAResponse || "Processing..."}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           </div>
@@ -94,9 +146,15 @@ export const ConsensusMessage = ({
                   <div className="h-2 bg-muted/20 rounded w-2/3 animate-shimmer" style={{ animationDelay: '0.35s' }} />
                 </div>
               ) : (
-                <p className="text-foreground/90 leading-relaxed">
-                  {modelBResponse || "Processing..."}
-                </p>
+                <div className="text-foreground/90 leading-relaxed prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      code: CodeBlock,
+                    }}
+                  >
+                    {modelBResponse || "Processing..."}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           </div>
@@ -135,9 +193,15 @@ export const ConsensusMessage = ({
                 <div className="h-2 bg-muted/20 rounded w-4/5 animate-shimmer" style={{ animationDelay: '0.5s' }} />
               </div>
             ) : (
-              <p className="text-foreground leading-relaxed text-sm">
-                {synthesisResponse || "Generating synthesis..."}
-              </p>
+              <div className="text-foreground leading-relaxed text-sm prose prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    code: CodeBlock,
+                  }}
+                >
+                  {synthesisResponse || "Generating synthesis..."}
+                </ReactMarkdown>
+              </div>
             )}
           </div>
         </div>
