@@ -12,13 +12,15 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 interface ChatInputProps {
-  onSend: (message: string, imageData?: string) => void;
+  onSend: (message: string, imageData?: string, fileImages?: string[]) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ name: string; imageData: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageData, setImageData] = useState<string | null>(null);
+  const [fileImages, setFileImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
           ctx.drawImage(img, 0, 0, width, height);
 
           // Convert to Base64 JPEG
-          const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
           resolve(base64);
         };
         img.onerror = () => reject(new Error("Failed to load image"));
@@ -62,31 +64,36 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     });
   };
 
-  // Extract ONLY page 1 from PDF as image
-  const extractPdfPage1 = async (file: File): Promise<string> => {
+  // Extract ALL pages from PDF as images
+  const extractPdfPages = async (file: File): Promise<string[]> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdf.numPages;
+    const images: string[] = [];
     
-    // Get only page 1
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1.5 });
-    
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error("Failed to get canvas context");
-    
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error("Failed to get canvas context");
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
 
-    await page.render({
-      canvasContext: context,
-      viewport: viewport,
-      canvas: canvas,
-    }).promise;
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+        canvas: canvas,
+      }).promise;
 
-    // Convert to Base64 JPEG
-    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-    return base64;
+      // Convert to Base64 data URL
+      const base64 = canvas.toDataURL('image/jpeg', 0.8);
+      images.push(base64);
+    }
+    
+    return images;
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,30 +118,26 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     setUploadStatus("Processing file...");
     
     try {
-      let imageData: string;
-
       // Check file type
       if (file.type === "application/pdf") {
-        setUploadStatus("Extracting Page 1...");
-        imageData = await extractPdfPage1(file);
-        
-        setSelectedFile({ 
-          name: `${file.name} (Page 1)`, 
-          imageData 
-        });
+        setUploadStatus("Extracting PDF pages...");
+        const pageImages = await extractPdfPages(file);
+        setFileImages(pageImages);
+        setImageData(null);
+        setSelectedFile(file);
+        setUploadStatus(`PDF ready (${pageImages.length} pages)`);
         
         toast({
           title: "PDF Ready",
-          description: "Page 1 extracted and ready for analysis.",
+          description: `${pageImages.length} pages extracted and ready for analysis.`,
         });
       } else if (file.type.startsWith("image/")) {
         setUploadStatus("Resizing image...");
-        imageData = await resizeImage(file);
-        
-        setSelectedFile({ 
-          name: file.name, 
-          imageData 
-        });
+        const resized = await resizeImage(file);
+        setImageData(resized);
+        setFileImages([]);
+        setSelectedFile(file);
+        setUploadStatus("Image ready");
         
         toast({
           title: "Image Ready",
@@ -153,6 +156,9 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         variant: "destructive",
       });
       
+      setSelectedFile(null);
+      setImageData(null);
+      setFileImages([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -164,6 +170,8 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
+    setImageData(null);
+    setFileImages([]);
     setUploadStatus("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -173,12 +181,9 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSend(message.trim(), selectedFile?.imageData);
+      onSend(message.trim(), imageData || undefined, fileImages.length > 0 ? fileImages : undefined);
       setMessage("");
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      handleRemoveFile();
     }
   };
 
@@ -196,6 +201,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         {selectedFile && (
           <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
             📸 {selectedFile.name}
+            {fileImages.length > 0 && ` (${fileImages.length} pages)`}
             <button
               onClick={handleRemoveFile}
               className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
