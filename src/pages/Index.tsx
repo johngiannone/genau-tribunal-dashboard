@@ -101,18 +101,20 @@ const Index = () => {
                     Running Llama 3, Claude 3.5, and GPT-4o in parallel for precision auditing.
                   </p>
                   
-                  {/* Model Indicators */}
-                  <div className="flex flex-wrap justify-center gap-3 text-xs font-mono">
-                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  {/* System Status Bar */}
+                  <div className="inline-flex items-center gap-4 bg-card/70 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50 text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                       <span className="text-foreground/80">LLAMA_3</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.2s' }} />
+                    <div className="h-4 w-px bg-border/50" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
                       <span className="text-foreground/80">CLAUDE_3.5</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-card/50 backdrop-blur-sm px-4 py-2 rounded border border-border">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }} />
+                    <div className="h-4 w-px bg-border/50" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
                       <span className="text-foreground/80">GPT_4o</span>
                     </div>
                   </div>
