@@ -188,17 +188,23 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     console.log("Auth header present:", !!authHeader);
     
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Extract JWT token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
+    
     const supabase = createClient(
       SUPABASE_URL, 
-      SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: { Authorization: authHeader || '' }
-        }
-      }
+      SUPABASE_ANON_KEY
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Verify the JWT token by passing it explicitly
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
     if (userError || !user) {
       console.error("Auth error:", userError?.message);
