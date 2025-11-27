@@ -3,10 +3,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface ChatInputProps {
   onSend: (message: string, imageData?: string) => void;
@@ -59,10 +55,15 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     });
   };
 
-  // Extract ONLY page 1 from PDF as image
+  // Extract ONLY page 1 from PDF as image using CDN
   const extractPdfPage1 = async (file: File): Promise<string> => {
+    // Dynamically load pdfjs from CDN
+    // @ts-ignore - Dynamic CDN import
+    const pdfJS = await import('https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.mjs');
+    pdfJS.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfJS.getDocument({ data: arrayBuffer }).promise;
     
     // Get only page 1
     const page = await pdf.getPage(1);
@@ -78,7 +79,6 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     await page.render({
       canvasContext: context,
       viewport: viewport,
-      canvas: canvas,
     }).promise;
 
     // Convert to Base64 JPEG
