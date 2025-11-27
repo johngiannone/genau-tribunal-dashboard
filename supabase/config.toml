@@ -2,3 +2,6 @@ project_id = "acqvzijmmabapbmefdzi"
 
 [functions.chat-consensus]
 verify_jwt = true
+
+[functions.analyze-page]
+verify_jwt = true

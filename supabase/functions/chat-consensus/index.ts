@@ -192,20 +192,29 @@ serve(async (req) => {
       );
     }
 
-    const { prompt, image_data } = await req.json();
+    const { prompt, image_data, document_text } = await req.json();
 
     console.log("Received prompt:", prompt);
     console.log("Image data provided:", !!image_data);
+    console.log("Document text provided:", !!document_text);
     if (image_data) {
       console.log("Image data size:", (image_data.length * 0.75 / 1024 / 1024).toFixed(2), "MB (estimated)");
+    }
+    if (document_text) {
+      console.log("Document text size:", (document_text.length / 1024).toFixed(2), "KB");
     }
 
     let draftA: string;
     let draftB: string;
-    let visionSummary = "";
+    let contextForModels = prompt;
 
+    // If document_text provided (from chunked processing), use it directly
+    if (document_text) {
+      console.log("Using pre-extracted document text");
+      contextForModels = `${prompt}\n\nDocument Content:\n${document_text}`;
+    }
     // If image_data provided, send to Gemini Flash 1.5 first
-    if (image_data) {
+    else if (image_data) {
       console.log("Vision Mode activated");
       console.log("Processing image with Gemini Flash 1.5");
       
@@ -246,12 +255,15 @@ serve(async (req) => {
       );
 
       const visionData = await visionResponse.json();
-      visionSummary = visionData.choices[0].message.content;
+      contextForModels = `${prompt}\n\nDocument Analysis:\n${visionData.choices[0].message.content}`;
       console.log("Vision analysis complete");
+    }
 
-      // Now send vision summary to the two draft models
+    // Fetch drafts from models with appropriate context
+    if (document_text || image_data) {
+      // Send with context
       const fetchModelWithContext = async (model: string, label: string) => {
-        console.log(`Fetching ${label} with vision context...`);
+        console.log(`Fetching ${label} with context...`);
         const response = await fetchWithTimeoutAndRetry(
           "https://openrouter.ai/api/v1/chat/completions",
           {
@@ -262,16 +274,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               model: model,
-              messages: [
-                {
-                  role: "system",
-                  content: `Document analysis:\n\n${visionSummary}`
-                },
-                {
-                  role: "user",
-                  content: prompt
-                }
-              ],
+              messages: [{ role: "user", content: contextForModels }],
             }),
           },
           label
