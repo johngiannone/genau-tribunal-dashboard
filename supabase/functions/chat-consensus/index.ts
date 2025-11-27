@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +17,58 @@ serve(async (req) => {
   }
 
   try {
+    // Get auth token from request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with user's auth
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Verify user is authenticated
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
+
+    // Check usage limits
+    const { data: usage, error: usageError } = await supabase
+      .from('user_usage')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (usageError) {
+      console.error("Error fetching usage:", usageError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to check usage limits' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Enforce limits: 5 free audits for non-premium users
+    if (!usage.is_premium && usage.audit_count >= 5) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Usage limit reached',
+          limitReached: true,
+          message: 'You have reached your daily limit of 5 free audits. Upgrade to premium for unlimited access.'
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { prompt, fileContext } = await req.json();
 
     console.log("Received prompt:", prompt);
@@ -167,9 +222,27 @@ serve(async (req) => {
     
     console.log("All requests completed successfully");
 
+    // Increment usage count
+    const { error: updateError } = await supabase
+      .from('user_usage')
+      .update({ audit_count: usage.audit_count + 1 })
+      .eq('user_id', user.id);
+
+    if (updateError) {
+      console.error("Error updating usage:", updateError);
+      // Don't fail the request, just log the error
+    }
+
+    console.log("Usage incremented to:", usage.audit_count + 1);
+
     // 4. Return everything to the Frontend
     return new Response(
-      JSON.stringify({ draftA, draftB, verdict }),
+      JSON.stringify({ 
+        draftA, 
+        draftB, 
+        verdict,
+        remainingAudits: usage.is_premium ? -1 : Math.max(0, 5 - usage.audit_count - 1)
+      }),
       { 
         headers: { 
           "Content-Type": "application/json",

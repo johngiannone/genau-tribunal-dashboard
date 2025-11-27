@@ -1,6 +1,10 @@
-import { Plus, Cpu, Settings } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Session } from "@supabase/supabase-js";
 
 const sampleChats = [
   { id: 1, title: "Code Review Analysis", time: "2h ago" },
@@ -9,6 +13,28 @@ const sampleChats = [
 ];
 
 export const Sidebar = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
   return (
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Header with Logo */}
@@ -56,10 +82,27 @@ export const Sidebar = () => {
       </ScrollArea>
 
       {/* Settings at Bottom */}
-      <div className="p-3 border-t border-sidebar-border">
-        <button className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground">
-          <Settings className="w-4 h-4" />
-        </button>
+      <div className="p-3 border-t border-sidebar-border space-y-2">
+        {session?.user && (
+          <div className="flex items-center gap-2 px-2 py-2 rounded bg-sidebar-accent/30">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground truncate flex-1">
+              {session.user.email}
+            </span>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground">
+            <Settings className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );
