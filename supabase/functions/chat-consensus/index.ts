@@ -218,7 +218,7 @@ serve(async (req) => {
       .from('user_usage')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (usageError) {
       console.error("Error fetching usage:", usageError);
@@ -228,7 +228,28 @@ serve(async (req) => {
       );
     }
 
-    if (!usage.is_premium && usage.audit_count >= 5) {
+    // If no usage record exists, create one
+    let userUsage = usage;
+    if (!userUsage) {
+      console.log("Creating new user_usage record for user:", user.id);
+      const { data: newUsage, error: createError } = await supabase
+        .from('user_usage')
+        .insert({ user_id: user.id, audit_count: 0, is_premium: false })
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error("Error creating usage record:", createError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to initialize usage tracking' }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      userUsage = newUsage;
+    }
+
+    if (!userUsage.is_premium && userUsage.audit_count >= 5) {
       return new Response(
         JSON.stringify({ 
           error: 'Usage limit reached',
@@ -322,7 +343,7 @@ serve(async (req) => {
     // Increment usage count
     await supabase
       .from('user_usage')
-      .update({ audit_count: usage.audit_count + 1 })
+      .update({ audit_count: userUsage.audit_count + 1 })
       .eq('user_id', user.id);
 
     return new Response(
@@ -330,7 +351,7 @@ serve(async (req) => {
         draftA, 
         draftB, 
         verdict,
-        remainingAudits: usage.is_premium ? -1 : Math.max(0, 5 - usage.audit_count - 1)
+        remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1)
       }),
       { 
         headers: { 
