@@ -57,6 +57,16 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        verdict: {
+          border: "hsl(var(--verdict-border))",
+        },
+        draft: {
+          chairman: "hsl(var(--draft-chairman))",
+          critic: "hsl(var(--draft-critic))",
+        },
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
