@@ -88,14 +88,14 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
 
     if (selectedFile) {
       setIsUploading(true);
-      setUploadStatus("Uploading to secure storage...");
+      setUploadStatus("Uploading to Secure Vault...");
       
       try {
         let fileToUpload: File | Blob = selectedFile;
         
         // Resize images before upload
         if (selectedFile.type.startsWith("image/")) {
-          setUploadStatus("Resizing image...");
+          setUploadStatus("Preparing image...");
           fileToUpload = await resizeImage(selectedFile);
         }
         
@@ -109,7 +109,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         const fileName = `${Date.now()}_${selectedFile.name}`;
         const filePath = `${user.id}/${fileName}`;
         
-        setUploadStatus("Uploading file...");
+        setUploadStatus("Uploading to Secure Vault...");
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('audits')
@@ -125,7 +125,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
           .getPublicUrl(uploadData.path);
         
         fileUrl = publicUrl;
-        setUploadStatus("File uploaded!");
+        setUploadStatus("Upload complete!");
       } catch (error) {
         console.error("File upload error:", error);
         toast({
