@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +47,9 @@ serve(async (req) => {
     }
 
     console.log("User authenticated:", user.id)
+
+    // Create admin client for database operations
+    const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     // 2. Check usage limits
     const { data: usage, error: usageError } = await supabase
@@ -95,9 +99,10 @@ serve(async (req) => {
     }
 
     // 3. Parse request
-    const { prompt, fileUrl } = await req.json()
+    const { prompt, fileUrl, conversationId } = await req.json()
     console.log("Prompt:", prompt?.substring(0, 100))
     console.log("File URL provided:", !!fileUrl)
+    console.log("Conversation ID:", conversationId)
 
     if (!prompt) {
       return new Response(
@@ -113,7 +118,22 @@ serve(async (req) => {
     let context = ""
     let librarianAnalysis = ""
 
-    // 4. THE LIBRARIAN (Gemini) - Only runs if file exists
+    // 4a. Check if conversation has existing context
+    if (conversationId && !fileUrl) {
+      console.log("Fetching persisted context from database...")
+      const { data: conversation, error: convError } = await adminSupabase
+        .from('conversations')
+        .select('context')
+        .eq('id', conversationId)
+        .single()
+      
+      if (conversation?.context) {
+        context = `\n\nDOCUMENT CONTEXT:\n${conversation.context}`
+        console.log("Using persisted context")
+      }
+    }
+
+    // 4b. THE LIBRARIAN (Gemini) - Only runs if file exists
     if (fileUrl) {
       console.log("File detected, waking up The Librarian...")
       try {
@@ -224,6 +244,7 @@ serve(async (req) => {
         draftA: draftA.choices[0].message.content,
         draftB: draftB.choices[0].message.content,
         verdict: verdictData.choices[0].message.content,
+        librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1)
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

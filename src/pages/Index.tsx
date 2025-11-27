@@ -28,6 +28,7 @@ const Index = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [usage, setUsage] = useState<{ audit_count: number; is_premium: boolean } | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [hasContext, setHasContext] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -145,6 +146,7 @@ const Index = () => {
   const handleNewSession = () => {
     setMessages([]);
     setCurrentConversationId(null);
+    setHasContext(false);
   };
 
   const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
@@ -199,11 +201,12 @@ const Index = () => {
         setStatusText("Initializing Council...");
       }
 
-      // Send to consensus with file URL if provided
+      // Send to consensus with conversation context
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
         body: { 
           prompt: userPrompt,
-          file_url: fileUrl
+          file_url: fileUrl,
+          conversationId: conversationId
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
@@ -243,6 +246,21 @@ const Index = () => {
           msg.id === newMessage.id ? updatedMessage : msg
         )
       );
+
+      // Save librarian analysis to conversation context if new file was analyzed
+      if (data.librarianAnalysis && conversationId) {
+        console.log("Saving librarian analysis to conversation context");
+        const { error: contextError } = await supabase
+          .from('conversations')
+          .update({ context: data.librarianAnalysis })
+          .eq('id', conversationId);
+        
+        if (contextError) {
+          console.error("Error saving context:", contextError);
+        } else {
+          setHasContext(true);
+        }
+      }
 
       // Save message to database
       if (conversationId) {
