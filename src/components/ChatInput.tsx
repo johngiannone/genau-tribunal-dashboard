@@ -2,10 +2,11 @@ import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { ArrowUp, Paperclip, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker with a more reliable CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ChatInputProps {
   onSend: (message: string, fileContext?: string) => void;
@@ -17,20 +18,34 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [selectedFile, setSelectedFile] = useState<{ name: string; context: string } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const extractTextFromPDF = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
+    try {
+      console.log("Starting PDF extraction for:", file.name);
+      const arrayBuffer = await file.arrayBuffer();
+      console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
+      
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      console.log("PDF loaded, pages:", pdf.numPages);
+      
+      let fullText = "";
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(" ");
-      fullText += pageText + "\n\n";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        console.log(`Extracting page ${i}/${pdf.numPages}`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(" ");
+        fullText += pageText + "\n\n";
+      }
+
+      console.log("PDF extraction complete, text length:", fullText.length);
+      return fullText.trim() || "No text could be extracted from this PDF.";
+    } catch (error) {
+      console.error("PDF extraction error:", error);
+      throw new Error(`Failed to extract PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    return fullText;
   };
 
   const extractTextFromFile = async (file: File): Promise<string> => {
@@ -46,12 +61,30 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log("File selected:", file.name, "Type:", file.type, "Size:", file.size);
     setIsExtracting(true);
+    
     try {
       const context = await extractTextFromFile(file);
+      console.log("Extraction successful, context length:", context.length);
       setSelectedFile({ name: file.name, context });
+      
+      toast({
+        title: "File Ready",
+        description: `${file.name} has been processed successfully.`,
+      });
     } catch (error) {
       console.error("Error extracting file:", error);
+      toast({
+        title: "Extraction Failed",
+        description: error instanceof Error ? error.message : "Failed to extract text from file.",
+        variant: "destructive",
+      });
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } finally {
       setIsExtracting(false);
     }
