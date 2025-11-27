@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
-import { TribunalMessage } from "@/components/TribunalMessage";
+import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Scale } from "lucide-react";
+import { Zap } from "lucide-react";
 
 interface Message {
   id: number;
   userPrompt: string;
-  chairmanResponse?: string;
-  criticResponse?: string;
-  auditorVerdict?: string;
+  modelAResponse?: string;
+  modelBResponse?: string;
+  synthesisResponse?: string;
+  confidenceScore?: number;
   isLoading?: boolean;
 }
 
@@ -35,13 +36,13 @@ const Index = () => {
           msg.id === newMessage.id
             ? {
                 ...msg,
-                chairmanResponse:
-                  "Based on my analysis, the document structure follows standard legal frameworks. Key clauses are properly defined with clear intent and scope. However, I recommend reviewing Section 4.2 for potential ambiguities in liability limitations.",
+                modelAResponse:
+                  "Analysis complete. Structure validated against schema. Primary nodes identified with 94% confidence. Data integrity check passed. Cross-reference complete. Pattern matching successful across 3 validation layers.",
               }
             : msg
         )
       );
-    }, 1500);
+    }, 1200);
 
     setTimeout(() => {
       setMessages((prev) =>
@@ -49,13 +50,13 @@ const Index = () => {
           msg.id === newMessage.id
             ? {
                 ...msg,
-                criticResponse:
-                  "While the Chairman's assessment covers the basics, there are critical gaps in the force majeure provisions. The indemnification clauses lack specificity regarding third-party claims, and the dispute resolution mechanism needs stronger arbitration language to be enforceable across jurisdictions.",
+                modelBResponse:
+                  "Secondary analysis confirms primary findings. Edge cases detected in nodes 4-7. Alternate interpretation suggests potential optimization in data flow. Validation metrics show 97% alignment with expected parameters. Minor discrepancies flagged for review.",
               }
             : msg
         )
       );
-    }, 2500);
+    }, 2000);
 
     setTimeout(() => {
       setMessages((prev) =>
@@ -63,15 +64,16 @@ const Index = () => {
           msg.id === newMessage.id
             ? {
                 ...msg,
-                auditorVerdict:
-                  "After synthesizing both perspectives, the document demonstrates foundational legal adequacy but requires targeted improvements. Priority actions: (1) Strengthen Section 4.2 with explicit liability caps and exclusions, (2) Expand force majeure definitions to include cyber events and supply chain disruptions, (3) Add multi-tiered dispute resolution with mandatory mediation before arbitration. Overall risk assessment: Medium. Recommended for conditional approval pending these revisions.",
+                synthesisResponse:
+                  "Consensus achieved. Both models converge on structural validity with high confidence scores. Recommended action: Proceed with implementation. Edge cases identified by Model B have been reviewed and deemed non-critical for current scope. Overall system integrity: VERIFIED. Performance projections: Optimal. Risk level: Minimal. Authorization: GRANTED.",
+                confidenceScore: 99,
                 isLoading: false,
               }
             : msg
         )
       );
       setIsProcessing(false);
-    }, 4000);
+    }, 3500);
   };
 
   return (
@@ -86,41 +88,41 @@ const Index = () => {
           <div className="max-w-5xl mx-auto px-6 py-8">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center">
-                <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-6 rounded-full mb-6">
-                  <Scale className="w-16 h-16 text-primary" />
+                <div className="bg-primary/10 p-6 rounded mb-6 border border-primary/20">
+                  <Zap className="w-16 h-16 text-primary" />
                 </div>
-                <h2 className="text-3xl font-bold text-foreground mb-3">
-                  Welcome to Genau
+                <h2 className="text-3xl font-bold text-foreground mb-3 font-mono">
+                  GENAU
                 </h2>
-                <p className="text-muted-foreground max-w-md mb-6 leading-relaxed">
-                  Your premium AI auditing platform. Submit documents for
-                  tribunal-style analysis by our AI panel: The Chairman, The
-                  Critic, and The Auditor.
+                <p className="text-muted-foreground max-w-md mb-6 leading-relaxed text-sm">
+                  Precision consensus engine. Submit queries for multi-model analysis and synthesis. 
+                  Fast. Accurate. Neutral.
                 </p>
-                <div className="flex gap-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-lg border border-border">
-                    <span>🤖</span>
-                    <span>Chairman</span>
+                <div className="flex gap-3 text-xs font-mono">
+                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-border">
+                    <Zap className="w-3 h-3 text-primary" />
+                    <span>MODEL_A</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-lg border border-border">
-                    <span>🐯</span>
-                    <span>Critic</span>
+                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-border">
+                    <Zap className="w-3 h-3 text-primary" />
+                    <span>MODEL_B</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-card px-4 py-2 rounded-lg border border-primary">
-                    <span>⚖️</span>
-                    <span>Auditor</span>
+                  <div className="flex items-center gap-2 bg-card px-3 py-1.5 rounded border border-primary">
+                    <Zap className="w-3 h-3 text-primary" />
+                    <span>SYNTHESIS</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="space-y-12">
+              <div className="space-y-10">
                 {messages.map((message) => (
-                  <TribunalMessage
+                  <ConsensusMessage
                     key={message.id}
                     userPrompt={message.userPrompt}
-                    chairmanResponse={message.chairmanResponse}
-                    criticResponse={message.criticResponse}
-                    auditorVerdict={message.auditorVerdict}
+                    modelAResponse={message.modelAResponse}
+                    modelBResponse={message.modelBResponse}
+                    synthesisResponse={message.synthesisResponse}
+                    confidenceScore={message.confidenceScore}
                     isLoading={message.isLoading}
                   />
                 ))}
