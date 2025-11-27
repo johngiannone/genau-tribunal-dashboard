@@ -14,43 +14,123 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, fileContext } = await req.json();
 
     console.log("Received prompt:", prompt);
+    console.log("File context provided:", !!fileContext);
 
-    // 1. Define the "Worker" requests (Llama 3 & Claude)
-    // We use OpenRouter to call both with one key for simplicity
-    const fetchModel = async (model: string, label: string) => {
-      console.log(`Fetching ${label}...`);
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    let draftA: string;
+    let draftB: string;
+    let librarianContext = "";
+
+    // BRANCHING LOGIC: If fileContext is provided, use Gemini as "The Librarian" first
+    if (fileContext) {
+      console.log("File context provided - activating Librarian mode");
+      
+      // Step 1: The Librarian (Gemini) analyzes the document
+      const librarianResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: model,
-          messages: [{ role: "user", content: prompt }],
+          model: "google/gemini-pro-1.5",
+          messages: [
+            {
+              role: "system",
+              content: "You are The Librarian. Analyze the provided text. Extract every relevant fact, date, and clause. Summarize it for the other agents."
+            },
+            {
+              role: "user",
+              content: `Context: ${fileContext}\n\nUser Question: ${prompt}`
+            }
+          ],
         }),
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error from ${label}:`, errorText);
-        throw new Error(`${label} request failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`${label} response received`);
-      return data.choices[0].message.content;
-    };
 
-    // 2. Run them in PARALLEL (This makes it fast)
-    console.log("Starting parallel requests for Draft A and Draft B...");
-    const [draftA, draftB] = await Promise.all([
-      fetchModel("meta-llama/llama-3-70b-instruct", "Llama 3"), // The Speedster
-      fetchModel("anthropic/claude-3.5-sonnet", "Claude 3.5"),  // The Critic
-    ]);
+      if (!librarianResponse.ok) {
+        const errorText = await librarianResponse.text();
+        console.error("Error from Librarian:", errorText);
+        throw new Error(`Librarian request failed: ${librarianResponse.status}`);
+      }
+
+      const librarianData = await librarianResponse.json();
+      librarianContext = librarianData.choices[0].message.content;
+      console.log("Librarian analysis complete");
+
+      // Step 2: Pass Librarian's analysis to Draft models
+      const fetchModelWithContext = async (model: string, label: string) => {
+        console.log(`Fetching ${label} with Librarian context...`);
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: "system",
+                content: `The Librarian has analyzed the document. Use this context:\n\n${librarianContext}`
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Error from ${label}:`, errorText);
+          throw new Error(`${label} request failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`${label} response received`);
+        return data.choices[0].message.content;
+      };
+
+      [draftA, draftB] = await Promise.all([
+        fetchModelWithContext("meta-llama/llama-3-70b-instruct", "Llama 3"),
+        fetchModelWithContext("anthropic/claude-3.5-sonnet", "Claude 3.5"),
+      ]);
+    } else {
+      // Standard flow without file context
+      const fetchModel = async (model: string, label: string) => {
+        console.log(`Fetching ${label}...`);
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: "user", content: prompt }],
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Error from ${label}:`, errorText);
+          throw new Error(`${label} request failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`${label} response received`);
+        return data.choices[0].message.content;
+      };
+
+      console.log("Starting parallel requests for Draft A and Draft B...");
+      [draftA, draftB] = await Promise.all([
+        fetchModel("meta-llama/llama-3-70b-instruct", "Llama 3"),
+        fetchModel("anthropic/claude-3.5-sonnet", "Claude 3.5"),
+      ]);
+    }
 
     // 3. The Auditor (DeepSeek R1) - The "Judge"
     // It reads the previous two drafts and synthesizes them.

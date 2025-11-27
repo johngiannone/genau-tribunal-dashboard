@@ -23,7 +23,7 @@ const Index = () => {
   const [statusText, setStatusText] = useState("");
   const { toast } = useToast();
 
-  const handleSendMessage = async (userPrompt: string) => {
+  const handleSendMessage = async (userPrompt: string, fileContext?: string) => {
     const newMessage: Message = {
       id: Date.now(),
       userPrompt,
@@ -32,12 +32,12 @@ const Index = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
-    setStatusText("Initializing Council...");
+    setStatusText(fileContext ? "📚 The Librarian is reading..." : "Initializing Council...");
 
     try {
       // Call the chat-consensus edge function
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
-        body: { prompt: userPrompt }
+        body: { prompt: userPrompt, fileContext }
       });
 
       if (error) {

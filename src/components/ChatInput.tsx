@@ -1,20 +1,78 @@
-import { useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "./ui/button";
+import { ArrowUp, Paperclip, X } from "lucide-react";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string, fileContext?: string) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<{ name: string; context: string } | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(" ");
+      fullText += pageText + "\n\n";
+    }
+
+    return fullText;
+  };
+
+  const extractTextFromFile = async (file: File): Promise<string> => {
+    if (file.type === "application/pdf") {
+      return extractTextFromPDF(file);
+    } else {
+      // For .txt, .md, .csv
+      return await file.text();
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    try {
+      const context = await extractTextFromFile(file);
+      setSelectedFile({ name: file.name, context });
+    } catch (error) {
+      console.error("Error extracting file:", error);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSend(message.trim());
+      onSend(message.trim(), selectedFile?.context);
       setMessage("");
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -28,9 +86,48 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 pb-6 pointer-events-none">
       <div className="max-w-[700px] mx-auto px-6 pointer-events-auto">
+        {/* File Pill */}
+        {selectedFile && (
+          <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
+            📄 {selectedFile.name} <span className="text-primary/70">(Ready for Audit)</span>
+            <button
+              onClick={handleRemoveFile}
+              className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="relative">
           {/* Floating Command Bar */}
           <div className="flex gap-2 items-center bg-card/50 backdrop-blur-xl border border-primary/40 rounded-xl px-4 py-2 shadow-lg shadow-primary/5 hover:border-primary/60 focus-within:border-primary transition-all">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,.md,.csv"
+              onChange={handleFileSelect}
+              className="hidden"
+              disabled={disabled || isExtracting}
+            />
+            
+            {/* Paperclip button */}
+            <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isExtracting}
+              size="icon"
+              variant="ghost"
+              className="shrink-0 h-7 w-7 hover:bg-muted transition-colors"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+
+            {isExtracting && (
+              <span className="text-xs text-muted-foreground font-mono">Extracting...</span>
+            )}
+
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -40,6 +137,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               className="min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/60 text-sm leading-relaxed"
               rows={1}
             />
+            
             {/* Minimal Arrow Icon - only shows when typing */}
             {message.trim() && (
               <button
