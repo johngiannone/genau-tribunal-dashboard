@@ -77,7 +77,7 @@ const Index = () => {
     setUsage(data);
   };
 
-  const handleSendMessage = async (userPrompt: string, fileContext?: string) => {
+  const handleSendMessage = async (userPrompt: string, fileData?: { name: string; base64: string; type: string }) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -97,7 +97,7 @@ const Index = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     setIsProcessing(true);
-    setStatusText(fileContext ? "📚 The Librarian is reading..." : "Initializing Council...");
+    setStatusText(fileData ? "Uploading to Tribunal Secure Core..." : "Initializing Council...");
 
     try {
       // Get current session token for authenticated request
@@ -109,7 +109,7 @@ const Index = () => {
 
       // Call the chat-consensus edge function with auth header
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
-        body: { prompt: userPrompt, fileContext },
+        body: { prompt: userPrompt, fileData },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
         }

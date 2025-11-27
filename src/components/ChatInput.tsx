@@ -3,203 +3,84 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as pdfjsLib from "pdfjs-dist";
-
-// Configure PDF.js worker dynamically to match installed version
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface ChatInputProps {
-  onSend: (message: string, fileContext?: string) => void;
+  onSend: (message: string, fileData?: { name: string; base64: string; type: string }) => void;
   disabled?: boolean;
 }
 
 export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ name: string; context: string } | null>(null);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [isVisionMode, setIsVisionMode] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; base64: string; type: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    const extractCore = async () => {
-      console.log("Starting PDF extraction for:", file.name);
-      const arrayBuffer = await file.arrayBuffer();
-      console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
-
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      console.log("PDF loaded, pages:", pdf.numPages);
-
-      let fullText = "";
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        console.log(`Extracting page ${i}/${pdf.numPages}`);
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(" ");
-        fullText += pageText + "\n\n";
-      }
-
-      const trimmed = fullText.trim();
-      console.log("PDF extraction complete, text length:", trimmed.length);
-
-      if (!trimmed.length) {
-        console.log("No text extracted - likely scanned image PDF");
-        throw new Error(
-          "This PDF appears to be a scanned image. Please use a text-selectable PDF or copy-paste the content."
-        );
-      }
-
-      return trimmed;
-    };
-
-    const timeoutMs = 10000;
-
-    try {
-      return await Promise.race<string>([
-        extractCore(),
-        new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error("TIMEOUT_EXCEEDED")), timeoutMs)
-        ),
-      ]);
-    } catch (error) {
-      if (error instanceof Error && error.message === "TIMEOUT_EXCEEDED") {
-        console.error("PDF extraction timed out after", timeoutMs, "ms");
-        throw new Error("Document is too complex or encrypted.");
-      }
-
-      console.error("PDF extraction error:", error);
-      if (error instanceof Error) {
-        // Propagate user-friendly errors (e.g., scanned PDF message)
-        throw error;
-      }
-
-      throw new Error("Failed to extract text from PDF.");
-    }
-  };
-
-  const convertPdfToImages = async (file: File): Promise<string> => {
-    console.log("Converting PDF to images for Vision Mode");
-    const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-    
-    const maxPages = Math.min(5, pdf.numPages);
-    const imageDataArray: string[] = [];
-    
-    for (let i = 1; i <= maxPages; i++) {
-      console.log(`Rendering page ${i}/${maxPages} to image`);
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2.0 });
-      
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Failed to get canvas context");
-      
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-        canvas: canvas,
-      }).promise;
-      
-      const base64Image = canvas.toDataURL("image/png");
-      imageDataArray.push(base64Image);
-    }
-    
-    console.log(`Successfully converted ${imageDataArray.length} pages to images`);
-    return JSON.stringify({ visionMode: true, images: imageDataArray, fileName: file.name });
-  };
-
-  const extractTextFromFile = async (file: File): Promise<string> => {
-    if (file.type === "application/pdf") {
-      return extractTextFromPDF(file);
-    } else {
-      // For .txt, .md, .csv
-      return await file.text();
-    }
-  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check file size limit (6MB)
+    const maxSize = 6 * 1024 * 1024; // 6MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "File too large for Beta. Please upgrade to Supreme Court tier.",
+        variant: "destructive",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     console.log("File selected:", file.name, "Type:", file.type, "Size:", file.size);
-    setIsExtracting(true);
-    setIsVisionMode(false);
+    setIsUploading(true);
     
     try {
-      // Try text extraction first
-      const context = await extractTextFromFile(file);
-      console.log("Extraction successful, context length:", context.length);
+      // Convert file to Base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Extract base64 data (remove data URL prefix)
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+      });
       
-      // If text is too short (likely scanned), fall back to Vision Mode
-      if (context.trim().length < 50) {
-        console.log("Text extraction returned insufficient text. Switching to Vision Mode.");
-        setIsVisionMode(true);
-        const imageContext = await convertPdfToImages(file);
-        setSelectedFile({ name: file.name, context: imageContext });
-        
-        toast({
-          title: "Vision Mode Activated",
-          description: `${file.name} is a scanned document. Analyzing images...`,
-        });
-      } else {
-        setSelectedFile({ name: file.name, context });
-        toast({
-          title: "File Ready",
-          description: `${file.name} has been processed successfully.`,
-        });
-      }
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+      
+      setSelectedFile({ 
+        name: file.name, 
+        base64: base64Data,
+        type: file.type 
+      });
+      
+      toast({
+        title: "File Ready",
+        description: `${file.name} ready to upload to Tribunal Secure Core.`,
+      });
     } catch (error) {
-      console.error("Text extraction failed:", error);
+      console.error("File read error:", error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to read file.",
+        variant: "destructive",
+      });
       
-      // Fall back to Vision Mode on any error
-      if (file.type === "application/pdf") {
-        try {
-          console.log("Text extraction failed/empty. Switching to Vision Mode.");
-          setIsVisionMode(true);
-          const imageContext = await convertPdfToImages(file);
-          setSelectedFile({ name: file.name, context: imageContext });
-          
-          toast({
-            title: "Vision Mode Activated",
-            description: `${file.name} is a scanned document. Analyzing images...`,
-          });
-        } catch (visionError) {
-          console.error("Vision Mode also failed:", visionError);
-          toast({
-            title: "Extraction Failed",
-            description: "Unable to process this PDF. Please try a different file.",
-            variant: "destructive",
-          });
-          
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        }
-      } else {
-        toast({
-          title: "Extraction Failed",
-          description: error instanceof Error ? error.message : "Failed to extract text from file.",
-          variant: "destructive",
-        });
-        
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
     } finally {
-      setIsExtracting(false);
+      setIsUploading(false);
     }
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
-    setIsVisionMode(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -208,7 +89,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSend(message.trim(), selectedFile?.context);
+      onSend(message.trim(), selectedFile || undefined);
       setMessage("");
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -230,10 +111,8 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         {/* File Pill */}
         {selectedFile && (
           <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
-            {isVisionMode ? "⚠️" : "📄"} {selectedFile.name} 
-            <span className="text-primary/70">
-              {isVisionMode ? "(Analyzing Images...)" : "(Ready for Audit)"}
-            </span>
+            📄 {selectedFile.name} 
+            <span className="text-primary/70">(Ready for Upload)</span>
             <button
               onClick={handleRemoveFile}
               className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
@@ -253,14 +132,14 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               accept=".pdf,.txt,.md,.csv"
               onChange={handleFileSelect}
               className="hidden"
-              disabled={disabled || isExtracting}
+              disabled={disabled || isUploading}
             />
             
             {/* Paperclip button */}
             <Button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isExtracting}
+              disabled={disabled || isUploading}
               size="icon"
               variant="ghost"
               className="shrink-0 h-7 w-7 hover:bg-muted transition-colors"
@@ -268,8 +147,8 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               <Paperclip className="h-4 w-4" />
             </Button>
 
-            {isExtracting && (
-              <span className="text-xs text-muted-foreground font-mono">Extracting text layers...</span>
+            {isUploading && (
+              <span className="text-xs text-muted-foreground font-mono">Preparing file...</span>
             )}
 
             <Textarea

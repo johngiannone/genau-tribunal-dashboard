@@ -10,6 +10,80 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to decode Base64 and extract text from PDF (simple text extraction)
+async function extractTextFromPDF(base64Data: string): Promise<string> {
+  try {
+    // For simple PDF text extraction, we'll use a basic approach
+    // In production, you'd want a more robust PDF parser
+    const binaryData = atob(base64Data);
+    const bytes = new Uint8Array(binaryData.length);
+    for (let i = 0; i < binaryData.length; i++) {
+      bytes[i] = binaryData.charCodeAt(i);
+    }
+    
+    // Convert to string and try to extract text
+    const text = new TextDecoder().decode(bytes);
+    
+    // Basic PDF text extraction - look for text between stream markers
+    const textMatches = text.match(/(?:BT|Td|TJ|Tj)\s+.*?(?:ET|\n)/gs);
+    if (textMatches && textMatches.length > 0) {
+      return textMatches.join(' ').replace(/[^\x20-\x7E]/g, ' ').trim();
+    }
+    
+    // If no text found, return empty (will trigger Vision Mode)
+    return "";
+  } catch (error) {
+    console.error("PDF text extraction failed:", error);
+    return "";
+  }
+}
+
+// Helper to prepare file content for Vision Mode (Gemini with images)
+async function processFileAsVision(fileData: { name: string; base64: string; type: string }): Promise<string> {
+  console.log("Processing file in Vision Mode for Gemini");
+  
+  // Send base64 directly to Gemini with vision capabilities
+  // For now, we'll format it as a data URL for Gemini to process
+  const dataUrl = `data:${fileData.type};base64,${fileData.base64}`;
+  
+  const visionResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-pro-1.5-vision",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `You are The Librarian. Analyze this document image. Extract every relevant fact, date, and clause. Summarize it comprehensively for other AI agents. Document name: ${fileData.name}`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: dataUrl
+              }
+            }
+          ]
+        }
+      ],
+    }),
+  });
+
+  if (!visionResponse.ok) {
+    const errorText = await visionResponse.text();
+    console.error("Gemini Vision error:", errorText);
+    throw new Error("Failed to process document with Vision Mode");
+  }
+
+  const visionData = await visionResponse.json();
+  return visionData.choices[0].message.content;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -69,49 +143,69 @@ serve(async (req) => {
       );
     }
 
-    const { prompt, fileContext } = await req.json();
+    const { prompt, fileData } = await req.json();
 
     console.log("Received prompt:", prompt);
-    console.log("File context provided:", !!fileContext);
+    console.log("File data provided:", !!fileData);
 
     let draftA: string;
     let draftB: string;
     let librarianContext = "";
 
-    // BRANCHING LOGIC: If fileContext is provided, use Gemini as "The Librarian" first
-    if (fileContext) {
-      console.log("File context provided - activating Librarian mode");
+    // BRANCHING LOGIC: If fileData is provided, process it server-side
+    if (fileData) {
+      console.log("File uploaded - processing on server:", fileData.name);
       
-      // Step 1: The Librarian (Gemini) analyzes the document
-      const librarianResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-pro-1.5",
-          messages: [
-            {
-              role: "system",
-              content: "You are The Librarian. Analyze the provided text. Extract every relevant fact, date, and clause. Summarize it for the other agents."
-            },
-            {
-              role: "user",
-              content: `Context: ${fileContext}\n\nUser Question: ${prompt}`
-            }
-          ],
-        }),
-      });
-
-      if (!librarianResponse.ok) {
-        const errorText = await librarianResponse.text();
-        console.error("Error from Librarian:", errorText);
-        throw new Error(`Librarian request failed: ${librarianResponse.status}`);
+      let extractedText = "";
+      
+      // Try text extraction first for PDFs
+      if (fileData.type === "application/pdf") {
+        extractedText = await extractTextFromPDF(fileData.base64);
+        console.log("PDF text extraction result length:", extractedText.length);
+      } else if (fileData.type === "text/plain" || fileData.type === "text/markdown" || fileData.type === "text/csv") {
+        // For text files, decode directly
+        const binaryData = atob(fileData.base64);
+        extractedText = new TextDecoder().decode(new Uint8Array([...binaryData].map(c => c.charCodeAt(0))));
       }
+      
+      // If text extraction failed or returned < 50 chars, use Vision Mode
+      if (extractedText.length < 50) {
+        console.log("Text extraction insufficient. Switching to Vision Mode.");
+        librarianContext = await processFileAsVision(fileData);
+      } else {
+        // Use standard Librarian flow with extracted text
+        console.log("Using text-based Librarian processing");
+        const librarianResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-pro-1.5",
+            messages: [
+              {
+                role: "system",
+                content: "You are The Librarian. Analyze the provided text. Extract every relevant fact, date, and clause. Summarize it for the other agents."
+              },
+              {
+                role: "user",
+                content: `Context: ${extractedText}\n\nUser Question: ${prompt}`
+              }
+            ],
+          }),
+        });
 
-      const librarianData = await librarianResponse.json();
-      librarianContext = librarianData.choices[0].message.content;
+        if (!librarianResponse.ok) {
+          const errorText = await librarianResponse.text();
+          console.error("Error from Librarian:", errorText);
+          throw new Error(`Librarian request failed: ${librarianResponse.status}`);
+        }
+
+        const librarianData = await librarianResponse.json();
+        librarianContext = librarianData.choices[0].message.content;
+      }
+      
       console.log("Librarian analysis complete");
 
       // Step 2: Pass Librarian's analysis to Draft models
@@ -188,7 +282,6 @@ serve(async (req) => {
     }
 
     // 3. The Auditor (DeepSeek R1) - The "Judge"
-    // It reads the previous two drafts and synthesizes them.
     console.log("Starting Auditor (DeepSeek R1) request...");
     const auditResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -230,12 +323,10 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating usage:", updateError);
-      // Don't fail the request, just log the error
     }
 
     console.log("Usage incremented to:", usage.audit_count + 1);
 
-    // 4. Return everything to the Frontend
     return new Response(
       JSON.stringify({ 
         draftA, 
