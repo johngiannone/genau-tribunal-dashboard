@@ -1,4 +1,4 @@
 project_id = "acqvzijmmabapbmefdzi"
 
 [functions.chat-consensus]
-verify_jwt = false
+verify_jwt = true

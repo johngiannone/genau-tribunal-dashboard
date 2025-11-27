@@ -66,25 +66,28 @@ serve(async (req) => {
   }
 
   try {
-    // Get auth token from request
+    // Get auth token from request header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    console.log("Auth header present:", !!authHeader);
+    
+    // Create Supabase client (JWT verification is handled by config.toml)
+    const supabase = createClient(
+      SUPABASE_URL, 
+      SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: { Authorization: authHeader || '' }
+        }
+      }
+    );
+
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError?.message);
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create Supabase client with user's auth
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Verify user is authenticated
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
