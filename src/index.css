@@ -107,3 +107,33 @@ All colors MUST be HSL.
   );
   background-size: 1000px 100%;
 }
+
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(to bottom, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Geometric grid background */
+.geometric-grid {
+  background-image: 
+    linear-gradient(hsl(var(--border)) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.geometric-mesh {
+  background-image: 
+    repeating-linear-gradient(45deg, transparent, transparent 35px, hsl(var(--border)) 35px, hsl(var(--border)) 36px),
+    repeating-linear-gradient(-45deg, transparent, transparent 35px, hsl(var(--border)) 35px, hsl(var(--border)) 36px);
+  opacity: 0.08;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
