@@ -5,8 +5,8 @@ import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker with a more reliable CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker from a fixed CDN version to avoid loading hangs
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
 
 interface ChatInputProps {
   onSend: (message: string, fileContext?: string) => void;
@@ -21,15 +21,15 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const { toast } = useToast();
 
   const extractTextFromPDF = async (file: File): Promise<string> => {
-    try {
+    const extractCore = async () => {
       console.log("Starting PDF extraction for:", file.name);
       const arrayBuffer = await file.arrayBuffer();
       console.log("ArrayBuffer created, size:", arrayBuffer.byteLength);
-      
+
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       console.log("PDF loaded, pages:", pdf.numPages);
-      
+
       let fullText = "";
 
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -40,11 +40,41 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         fullText += pageText + "\n\n";
       }
 
-      console.log("PDF extraction complete, text length:", fullText.length);
-      return fullText.trim() || "No text could be extracted from this PDF.";
+      const trimmed = fullText.trim();
+      console.log("PDF extraction complete, text length:", trimmed.length);
+
+      if (!trimmed.length) {
+        console.log("No text extracted - likely scanned image PDF");
+        throw new Error(
+          "This PDF appears to be a scanned image. Please use a text-selectable PDF or copy-paste the content."
+        );
+      }
+
+      return trimmed;
+    };
+
+    const timeoutMs = 10000;
+
+    try {
+      return await Promise.race<string>([
+        extractCore(),
+        new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("TIMEOUT_EXCEEDED")), timeoutMs)
+        ),
+      ]);
     } catch (error) {
+      if (error instanceof Error && error.message === "TIMEOUT_EXCEEDED") {
+        console.error("PDF extraction timed out after", timeoutMs, "ms");
+        throw new Error("Document is too complex or encrypted.");
+      }
+
       console.error("PDF extraction error:", error);
-      throw new Error(`Failed to extract PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof Error) {
+        // Propagate user-friendly errors (e.g., scanned PDF message)
+        throw error;
+      }
+
+      throw new Error("Failed to extract text from PDF.");
     }
   };
 
@@ -158,7 +188,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             </Button>
 
             {isExtracting && (
-              <span className="text-xs text-muted-foreground font-mono">Extracting...</span>
+              <span className="text-xs text-muted-foreground font-mono">Extracting text layers...</span>
             )}
 
             <Textarea
