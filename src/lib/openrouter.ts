@@ -1,3 +1,17 @@
+// Popular/Trending model IDs - updated based on usage patterns
+export const TRENDING_IDS = [
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
+  'anthropic/claude-3.5-sonnet',
+  'anthropic/claude-3-opus',
+  'google/gemini-pro-1.5',
+  'google/gemini-flash-1.5',
+  'meta-llama/llama-3.3-70b-instruct',
+  'deepseek/deepseek-chat',
+  'qwen/qwen-2.5-72b-instruct',
+  'x-ai/grok-2-1212',
+];
+
 export interface OpenRouterModel {
   id: string;
   name: string;
@@ -25,6 +39,7 @@ export interface Model {
   isFree: boolean;
   priceTier: number; // 1-4 for $, $$, $$$, $$$$
   avgCostPer1M: number; // Average cost per 1M tokens
+  isPopular?: boolean; // Whether this is a trending/popular model
 }
 
 export async function fetchOpenRouterModels(): Promise<Model[]> {
@@ -72,6 +87,7 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
         isFree,
         priceTier,
         avgCostPer1M: avgCost,
+        isPopular: TRENDING_IDS.includes(model.id),
       };
     });
 
@@ -142,11 +158,12 @@ export function sortModels(models: Model[], sortBy: string, favoriteIds: string[
       sortedModels = sorted;
   }
   
-  // Always put favorites at the top
+  // Prioritize: Favorites > Popular > Others
   const favorites = sortedModels.filter(m => favoriteIds.includes(m.id));
-  const nonFavorites = sortedModels.filter(m => !favoriteIds.includes(m.id));
+  const popularNonFavorites = sortedModels.filter(m => !favoriteIds.includes(m.id) && m.isPopular);
+  const others = sortedModels.filter(m => !favoriteIds.includes(m.id) && !m.isPopular);
   
-  return [...favorites, ...nonFavorites];
+  return [...favorites, ...popularNonFavorites, ...others];
 }
 
 export function filterModelsByCategory(models: Model[], category: string): Model[] {
