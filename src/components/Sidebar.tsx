@@ -1,10 +1,11 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Conversation {
   id: string;
@@ -22,6 +23,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   const [session, setSession] = useState<Session | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -144,6 +146,15 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           </div>
         )}
         <div className="flex gap-2">
+          {isAdmin && (
+            <button 
+              onClick={() => navigate("/admin")}
+              className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"
+              title="Admin Panel"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+          )}
           <button 
             onClick={() => navigate("/vault")}
             className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"

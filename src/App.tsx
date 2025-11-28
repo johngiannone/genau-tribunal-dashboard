@@ -10,6 +10,7 @@ import CouncilSettings from "./pages/CouncilSettings";
 import Pricing from "./pages/Pricing";
 import Analytics from "./pages/Analytics";
 import Vault from "./pages/Vault";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/vault" element={<Vault />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
