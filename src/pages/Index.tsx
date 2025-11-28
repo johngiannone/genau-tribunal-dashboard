@@ -377,6 +377,45 @@ const Index = () => {
           return;
         }
         
+        // Check if account is disabled
+        if (error.message?.includes('Account disabled') || error.context?.account_status === 'disabled') {
+          toast({
+            title: "Account Disabled",
+            description: "Your account has been permanently disabled. Please contact support if you believe this is an error.",
+            variant: "destructive",
+          });
+          setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
+          setStatusText("");
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Check if account is inactive
+        if (error.message?.includes('Account inactive') || error.context?.account_status === 'inactive') {
+          toast({
+            title: "Account Inactive",
+            description: "Your account is currently inactive. Please contact support to reactivate your account.",
+            variant: "destructive",
+          });
+          setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
+          setStatusText("");
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Check if account is suspended/banned
+        if (error.message?.includes('Account suspended')) {
+          toast({
+            title: "Account Suspended",
+            description: error.context?.details || "Your account has been suspended. Contact support for assistance.",
+            variant: "destructive",
+          });
+          setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
+          setStatusText("");
+          setIsProcessing(false);
+          return;
+        }
+        
         // Extract the actual error message
         const errorMessage = error.message || error.error || JSON.stringify(error);
         throw new Error(errorMessage);
