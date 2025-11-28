@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -15,6 +15,9 @@ interface ConsensusMessageProps {
   isLoading?: boolean;
   modelAName?: string;
   modelBName?: string;
+  messageId?: string;
+  onRatingChange?: (messageId: string, rating: number) => void;
+  currentRating?: number;
 }
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
@@ -209,6 +212,9 @@ export const ConsensusMessage = ({
   isLoading = false,
   modelAName = "Model A",
   modelBName = "Model B",
+  messageId,
+  onRatingChange,
+  currentRating = 0,
 }: ConsensusMessageProps) => {
   const getModelDisplayName = (modelId: string) => {
     if (modelId === "Model A" || modelId === "Model B") return modelId;
@@ -361,6 +367,31 @@ export const ConsensusMessage = ({
               </div>
             )}
           </div>
+
+          {/* Feedback Buttons */}
+          {!isLoading && synthesisResponse && messageId && onRatingChange && (
+            <div className="border-t border-border px-5 py-3 flex items-center justify-center gap-3">
+              <span className="text-xs text-muted-foreground font-mono mr-2">Rate this verdict:</span>
+              <Button
+                size="sm"
+                variant={currentRating === 1 ? "default" : "outline"}
+                onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
+                className="gap-2"
+              >
+                <ThumbsUp className="h-4 w-4" />
+                Good
+              </Button>
+              <Button
+                size="sm"
+                variant={currentRating === -1 ? "destructive" : "outline"}
+                onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
+                className="gap-2"
+              >
+                <ThumbsDown className="h-4 w-4" />
+                Bad
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

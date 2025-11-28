@@ -153,6 +153,45 @@ export type Database = {
         }
         Relationships: []
       }
+      training_dataset: {
+        Row: {
+          chosen_response: string
+          created_at: string
+          human_rating: number | null
+          id: string
+          model_config: Json
+          prompt: string
+          rejected_response_a: string
+          rejected_response_b: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chosen_response: string
+          created_at?: string
+          human_rating?: number | null
+          id?: string
+          model_config: Json
+          prompt: string
+          rejected_response_a: string
+          rejected_response_b: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chosen_response?: string
+          created_at?: string
+          human_rating?: number | null
+          id?: string
+          model_config?: Json
+          prompt?: string
+          rejected_response_a?: string
+          rejected_response_b?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_usage: {
         Row: {
           audit_count: number
