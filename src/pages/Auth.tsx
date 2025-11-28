@@ -20,7 +20,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/app`;
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -58,7 +58,7 @@ const Auth = () => {
 
       if (error) throw error;
 
-      navigate("/");
+      navigate("/app");
     } catch (error: any) {
       toast({
         title: "Error",

@@ -125,7 +125,7 @@ const Settings = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/app")}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -177,7 +177,7 @@ const Settings = () => {
                 </div>
                 {!usage?.is_premium && (
                   <Button
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/pricing")}
                     className="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
                   >
                     <CreditCard className="w-4 h-4 mr-2" />

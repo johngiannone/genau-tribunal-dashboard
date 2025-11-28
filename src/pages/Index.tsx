@@ -50,6 +50,8 @@ const Index = () => {
         setSession(session);
         if (!session) {
           navigate("/auth");
+        } else if (window.location.pathname === "/") {
+          navigate("/app");
         }
       }
     );
@@ -59,6 +61,8 @@ const Index = () => {
       setSession(session);
       if (!session) {
         navigate("/auth");
+      } else if (window.location.pathname === "/") {
+        navigate("/app");
       }
     });
 
