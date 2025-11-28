@@ -24,6 +24,7 @@ export interface Model {
   contextLength: number;
   isFree: boolean;
   priceTier: number; // 1-4 for $, $$, $$$, $$$$
+  avgCostPer1M: number; // Average cost per 1M tokens
 }
 
 export async function fetchOpenRouterModels(): Promise<Model[]> {
@@ -62,6 +63,7 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
         contextLength: model.context_length || 0,
         isFree,
         priceTier,
+        avgCostPer1M: avgCost,
       };
     });
 
@@ -84,6 +86,7 @@ function getFallbackModels(): Model[] {
       contextLength: 128000,
       isFree: false,
       priceTier: 3,
+      avgCostPer1M: 10,
     },
     {
       id: "anthropic/claude-3.5-sonnet",
@@ -94,6 +97,7 @@ function getFallbackModels(): Model[] {
       contextLength: 200000,
       isFree: false,
       priceTier: 3,
+      avgCostPer1M: 9,
     },
     {
       id: "meta-llama/llama-3.3-70b",
@@ -104,8 +108,24 @@ function getFallbackModels(): Model[] {
       contextLength: 128000,
       isFree: true,
       priceTier: 0,
+      avgCostPer1M: 0,
     },
   ];
+}
+
+export function sortModels(models: Model[], sortBy: string): Model[] {
+  const sorted = [...models];
+  
+  switch (sortBy) {
+    case 'cheapest':
+      return sorted.sort((a, b) => a.avgCostPer1M - b.avgCostPer1M);
+    case 'smartest':
+      return sorted.sort((a, b) => b.avgCostPer1M - a.avgCostPer1M);
+    case 'context':
+      return sorted.sort((a, b) => b.contextLength - a.contextLength);
+    default: // 'popular'
+      return sorted;
+  }
 }
 
 export function filterModelsByCategory(models: Model[], category: string): Model[] {
