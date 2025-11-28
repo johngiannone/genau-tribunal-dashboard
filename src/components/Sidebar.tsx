@@ -144,7 +144,11 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           </div>
         )}
         <div className="flex gap-2">
-          <button className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground">
+          <button 
+            onClick={() => navigate("/settings")}
+            className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"
+            title="Settings"
+          >
             <Settings className="w-4 h-4" />
           </button>
           <button 
