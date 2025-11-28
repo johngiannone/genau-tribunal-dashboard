@@ -9,7 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 interface CostAlert {
   id: string;
   user_id: string;
-  alert_type: 'daily_threshold' | 'audit_threshold';
+  alert_type: 'daily_threshold' | 'audit_threshold' | 'budget_forecast';
   estimated_cost: number;
   threshold: number;
   created_at: string;
@@ -75,11 +75,15 @@ export const CostAlertsPanel = () => {
   };
 
   const getAlertTypeLabel = (type: string) => {
-    return type === 'daily_threshold' ? 'Daily Threshold' : 'Per-Audit Threshold';
+    if (type === 'daily_threshold') return 'Daily Threshold';
+    if (type === 'budget_forecast') return 'Budget Forecast';
+    return 'Per-Audit Threshold';
   };
 
   const getAlertTypeColor = (type: string) => {
-    return type === 'daily_threshold' ? 'bg-red-500' : 'bg-orange-500';
+    if (type === 'daily_threshold') return 'bg-red-500';
+    if (type === 'budget_forecast') return 'bg-yellow-500';
+    return 'bg-orange-500';
   };
 
   if (loading) {

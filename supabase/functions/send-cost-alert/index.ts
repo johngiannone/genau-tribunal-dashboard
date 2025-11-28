@@ -37,31 +37,39 @@ serve(async (req) => {
     }
 
     const userEmail = user.email
-    const alertTypeLabel = alertType === 'daily_threshold' ? 'Daily' : 'Per-Audit'
+    const alertTypeLabel = alertType === 'daily_threshold' ? 'Daily' : 
+                          alertType === 'budget_forecast' ? 'Budget Forecast' : 
+                          'Per-Audit'
     const costFormatted = `$${estimatedCost.toFixed(4)}`
     const thresholdFormatted = `$${threshold.toFixed(4)}`
+    
+    const isForecasted = alertType === 'budget_forecast'
 
     // Send email
     const emailResponse = await resend.emails.send({
       from: "Consensus AI <onboarding@resend.dev>",
       to: [userEmail],
-      subject: `⚠️ Cost Alert: ${alertTypeLabel} Threshold Exceeded`,
+      subject: `${isForecasted ? '📊' : '⚠️'} Cost Alert: ${alertTypeLabel} ${isForecasted ? 'Warning' : 'Exceeded'}`,
       html: `
-        <h1>Cost Threshold Exceeded</h1>
-        <p>Your ${alertTypeLabel.toLowerCase()} cost threshold has been exceeded.</p>
+        <h1>${isForecasted ? 'Budget Forecast Warning' : 'Cost Threshold Exceeded'}</h1>
+        <p>${isForecasted 
+          ? 'Based on your current spending patterns, you are projected to exceed your monthly budget limit.'
+          : `Your ${alertTypeLabel.toLowerCase()} cost threshold has been exceeded.`
+        }</p>
         
-        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0;">
-          <p style="margin: 0; font-size: 14px; color: #991b1b;">
-            <strong>Threshold:</strong> ${thresholdFormatted}<br>
-            <strong>Current Cost:</strong> ${costFormatted}
+        <div style="background: ${isForecasted ? '#fef9e7' : '#fef2f2'}; border-left: 4px solid ${isForecasted ? '#f59e0b' : '#dc2626'}; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: ${isForecasted ? '#92400e' : '#991b1b'};">
+            <strong>${isForecasted ? 'Budget Limit' : 'Threshold'}:</strong> ${thresholdFormatted}<br>
+            <strong>${isForecasted ? 'Projected Total' : 'Current Cost'}:</strong> ${costFormatted}
           </p>
         </div>
         
         <p>To avoid unexpected charges, consider:</p>
         <ul>
           <li>Reviewing your model selections for cost efficiency</li>
-          <li>Adjusting your cost thresholds in the admin panel</li>
+          <li>Adjusting your ${isForecasted ? 'budget limits' : 'cost thresholds'} in the admin panel</li>
           <li>Monitoring your daily usage more closely</li>
+          ${isForecasted ? '<li>Reducing the frequency of audits for the remainder of the month</li>' : ''}
         </ul>
         
         <p style="margin-top: 20px; color: #666; font-size: 12px;">

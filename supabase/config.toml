@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-cost-alert]
 verify_jwt = false
+
+[functions.calculate-forecast]
+verify_jwt = false
