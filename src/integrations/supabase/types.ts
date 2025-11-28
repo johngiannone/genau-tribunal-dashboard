@@ -89,18 +89,21 @@ export type Database = {
         Row: {
           council_config: Json | null
           created_at: string
+          favorite_models: Json | null
           id: string
           updated_at: string
         }
         Insert: {
           council_config?: Json | null
           created_at?: string
+          favorite_models?: Json | null
           id: string
           updated_at?: string
         }
         Update: {
           council_config?: Json | null
           created_at?: string
+          favorite_models?: Json | null
           id?: string
           updated_at?: string
         }

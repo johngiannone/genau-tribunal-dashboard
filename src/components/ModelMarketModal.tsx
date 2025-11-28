@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
@@ -8,8 +8,10 @@ import { Input } from "./ui/input";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
-import { Check, Search, Loader2, AlertTriangle } from "lucide-react";
+import { Check, Search, Loader2, AlertTriangle, Star } from "lucide-react";
 import { fetchOpenRouterModels, filterModelsByCategory, sortModels, Model } from "@/lib/openrouter";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ModelMarketModalProps {
   open: boolean;
@@ -29,7 +31,9 @@ export const ModelMarketModal = ({
   const [sortBy, setSortBy] = useState("popular");
   const [pendingModel, setPendingModel] = useState<Model | null>(null);
   const [showExpensiveWarning, setShowExpensiveWarning] = useState(false);
+  const [favoriteModels, setFavoriteModels] = useState<string[]>([]);
   const parentRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Fetch models using TanStack Query
   const { data: models = [], isLoading } = useQuery({
@@ -39,7 +43,34 @@ export const ModelMarketModal = ({
     enabled: open, // Only fetch when modal is open
   });
 
-  const filteredByCategory = filterModelsByCategory(models, activeCategory);
+  // Fetch user's favorite models from Supabase
+  useEffect(() => {
+    if (!open) return;
+    
+    const fetchFavorites = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('favorite_models')
+        .eq('id', user.id)
+        .single();
+
+      if (data && !error) {
+        const favorites = data.favorite_models;
+        if (Array.isArray(favorites)) {
+          setFavoriteModels(favorites as string[]);
+        }
+      }
+    };
+
+    fetchFavorites();
+  }, [open]);
+
+  const filteredByCategory = activeCategory === "favorites" 
+    ? models.filter(m => favoriteModels.includes(m.id))
+    : filterModelsByCategory(models, activeCategory);
   
   const filteredAndSearched = filteredByCategory.filter((model) => {
     const search = searchTerm.toLowerCase();
@@ -51,7 +82,7 @@ export const ModelMarketModal = ({
     );
   });
 
-  const filteredModels = sortModels(filteredAndSearched, sortBy);
+  const filteredModels = sortModels(filteredAndSearched, sortBy, favoriteModels);
 
   // Group models into rows (2 per row)
   const rows = [];
@@ -83,6 +114,49 @@ export const ModelMarketModal = ({
     setPendingModel(null);
   };
 
+  const toggleFavorite = async (modelId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to favorite models.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isFavorite = favoriteModels.includes(modelId);
+    const updatedFavorites = isFavorite
+      ? favoriteModels.filter(id => id !== modelId)
+      : [...favoriteModels, modelId];
+
+    // Optimistically update UI
+    setFavoriteModels(updatedFavorites);
+
+    // Save to database
+    const { error } = await supabase
+      .from('profiles')
+      .update({ favorite_models: updatedFavorites })
+      .eq('id', user.id);
+
+    if (error) {
+      // Revert on error
+      setFavoriteModels(favoriteModels);
+      toast({
+        title: "Failed to update favorites",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: isFavorite ? "Removed from favorites" : "Added to favorites",
+        description: `${models.find(m => m.id === modelId)?.name || "Model"} ${isFavorite ? "removed from" : "added to"} your favorites.`,
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] bg-card/95 backdrop-blur-xl border-primary/30">
@@ -97,8 +171,12 @@ export const ModelMarketModal = ({
 
         {/* Category Tabs */}
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-card/50">
-            <TabsTrigger value="all" className="text-xs">All Models</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 bg-card/50">
+            <TabsTrigger value="favorites" className="text-xs">
+              <Star className="w-3 h-3 mr-1 fill-current" />
+              Favorites
+            </TabsTrigger>
+            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
             <TabsTrigger value="free" className="text-xs">Free</TabsTrigger>
             <TabsTrigger value="top-tier" className="text-xs">Top Tier</TabsTrigger>
             <TabsTrigger value="coding" className="text-xs">Coding</TabsTrigger>
@@ -179,7 +257,9 @@ export const ModelMarketModal = ({
                           key={model.id}
                           model={model}
                           isSelected={currentModel === model.id}
+                          isFavorite={favoriteModels.includes(model.id)}
                           onClick={() => handleModelClick(model)}
+                          onToggleFavorite={(e) => toggleFavorite(model.id, e)}
                         />
                       ))}
                     </div>
@@ -219,10 +299,12 @@ export const ModelMarketModal = ({
 interface ModelCardProps {
   model: Model;
   isSelected: boolean;
+  isFavorite: boolean;
   onClick: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
 }
 
-const ModelCard = ({ model, isSelected, onClick }: ModelCardProps) => {
+const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }: ModelCardProps) => {
   const priceDisplay = model.isFree
     ? "FREE"
     : `$${model.avgCostPer1M < 1 ? model.avgCostPer1M.toFixed(3) : model.avgCostPer1M.toFixed(2)} / 1M`;
@@ -236,6 +318,21 @@ const ModelCard = ({ model, isSelected, onClick }: ModelCardProps) => {
       }`}
       onClick={onClick}
     >
+      {/* Favorite Star Button */}
+      <button
+        onClick={onToggleFavorite}
+        className="absolute top-3 left-3 z-10 p-1 rounded-full hover:bg-primary/10 transition-colors"
+        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      >
+        <Star
+          className={`w-5 h-5 transition-all ${
+            isFavorite
+              ? "fill-yellow-400 text-yellow-400"
+              : "text-muted-foreground hover:text-yellow-400"
+          }`}
+        />
+      </button>
+
       {isSelected && (
         <div className="absolute top-3 right-3">
           <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
