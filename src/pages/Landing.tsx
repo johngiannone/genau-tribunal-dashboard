@@ -217,6 +217,166 @@ const Landing = () => {
         </motion.div>
       </section>
 
+      {/* How It Works Section */}
+      <section className="max-w-7xl mx-auto px-6 py-32 bg-gradient-to-b from-background to-secondary/10">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-20"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
+            How It Works
+          </h2>
+          <p className="text-xl text-[#86868B] max-w-2xl mx-auto">
+            A simple, powerful process to get the best answer from multiple AI minds
+          </p>
+        </motion.div>
+
+        <div className="relative max-w-5xl mx-auto">
+          {/* Connection Lines */}
+          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2" />
+          
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {/* Step 1: Ask */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0 }}
+              className="relative"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center mb-6 relative z-10 bg-background">
+                  <div className="text-3xl">💬</div>
+                </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold z-20">
+                  1
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Ask Your Question
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Submit any question or upload a document for analysis
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Step 2: Analyze */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="relative"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-2xl bg-purple-500/10 border-2 border-purple-500/20 flex items-center justify-center mb-6 relative z-10 bg-background">
+                  <div className="text-3xl">🤖</div>
+                </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-bold z-20">
+                  2
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Council Deliberates
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Multiple AI models analyze your question in parallel
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Step 3: Compare */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="relative"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-2xl bg-orange-500/10 border-2 border-orange-500/20 flex items-center justify-center mb-6 relative z-10 bg-background">
+                  <div className="text-3xl">⚖️</div>
+                </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold z-20">
+                  3
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Auditor Reviews
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  An expert model compares all responses for accuracy
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Step 4: Synthesis */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.45 }}
+              className="relative"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-2xl bg-success/10 border-2 border-success/20 flex items-center justify-center mb-6 relative z-10 bg-background">
+                  <div className="text-3xl">✨</div>
+                </div>
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-success text-white flex items-center justify-center text-sm font-bold z-20">
+                  4
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Get Synthesis
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Receive a unified answer with confidence score
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Process Flow Visualization */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mt-20 apple-card p-8 bg-gradient-to-br from-secondary/50 to-secondary/20"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-semibold text-foreground mb-1">Why Consensus?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Single AI models can be wrong. Multiple models reaching consensus are far more reliable.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-primary mb-1">99%</div>
+                  <div className="text-xs text-muted-foreground">Avg. Confidence</div>
+                </div>
+                <div className="h-12 w-px bg-border" />
+                <div>
+                  <div className="text-2xl font-bold text-primary mb-1">&lt;2s</div>
+                  <div className="text-xs text-muted-foreground">Response Time</div>
+                </div>
+                <div className="h-12 w-px bg-border" />
+                <div>
+                  <div className="text-2xl font-bold text-primary mb-1">5+</div>
+                  <div className="text-xs text-muted-foreground">AI Models</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="max-w-7xl mx-auto px-6 py-32">
         <motion.div
