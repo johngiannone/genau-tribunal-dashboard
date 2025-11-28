@@ -99,10 +99,11 @@ serve(async (req) => {
     }
 
     // 3. Parse request
-    const { prompt, fileUrl, conversationId } = await req.json()
+    const { prompt, fileUrl, conversationId, councilConfig } = await req.json()
     console.log("Prompt:", prompt?.substring(0, 100))
     console.log("File URL provided:", !!fileUrl)
     console.log("Conversation ID:", conversationId)
+    console.log("Council Config:", councilConfig ? "Custom" : "Default")
 
     if (!prompt) {
       return new Response(
@@ -114,6 +115,13 @@ serve(async (req) => {
     if (!OPENROUTER_API_KEY) {
       throw new Error("Missing OPENROUTER_API_KEY")
     }
+
+    // Get models from council config or use defaults
+    const modelA = councilConfig?.slot_1 || "meta-llama/llama-3-70b-instruct"
+    const modelB = councilConfig?.slot_2 || "anthropic/claude-3.5-sonnet"
+    const synthModel = councilConfig?.slot_5 || "deepseek/deepseek-r1"
+    
+    console.log("Using models:", { modelA, modelB, synthModel })
 
     let context = ""
     let librarianAnalysis = ""
@@ -183,7 +191,7 @@ serve(async (req) => {
           "Content-Type": "application/json" 
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-3-70b-instruct",
+          model: modelA,
           messages: [{ role: "user", content: prompt + context }]
         })
       }).then(r => r.json()),
@@ -195,7 +203,7 @@ serve(async (req) => {
           "Content-Type": "application/json" 
         },
         body: JSON.stringify({
-          model: "anthropic/claude-3.5-sonnet",
+          model: modelB,
           messages: [{ role: "user", content: prompt + context }]
         })
       }).then(r => r.json())
@@ -203,7 +211,7 @@ serve(async (req) => {
 
     console.log("Drafts received, generating synthesis...")
 
-    // 6. THE VERDICT (DeepSeek)
+    // 6. THE VERDICT (DeepSeek or custom synthesis model)
     const verdictReq = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -211,7 +219,7 @@ serve(async (req) => {
         "Content-Type": "application/json" 
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-r1",
+        model: synthModel,
         messages: [{
           role: "system",
           content: "You are an Auditor. Compare Draft A and Draft B. Identify errors. Write a final, corrected verdict."
