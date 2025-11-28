@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, TrendingUp, Clock, Users, Activity, CalendarIcon, Download } from "lucide-react";
+import { Loader2, TrendingUp, Clock, Users, Activity, CalendarIcon, Download, GitCompare, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -79,11 +79,30 @@ export const ActivityStatsDashboard = () => {
     to: new Date(),
   });
 
+  // Comparison mode state
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [comparisonDateRange, setComparisonDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 14),
+    to: subDays(new Date(), 7),
+  });
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonActivityTypeCounts, setComparisonActivityTypeCounts] = useState<ActivityTypeCount[]>([]);
+  const [comparisonHourlyActivity, setComparisonHourlyActivity] = useState<HourlyActivity[]>([]);
+  const [comparisonDailyActivity, setComparisonDailyActivity] = useState<DailyActivity[]>([]);
+  const [comparisonTopUsers, setComparisonTopUsers] = useState<TopUser[]>([]);
+  const [comparisonTotalActivities, setComparisonTotalActivities] = useState(0);
+
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
       fetchStatistics();
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    if (comparisonMode && comparisonDateRange?.from && comparisonDateRange?.to) {
+      fetchComparisonStatistics();
+    }
+  }, [comparisonMode, comparisonDateRange]);
 
   // Set up realtime subscription for new activities
   useEffect(() => {
@@ -308,6 +327,109 @@ export const ActivityStatsDashboard = () => {
     return diffDays;
   };
 
+  const fetchComparisonStatistics = async () => {
+    if (!comparisonDateRange?.from || !comparisonDateRange?.to) return;
+
+    setComparisonLoading(true);
+    try {
+      const fromDate = startOfDay(comparisonDateRange.from);
+      const toDate = endOfDay(comparisonDateRange.to);
+
+      const { data: logs, error } = await supabase
+        .from('activity_logs')
+        .select('activity_type, created_at, user_id')
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString());
+
+      if (error) throw error;
+
+      setComparisonTotalActivities(logs?.length || 0);
+
+      const typeCounts: Record<string, number> = {};
+      const userCounts: Record<string, number> = {};
+      const hourlyCounts: Record<number, number> = {};
+      const dailyCounts: Record<string, Record<string, number>> = {};
+
+      logs?.forEach((log) => {
+        typeCounts[log.activity_type] = (typeCounts[log.activity_type] || 0) + 1;
+        userCounts[log.user_id] = (userCounts[log.user_id] || 0) + 1;
+        const hour = new Date(log.created_at).getHours();
+        hourlyCounts[hour] = (hourlyCounts[hour] || 0) + 1;
+        const date = format(new Date(log.created_at), 'MMM dd');
+        if (!dailyCounts[date]) {
+          dailyCounts[date] = {
+            login: 0,
+            logout: 0,
+            audit_completed: 0,
+            file_upload: 0,
+            profile_update: 0,
+            admin_change: 0,
+          };
+        }
+        dailyCounts[date][log.activity_type] = (dailyCounts[date][log.activity_type] || 0) + 1;
+      });
+
+      const typeCountsArray = Object.entries(typeCounts).map(([activity_type, count]) => ({
+        activity_type,
+        count,
+      }));
+
+      const hourlyArray = Array.from({ length: 24 }, (_, i) => ({
+        hour: i,
+        count: hourlyCounts[i] || 0,
+      }));
+
+      const dailyArray: DailyActivity[] = Object.entries(dailyCounts).map(([date, counts]) => ({
+        date,
+        login: counts.login || 0,
+        logout: counts.logout || 0,
+        audit_completed: counts.audit_completed || 0,
+        file_upload: counts.file_upload || 0,
+        profile_update: counts.profile_update || 0,
+        admin_change: counts.admin_change || 0,
+      }));
+
+      const topUsersArray = Object.entries(userCounts)
+        .map(([user_id, count]) => ({ user_id, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      setComparisonActivityTypeCounts(typeCountsArray);
+      setComparisonHourlyActivity(hourlyArray);
+      setComparisonDailyActivity(dailyArray);
+      setComparisonTopUsers(topUsersArray);
+    } catch (error) {
+      console.error('Error fetching comparison statistics:', error);
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
+
+  const calculateVariance = (current: number, previous: number) => {
+    if (previous === 0) return { percentage: current > 0 ? 100 : 0, trend: current > 0 ? 'up' : 'neutral' };
+    const percentage = ((current - previous) / previous) * 100;
+    const trend = percentage > 0 ? 'up' : percentage < 0 ? 'down' : 'neutral';
+    return { percentage: Math.abs(percentage), trend };
+  };
+
+  const VarianceIndicator = ({ current, previous }: { current: number; previous: number }) => {
+    const { percentage, trend } = calculateVariance(current, previous);
+    
+    return (
+      <div className={cn(
+        "flex items-center gap-1 text-xs font-medium",
+        trend === 'up' && "text-green-600",
+        trend === 'down' && "text-red-600",
+        trend === 'neutral' && "text-gray-500"
+      )}>
+        {trend === 'up' && <ArrowUp className="w-3 h-3" />}
+        {trend === 'down' && <ArrowDown className="w-3 h-3" />}
+        {trend === 'neutral' && <Minus className="w-3 h-3" />}
+        <span>{percentage.toFixed(1)}%</span>
+      </div>
+    );
+  };
+
   const exportToPDF = async () => {
     setExporting(true);
     try {
@@ -474,7 +596,7 @@ export const ActivityStatsDashboard = () => {
     <div className="space-y-6">
       {/* Header with Date Range Filters */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <TrendingUp className="w-6 h-6 text-[#0071E3]" />
           <h2 className="text-2xl font-bold text-[#111111]">Activity Statistics</h2>
           <Badge variant="secondary" className="font-mono text-xs">
@@ -482,54 +604,82 @@ export const ActivityStatsDashboard = () => {
               ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`
               : "Select date range"}
           </Badge>
-          <Badge variant="outline" className="font-mono text-xs border-green-500 text-green-700 bg-green-50">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse" />
-            Live Updates
-          </Badge>
+          {!comparisonMode && (
+            <Badge variant="outline" className="font-mono text-xs border-green-500 text-green-700 bg-green-50">
+              <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse" />
+              Live Updates
+            </Badge>
+          )}
+          {comparisonMode && (
+            <Badge variant="secondary" className="font-mono text-xs bg-purple-100 text-purple-700 border-purple-300">
+              <GitCompare className="w-3 h-3 mr-1.5" />
+              vs {comparisonDateRange?.from && comparisonDateRange?.to
+                ? `${format(comparisonDateRange.from, "MMM dd")} - ${format(comparisonDateRange.to, "MMM dd")}`
+                : "Select comparison range"}
+            </Badge>
+          )}
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Comparison Mode Toggle */}
+          <Button
+            variant={comparisonMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setComparisonMode(!comparisonMode)}
+            className={cn(
+              "h-9",
+              comparisonMode && "bg-purple-600 hover:bg-purple-700"
+            )}
+          >
+            <GitCompare className="w-4 h-4 mr-2" />
+            Compare Periods
+          </Button>
+
           {/* Quick Select Buttons */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickRange(7)}
-            className={cn(
-              "h-9",
-              getDaysCount() === 7 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
-            )}
-          >
-            Last 7 days
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickRange(30)}
-            className={cn(
-              "h-9",
-              getDaysCount() === 30 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
-            )}
-          >
-            Last 30 days
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickRange(90)}
-            className={cn(
-              "h-9",
-              getDaysCount() === 90 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
-            )}
-          >
-            Last 90 days
-          </Button>
+          {!comparisonMode && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange(7)}
+                className={cn(
+                  "h-9",
+                  getDaysCount() === 7 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+                )}
+              >
+                Last 7 days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange(30)}
+                className={cn(
+                  "h-9",
+                  getDaysCount() === 30 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+                )}
+              >
+                Last 30 days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange(90)}
+                className={cn(
+                  "h-9",
+                  getDaysCount() === 90 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+                )}
+              >
+                Last 90 days
+              </Button>
+            </>
+          )}
           
-          {/* Custom Date Range Picker */}
+          {/* Custom Date Range Picker - Primary */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="h-9">
                 <CalendarIcon className="w-4 h-4 mr-2" />
-                Custom Range
+                {comparisonMode ? "Primary Period" : "Custom Range"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-white z-50" align="end">
@@ -544,11 +694,40 @@ export const ActivityStatsDashboard = () => {
             </PopoverContent>
           </Popover>
 
-          {/* Total Activities Badge */}
+          {/* Comparison Date Range Picker */}
+          {comparisonMode && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 border-purple-300">
+                  <CalendarIcon className="w-4 h-4 mr-2 text-purple-600" />
+                  Comparison Period
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-white z-50" align="end">
+                <Calendar
+                  mode="range"
+                  selected={comparisonDateRange}
+                  onSelect={setComparisonDateRange}
+                  numberOfMonths={2}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {/* Total Activities Badge with Comparison */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F9FAFB] border border-[#E5E5EA]">
             <Activity className="w-4 h-4 text-[#0071E3]" />
-            <span className="text-lg font-bold text-[#111111]">{totalActivities}</span>
-            <span className="text-xs text-[#86868B]">activities</span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-[#111111]">{totalActivities}</span>
+                <span className="text-xs text-[#86868B]">activities</span>
+              </div>
+              {comparisonMode && !comparisonLoading && (
+                <VarianceIndicator current={totalActivities} previous={comparisonTotalActivities} />
+              )}
+            </div>
           </div>
 
           {/* Export Button */}
@@ -573,125 +752,262 @@ export const ActivityStatsDashboard = () => {
       </div>
 
       {/* Activity Types Distribution - Pie Chart */}
-      <Card className="border-[#E5E5EA]" id="pie-chart">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-[#111111]">
-            Activity Types Distribution
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={activityTypeCounts}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ activity_type, percent }) => 
-                  `${activity_type.replace('_', ' ')}: ${(percent * 100).toFixed(0)}%`
-                }
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="count"
-              >
-                {activityTypeCounts.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={COLORS[entry.activity_type as keyof typeof COLORS] || '#6b7280'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <div className={cn("grid gap-6", comparisonMode ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
+        <Card className="border-[#E5E5EA]" id="pie-chart">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-[#111111]">
+              Activity Types Distribution {comparisonMode && "(Primary)"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={activityTypeCounts}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ activity_type, percent }) => 
+                    `${activity_type.replace('_', ' ')}: ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {activityTypeCounts.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[entry.activity_type as keyof typeof COLORS] || '#6b7280'} 
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {comparisonMode && (
+          <Card className="border-[#E5E5EA] border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                Activity Types Distribution (Comparison)
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  Period 2
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {comparisonLoading ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={comparisonActivityTypeCounts}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ activity_type, percent }) => 
+                        `${activity_type.replace('_', ' ')}: ${(percent * 100).toFixed(0)}%`
+                      }
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {comparisonActivityTypeCounts.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[entry.activity_type as keyof typeof COLORS] || '#6b7280'} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Daily Activity Trends - Stacked Area Chart */}
-      <Card className="border-[#E5E5EA]" id="area-chart">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-[#111111]">
-            Daily Activity Trends
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={dailyActivity}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fill: '#86868B', fontSize: 12 }}
-              />
-              <YAxis tick={{ fill: '#86868B', fontSize: 12 }} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #E5E5EA',
-                  borderRadius: '8px'
-                }}
-              />
-              <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="login" 
-                stackId="1" 
-                stroke={COLORS.login} 
-                fill={COLORS.login} 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="logout" 
-                stackId="1" 
-                stroke={COLORS.logout} 
-                fill={COLORS.logout} 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="audit_completed" 
-                stackId="1" 
-                stroke={COLORS.audit_completed} 
-                fill={COLORS.audit_completed} 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="file_upload" 
-                stackId="1" 
-                stroke={COLORS.file_upload} 
-                fill={COLORS.file_upload} 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="profile_update" 
-                stackId="1" 
-                stroke={COLORS.profile_update} 
-                fill={COLORS.profile_update} 
-                fillOpacity={0.6}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="admin_change" 
-                stackId="1" 
-                stroke={COLORS.admin_change} 
-                fill={COLORS.admin_change} 
-                fillOpacity={0.6}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <div className={cn("grid gap-6", comparisonMode ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
+        <Card className="border-[#E5E5EA]" id="area-chart">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-[#111111]">
+              Daily Activity Trends {comparisonMode && "(Primary)"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={dailyActivity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: '#86868B', fontSize: 12 }}
+                />
+                <YAxis tick={{ fill: '#86868B', fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #E5E5EA',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Area 
+                  type="monotone" 
+                  dataKey="login" 
+                  stackId="1" 
+                  stroke={COLORS.login} 
+                  fill={COLORS.login} 
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="logout" 
+                  stackId="1" 
+                  stroke={COLORS.logout} 
+                  fill={COLORS.logout} 
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="audit_completed" 
+                  stackId="1" 
+                  stroke={COLORS.audit_completed} 
+                  fill={COLORS.audit_completed} 
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="file_upload" 
+                  stackId="1" 
+                  stroke={COLORS.file_upload} 
+                  fill={COLORS.file_upload} 
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="profile_update" 
+                  stackId="1" 
+                  stroke={COLORS.profile_update} 
+                  fill={COLORS.profile_update} 
+                  fillOpacity={0.6}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="admin_change" 
+                  stackId="1" 
+                  stroke={COLORS.admin_change} 
+                  fill={COLORS.admin_change} 
+                  fillOpacity={0.6}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {comparisonMode && (
+          <Card className="border-[#E5E5EA] border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                Daily Activity Trends (Comparison)
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  Period 2
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {comparisonLoading ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={comparisonDailyActivity}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
+                    <XAxis 
+                      dataKey="date" 
+                      tick={{ fill: '#86868B', fontSize: 12 }}
+                    />
+                    <YAxis tick={{ fill: '#86868B', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #E5E5EA',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="login" 
+                      stackId="1" 
+                      stroke={COLORS.login} 
+                      fill={COLORS.login} 
+                      fillOpacity={0.6}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="logout" 
+                      stackId="1" 
+                      stroke={COLORS.logout} 
+                      fill={COLORS.logout} 
+                      fillOpacity={0.6}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="audit_completed" 
+                      stackId="1" 
+                      stroke={COLORS.audit_completed} 
+                      fill={COLORS.audit_completed} 
+                      fillOpacity={0.6}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="file_upload" 
+                      stackId="1" 
+                      stroke={COLORS.file_upload} 
+                      fill={COLORS.file_upload} 
+                      fillOpacity={0.6}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="profile_update" 
+                      stackId="1" 
+                      stroke={COLORS.profile_update} 
+                      fill={COLORS.profile_update} 
+                      fillOpacity={0.6}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="admin_change" 
+                      stackId="1" 
+                      stroke={COLORS.admin_change} 
+                      fill={COLORS.admin_change} 
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className={cn("grid gap-6", comparisonMode ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 lg:grid-cols-2")}>
         {/* Peak Usage Hours - Bar Chart */}
         <Card className="border-[#E5E5EA]" id="bar-chart">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
               <Clock className="w-5 h-5 text-[#0071E3]" />
-              Peak Usage Hours
+              Peak Usage Hours {comparisonMode && "(Primary)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -718,12 +1034,54 @@ export const ActivityStatsDashboard = () => {
           </CardContent>
         </Card>
 
+        {comparisonMode && (
+          <Card className="border-[#E5E5EA] border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                <Clock className="w-5 h-5 text-purple-600" />
+                Peak Usage Hours (Comparison)
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  Period 2
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {comparisonLoading ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={comparisonHourlyActivity}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
+                    <XAxis 
+                      dataKey="hour" 
+                      tick={{ fill: '#86868B', fontSize: 12 }}
+                      label={{ value: 'Hour of Day', position: 'insideBottom', offset: -5, fill: '#86868B' }}
+                    />
+                    <YAxis tick={{ fill: '#86868B', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #E5E5EA',
+                        borderRadius: '8px'
+                      }}
+                      labelFormatter={(hour) => `${hour}:00`}
+                    />
+                    <Bar dataKey="count" fill="#9333ea" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Most Active Users - Leaderboard */}
         <Card className="border-[#E5E5EA]">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
               <Users className="w-5 h-5 text-[#0071E3]" />
-              Most Active Users
+              Most Active Users {comparisonMode && "(Primary)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -756,15 +1114,81 @@ export const ActivityStatsDashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="font-semibold">
-                      {user.count} activities
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="font-semibold">
+                        {user.count} activities
+                      </Badge>
+                      {comparisonMode && !comparisonLoading && (
+                        <VarianceIndicator 
+                          current={user.count} 
+                          previous={comparisonTopUsers.find(u => u.user_id === user.user_id)?.count || 0} 
+                        />
+                      )}
+                    </div>
                   </div>
                 ))
               )}
             </div>
           </CardContent>
         </Card>
+
+        {comparisonMode && (
+          <Card className="border-[#E5E5EA] border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-600" />
+                Most Active Users (Comparison)
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  Period 2
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {comparisonLoading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {comparisonTopUsers.length === 0 ? (
+                    <p className="text-sm text-[#86868B] text-center py-8">
+                      No user activity data available
+                    </p>
+                  ) : (
+                    comparisonTopUsers.map((user, index) => (
+                      <div
+                        key={user.user_id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-purple-50 hover:bg-white transition-all border border-purple-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className={`
+                              w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                              ${index === 0 ? 'bg-[#FFD700] text-white' : 
+                                index === 1 ? 'bg-[#C0C0C0] text-white' : 
+                                index === 2 ? 'bg-[#CD7F32] text-white' : 
+                                'bg-purple-200 text-purple-700'}
+                            `}
+                          >
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-mono text-xs text-[#86868B]">
+                              {user.user_id.slice(0, 8)}...
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="font-semibold bg-purple-100 text-purple-700">
+                          {user.count} activities
+                        </Badge>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
