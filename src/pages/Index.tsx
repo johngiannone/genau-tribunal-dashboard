@@ -167,18 +167,35 @@ const Index = () => {
   };
 
   const loadConversation = async (conversationId: string) => {
-    const { data, error } = await supabase
+    // Fetch messages
+    const { data: messagesData, error: messagesError } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error("Error loading conversation:", error);
+    if (messagesError) {
+      console.error("Error loading messages:", messagesError);
+      toast({
+        title: "Error loading conversation",
+        description: messagesError.message,
+        variant: "destructive",
+      });
       return;
     }
 
-    const loadedMessages: Message[] = data.map((msg) => ({
+    // Fetch conversation context
+    const { data: conversationData, error: conversationError } = await supabase
+      .from('conversations')
+      .select('context, title')
+      .eq('id', conversationId)
+      .maybeSingle();
+
+    if (conversationError) {
+      console.error("Error loading conversation context:", conversationError);
+    }
+
+    const loadedMessages: Message[] = messagesData.map((msg) => ({
       id: Date.now() + Math.random(),
       userPrompt: msg.content,
       modelAResponse: msg.model_a_response || undefined,
@@ -190,6 +207,15 @@ const Index = () => {
 
     setMessages(loadedMessages);
     setCurrentConversationId(conversationId);
+    setHasContext(!!conversationData?.context);
+    
+    // Show feedback
+    toast({
+      title: messagesData.length === 0 ? "Empty conversation loaded" : "Conversation loaded",
+      description: messagesData.length === 0 
+        ? "No audits in this conversation yet" 
+        : `${messagesData.length} message${messagesData.length === 1 ? '' : 's'} loaded`,
+    });
   };
 
   const handleNewSession = () => {
@@ -428,47 +454,65 @@ const Index = () => {
                 
                 {/* Hero Content */}
                 <div className="relative z-10">
-                  <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text font-sans tracking-tight">
-                    Ask once. Get the consensus.
-                  </h1>
-                  <p className="text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed text-base font-mono">
-                    Running {councilConfig?.slot_1?.name || 'Llama 3'}, {councilConfig?.slot_2?.name || 'Claude 3.5'}, and {councilConfig?.slot_3?.name || 'DeepSeek R1'} in parallel for precision auditing.
-                  </p>
-                  
-                  {/* Usage indicator */}
-                  {usage && !usage.is_premium && (
-                    <div className="mb-6">
-                      <p className="text-sm text-muted-foreground">
-                        {(() => {
-                          const monthlyLimit = usage.subscription_tier === 'pro' ? 200 
-                            : usage.subscription_tier === 'max' ? 800
-                            : usage.subscription_tier === 'team' ? 1500
-                            : usage.subscription_tier === 'agency' ? 5000
-                            : 3; // Free tier: 3 per day
-                          const remaining = monthlyLimit - (usage.audits_this_month || 0);
-                          return `${remaining} free audits remaining this month`;
-                        })()}
+                  {currentConversationId ? (
+                    <>
+                      <h1 className="text-3xl md:text-4xl font-bold mb-4 text-muted-foreground font-sans tracking-tight">
+                        Empty Conversation
+                      </h1>
+                      <p className="text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed text-sm font-mono">
+                        This conversation has no completed audits yet. Send a message to start.
                       </p>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text font-sans tracking-tight">
+                        Ask once. Get the consensus.
+                      </h1>
+                      <p className="text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed text-base font-mono">
+                        Running {councilConfig?.slot_1?.name || 'Llama 3'}, {councilConfig?.slot_2?.name || 'Claude 3.5'}, and {councilConfig?.slot_3?.name || 'DeepSeek R1'} in parallel for precision auditing.
+                      </p>
+                    </>
                   )}
                   
-                  {/* System Status Bar */}
-                  <div className="inline-flex items-center gap-4 bg-card/70 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50 text-xs font-mono">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      <span className="text-foreground/80">{councilConfig?.slot_1?.name?.toUpperCase().replace(/\s+/g, '_') || 'LLAMA_3'}</span>
-                    </div>
-                    <div className="h-4 w-px bg-border/50" />
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
-                      <span className="text-foreground/80">{councilConfig?.slot_2?.name?.toUpperCase().replace(/\s+/g, '_') || 'CLAUDE_3.5'}</span>
-                    </div>
-                    <div className="h-4 w-px bg-border/50" />
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
-                      <span className="text-foreground/80">{councilConfig?.slot_3?.name?.toUpperCase().replace(/\s+/g, '_') || 'DEEPSEEK_R1'}</span>
-                    </div>
-                  </div>
+                  {/* Only show usage and status when not in a loaded conversation */}
+                  {!currentConversationId && (
+                    <>
+                      {/* Usage indicator */}
+                      {usage && !usage.is_premium && (
+                        <div className="mb-6">
+                          <p className="text-sm text-muted-foreground">
+                            {(() => {
+                              const monthlyLimit = usage.subscription_tier === 'pro' ? 200 
+                                : usage.subscription_tier === 'max' ? 800
+                                : usage.subscription_tier === 'team' ? 1500
+                                : usage.subscription_tier === 'agency' ? 5000
+                                : 3; // Free tier: 3 per day
+                              const remaining = monthlyLimit - (usage.audits_this_month || 0);
+                              return `${remaining} free audits remaining this month`;
+                            })()}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* System Status Bar */}
+                      <div className="inline-flex items-center gap-4 bg-card/70 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50 text-xs font-mono">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          <span className="text-foreground/80">{councilConfig?.slot_1?.name?.toUpperCase().replace(/\s+/g, '_') || 'LLAMA_3'}</span>
+                        </div>
+                        <div className="h-4 w-px bg-border/50" />
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
+                          <span className="text-foreground/80">{councilConfig?.slot_2?.name?.toUpperCase().replace(/\s+/g, '_') || 'CLAUDE_3.5'}</span>
+                        </div>
+                        <div className="h-4 w-px bg-border/50" />
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
+                          <span className="text-foreground/80">{councilConfig?.slot_3?.name?.toUpperCase().replace(/\s+/g, '_') || 'DEEPSEEK_R1'}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
