@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ModelMarketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onModelSelect: (modelId: string) => void;
+  onModelSelect: (modelId: string, modelName?: string) => void | Promise<void>;
   currentModel?: string;
 }
 
@@ -102,13 +102,13 @@ export const ModelMarketModal = ({
       setPendingModel(model);
       setShowExpensiveWarning(true);
     } else {
-      onModelSelect(model.id);
+      onModelSelect(model.id, model.name);
     }
   };
 
   const confirmExpensiveModel = () => {
     if (pendingModel) {
-      onModelSelect(pendingModel.id);
+      onModelSelect(pendingModel.id, pendingModel.name);
     }
     setShowExpensiveWarning(false);
     setPendingModel(null);

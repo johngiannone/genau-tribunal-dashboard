@@ -4,39 +4,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Settings2, Sparkles } from "lucide-react";
 import { ModelMarketModal } from "@/components/ModelMarketModal";
 import { Session } from "@supabase/supabase-js";
 
-interface CouncilConfig {
-  slot_1: string;
-  slot_2: string;
-  slot_3: string;
-  slot_4: string;
-  slot_5: string;
+interface SlotConfig {
+  id: string;
+  name: string;
+  role: string;
 }
 
-const DEFAULT_COUNCIL_CONFIG: CouncilConfig = {
-  slot_1: "openai/gpt-4o",
-  slot_2: "anthropic/claude-3.5-sonnet",
-  slot_3: "qwen/qwen-2.5-coder-32b",
-  slot_4: "xai/grok-beta",
-  slot_5: "meta-llama/llama-3.3-70b",
-};
+interface CouncilConfig {
+  slot_1: SlotConfig;
+  slot_2: SlotConfig;
+  slot_3: SlotConfig;
+  slot_4: SlotConfig;
+  slot_5: SlotConfig;
+}
 
-const SLOT_NAMES = {
-  slot_1: "The Chairman",
-  slot_2: "The Critic",
-  slot_3: "The Architect",
-  slot_4: "The Reporter",
-  slot_5: "The Speedster",
+const DEFAULT_COUNCIL: CouncilConfig = {
+  slot_1: { id: "openai/gpt-4o", name: "GPT-4o", role: "The Chairman" },
+  slot_2: { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", role: "The Critic" },
+  slot_3: { id: "qwen/qwen-2.5-coder-32b", name: "Qwen 2.5 Coder", role: "The Architect" },
+  slot_4: { id: "xai/grok-beta", name: "Grok Beta", role: "The Reporter" },
+  slot_5: { id: "meta-llama/llama-3.3-70b", name: "Llama 3.3 70B", role: "The Speedster" }
 };
 
 const CouncilSettings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
-  const [councilConfig, setCouncilConfig] = useState<CouncilConfig>(DEFAULT_COUNCIL_CONFIG);
+  const [councilConfig, setCouncilConfig] = useState<CouncilConfig>(DEFAULT_COUNCIL);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -87,12 +86,33 @@ const CouncilSettings = () => {
       return;
     }
 
-    if (data?.council_config) {
-      setCouncilConfig(data.council_config as unknown as CouncilConfig);
-    } else {
-      // Keep default config if no saved config exists
-      setCouncilConfig(DEFAULT_COUNCIL_CONFIG);
+    // If council_config is null or empty, save the default and use it
+    if (!data?.council_config || Object.keys(data.council_config).length === 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ council_config: DEFAULT_COUNCIL as any })
+        .eq('id', session.user.id);
+
+      if (updateError) {
+        console.error("Error saving default council config:", updateError);
+      }
+
+      setCouncilConfig(DEFAULT_COUNCIL);
+      setLoading(false);
+      return;
     }
+
+    // Merge with defaults to ensure no slots are missing
+    const loadedConfig = data.council_config as any;
+    const mergedConfig: CouncilConfig = { ...DEFAULT_COUNCIL };
+    
+    for (const slot of Object.keys(DEFAULT_COUNCIL) as Array<keyof CouncilConfig>) {
+      if (loadedConfig[slot]) {
+        mergedConfig[slot] = loadedConfig[slot];
+      }
+    }
+
+    setCouncilConfig(mergedConfig);
     setLoading(false);
   };
 
@@ -101,12 +121,18 @@ const CouncilSettings = () => {
     setIsModalOpen(true);
   };
 
-  const handleModelSelect = async (modelId: string) => {
+  const handleModelSelect = async (modelId: string, modelName: string) => {
     if (!session?.user || !selectedSlot) return;
+
+    const slotRole = DEFAULT_COUNCIL[selectedSlot as keyof CouncilConfig].role;
 
     const updatedConfig = {
       ...councilConfig,
-      [selectedSlot]: modelId,
+      [selectedSlot]: {
+        id: modelId,
+        name: modelName,
+        role: slotRole,
+      },
     };
 
     const { error } = await supabase
@@ -128,21 +154,10 @@ const CouncilSettings = () => {
     setIsModalOpen(false);
     toast({
       title: "Council Updated",
-      description: "Your AI Council has been reconfigured",
+      description: `${modelName} is now ${slotRole}`,
     });
   };
 
-  const getModelDisplayName = (modelId: string) => {
-    return modelId.split('/')[1]?.replace(/-/g, ' ').toUpperCase() || modelId;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -189,46 +204,64 @@ const CouncilSettings = () => {
 
           {/* Council Slots Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {Object.entries(councilConfig).map(([slot, modelId]) => (
-              <Card
-                key={slot}
-                className="group relative p-6 cursor-pointer transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
-                onClick={() => handleSlotClick(slot)}
-              >
-                <div className="absolute top-3 right-3">
-                  <Sparkles className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-xs font-mono text-primary mb-2">
-                      {SLOT_NAMES[slot as keyof typeof SLOT_NAMES]}
+            {loading ? (
+              // Skeleton loading state for 5 slots
+              Array.from({ length: 5 }).map((_, index) => (
+                <Card key={index} className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-6 w-32" />
                     </div>
-                    <h3 className="text-lg font-bold text-foreground">
-                      {getModelDisplayName(modelId)}
-                    </h3>
+                    <div className="pt-4 border-t border-border/30">
+                      <Skeleton className="h-3 w-full" />
+                    </div>
+                    <Skeleton className="h-9 w-full" />
+                  </div>
+                </Card>
+              ))
+            ) : (
+              Object.entries(councilConfig).map(([slot, slotConfig]) => (
+                <Card
+                  key={slot}
+                  className="group relative p-6 cursor-pointer transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+                  onClick={() => handleSlotClick(slot)}
+                >
+                  <div className="absolute top-3 right-3">
+                    <Sparkles className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
 
-                  <div className="pt-4 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {modelId}
-                    </p>
-                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs font-mono text-primary mb-2">
+                        {slotConfig.role}
+                      </div>
+                      <h3 className="text-lg font-bold text-foreground">
+                        {slotConfig.name}
+                      </h3>
+                    </div>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSlotClick(slot);
-                    }}
-                  >
-                    Change Model
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                    <div className="pt-4 border-t border-border/30">
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {slotConfig.id}
+                      </p>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSlotClick(slot);
+                      }}
+                    >
+                      Change Model
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -236,8 +269,8 @@ const CouncilSettings = () => {
       <ModelMarketModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        onModelSelect={handleModelSelect}
-        currentModel={selectedSlot ? councilConfig[selectedSlot as keyof CouncilConfig] : undefined}
+        onModelSelect={(modelId, modelName) => handleModelSelect(modelId, modelName || modelId)}
+        currentModel={selectedSlot ? councilConfig[selectedSlot as keyof CouncilConfig].id : undefined}
       />
     </div>
   );
