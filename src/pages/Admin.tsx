@@ -25,6 +25,7 @@ import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
+import { PriceSyncPanel } from "@/components/PriceSyncPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
@@ -128,6 +129,7 @@ const Admin = () => {
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
+                <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users">
@@ -238,6 +240,10 @@ const Admin = () => {
 
       <TabsContent value="stats">
         <ActivityStatsDashboard />
+      </TabsContent>
+
+      <TabsContent value="pricing">
+        <PriceSyncPanel />
       </TabsContent>
     </Tabs>
           </div>

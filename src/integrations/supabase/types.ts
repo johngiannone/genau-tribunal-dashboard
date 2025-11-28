@@ -47,6 +47,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_models: {
+        Row: {
+          id: string
+          input_price: number
+          last_updated: string
+          name: string
+          output_price: number
+        }
+        Insert: {
+          id: string
+          input_price: number
+          last_updated?: string
+          name: string
+          output_price: number
+        }
+        Update: {
+          id?: string
+          input_price?: number
+          last_updated?: string
+          name?: string
+          output_price?: number
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           conversation_id: string | null

@@ -176,6 +176,38 @@ serve(async (req) => {
     console.log("Drafters:", drafterSlots.map(s => s.name).join(", "))
     console.log("Auditor:", auditorSlot.name)
 
+    // Fetch current model prices from database
+    const allModelIds = [...drafterSlots.map(d => d.id), auditorSlot.id]
+    console.log("Fetching prices for models:", allModelIds)
+    
+    const { data: modelPrices, error: pricesError } = await adminSupabase
+      .from('ai_models')
+      .select('*')
+      .in('id', allModelIds)
+    
+    if (pricesError) {
+      console.warn("Failed to fetch model prices:", pricesError)
+    }
+    
+    // Calculate estimated cost (assuming 1k input + 1k output tokens)
+    let estimatedCost = 0
+    const priceMap = new Map(modelPrices?.map(p => [p.id, p]) || [])
+    
+    for (const drafter of drafterSlots) {
+      const price = priceMap.get(drafter.id)
+      if (price) {
+        estimatedCost += (price.input_price * 1000 + price.output_price * 1000)
+      }
+    }
+    
+    const auditorPrice = priceMap.get(auditorSlot.id)
+    if (auditorPrice) {
+      // Auditor processes more text (all drafts)
+      estimatedCost += (auditorPrice.input_price * 3000 + auditorPrice.output_price * 1500)
+    }
+    
+    console.log(`Estimated cost for this audit: $${estimatedCost.toFixed(6)}`)
+
     let context = ""
     let librarianAnalysis = ""
 
@@ -358,6 +390,26 @@ serve(async (req) => {
       console.error("Failed to log analytics:", analyticsError)
     } else {
       console.log(`Analytics logged for ${analyticsEvents.length} models`)
+    }
+
+    // Log cost estimate to activity logs
+    const { error: activityError } = await adminSupabase
+      .from('activity_logs')
+      .insert({
+        user_id: user.id,
+        activity_type: 'audit_completed',
+        description: `Consensus audit completed with ${drafterSlots.length} models`,
+        metadata: {
+          estimated_cost: estimatedCost,
+          models_used: allModelIds,
+          conversation_id: conversationId
+        }
+      })
+    
+    if (activityError) {
+      console.error("Failed to log activity:", activityError)
+    } else {
+      console.log(`Activity logged with estimated cost: $${estimatedCost.toFixed(6)}`)
     }
 
     // 9. Save to training dataset
