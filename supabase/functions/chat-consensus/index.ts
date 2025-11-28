@@ -134,16 +134,47 @@ serve(async (req) => {
       throw new Error("Missing OPENROUTER_API_KEY")
     }
 
-    // Get models from council config or use defaults
-    const slot1 = councilConfig?.slot_1 || { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3", role: "The Speedster" }
-    const slot2 = councilConfig?.slot_2 || { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5", role: "The Critic" }
-    const slot5 = councilConfig?.slot_5 || { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Synthesizer" }
+    // Dynamically extract drafter and auditor slots from council config
+    const defaultConfig = {
+      slot_1: { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3", role: "The Speedster" },
+      slot_2: { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5", role: "The Critic" },
+      slot_5: { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Auditor" }
+    }
     
-    const modelA = typeof slot1 === 'string' ? slot1 : slot1.id
-    const modelB = typeof slot2 === 'string' ? slot2 : slot2.id
-    const synthModel = typeof slot5 === 'string' ? slot5 : slot5.id
+    const config = councilConfig || defaultConfig
     
-    console.log("Using models:", { modelA, modelB, synthModel })
+    // Separate drafters from auditor
+    const allSlots = Object.entries(config).map(([key, value]) => {
+      if (typeof value === 'string') {
+        return {
+          slotKey: key,
+          id: value,
+          name: value,
+          role: 'Drafter'
+        }
+      } else {
+        const slot = value as { id: string; name: string; role: string }
+        return {
+          slotKey: key,
+          id: slot.id,
+          name: slot.name,
+          role: slot.role
+        }
+      }
+    })
+    
+    // Find auditor (last slot OR role contains "Audit" or "Synth")
+    const auditorSlot = allSlots.find(slot => 
+      slot.role?.toLowerCase().includes('audit') || 
+      slot.role?.toLowerCase().includes('synth')
+    ) || allSlots[allSlots.length - 1] // Default to last slot
+    
+    // All other slots are drafters
+    const drafterSlots = allSlots.filter(slot => slot.slotKey !== auditorSlot.slotKey)
+    
+    console.log(`Council: ${drafterSlots.length} drafters + 1 auditor`)
+    console.log("Drafters:", drafterSlots.map(s => s.name).join(", "))
+    console.log("Auditor:", auditorSlot.name)
 
     let context = ""
     let librarianAnalysis = ""
@@ -203,42 +234,64 @@ serve(async (req) => {
       }
     }
 
-    // 5. THE COUNCIL (Parallel Processing) - Track timing
-    console.log("Fetching drafts from models...")
+    // 5. THE COUNCIL - Run all drafters in parallel
+    console.log(`Fetching drafts from ${drafterSlots.length} drafters...`)
     
-    const startTimeA = Date.now()
-    const startTimeB = Date.now()
-    
-    const [draftA, draftB] = await Promise.all([
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { 
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`, 
-          "Content-Type": "application/json" 
-        },
-        body: JSON.stringify({
-          model: modelA,
-          messages: [{ role: "user", content: prompt + context }]
-        })
-      }).then(r => r.json()).then(data => ({ data, latency: Date.now() - startTimeA })),
+    const drafterPromises = drafterSlots.map(async (drafter, index) => {
+      const startTime = Date.now()
       
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: { 
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`, 
-          "Content-Type": "application/json" 
-        },
-        body: JSON.stringify({
-          model: modelB,
-          messages: [{ role: "user", content: prompt + context }]
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({
+            model: drafter.id,
+            messages: [{ role: "user", content: prompt + context }]
+          })
         })
-      }).then(r => r.json()).then(data => ({ data, latency: Date.now() - startTimeB }))
-    ])
+        
+        if (!response.ok) {
+          throw new Error(`${drafter.name} failed: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        const latency = Date.now() - startTime
+        
+        return {
+          agent: drafter.role,
+          name: drafter.name,
+          modelId: drafter.id,
+          slotKey: drafter.slotKey,
+          response: data.choices[0].message.content,
+          latency
+        }
+      } catch (err) {
+        console.error(`Drafter ${drafter.name} failed:`, err)
+        return {
+          agent: drafter.role,
+          name: drafter.name,
+          modelId: drafter.id,
+          slotKey: drafter.slotKey,
+          response: `[${drafter.name} failed to respond]`,
+          latency: Date.now() - startTime
+        }
+      }
+    })
+    
+    const drafts = await Promise.all(drafterPromises)
+    console.log(`All ${drafts.length} drafts received`)
 
-    console.log("Drafts received, generating synthesis...")
-
-    // 6. THE VERDICT (DeepSeek or custom synthesis model) - Track timing
+    // 6. THE AUDITOR - Synthesize all drafts
+    console.log(`Sending ${drafts.length} drafts to auditor: ${auditorSlot.name}`)
     const startTimeVerdict = Date.now()
+    
+    const draftsText = drafts.map((d, i) => 
+      `Draft ${i + 1} (${d.name}):\n${d.response}`
+    ).join('\n\n')
+    
     const verdictReq = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -246,27 +299,27 @@ serve(async (req) => {
         "Content-Type": "application/json" 
       },
       body: JSON.stringify({
-        model: synthModel,
+        model: auditorSlot.id,
         messages: [{
           role: "system",
-          content: "You are an Auditor. Compare Draft A and Draft B. Identify errors. Write a final, corrected verdict."
+          content: `You are ${auditorSlot.role}. Compare all drafts from the Council. Identify errors, conflicts, and strengths. Provide a final synthesized verdict that combines the best insights.`
         }, {
           role: "user",
-          content: `User Query: ${prompt}\n${context}\n\nDraft A: ${draftA.data.choices[0].message.content}\n\nDraft B: ${draftB.data.choices[0].message.content}`
+          content: `User Query: ${prompt}\n${context}\n\n${draftsText}`
         }]
       })
     })
 
     if (!verdictReq.ok) {
       const errorText = await verdictReq.text()
-      throw new Error(`DeepSeek audit failed: ${errorText}`)
+      throw new Error(`Auditor ${auditorSlot.name} failed: ${errorText}`)
     }
 
     const verdictData = await verdictReq.json()
     const verdictLatency = Date.now() - startTimeVerdict
     console.log("Synthesis complete")
 
-    // 7. Update usage count (increment monthly counter and total)
+    // 7. Update usage count
     await supabase
       .from('user_usage')
       .update({ 
@@ -275,33 +328,24 @@ serve(async (req) => {
       })
       .eq('user_id', user.id)
 
-    // 8. Log analytics events
+    // 8. Log analytics for all models
     const analyticsEvents = [
+      ...drafts.map((draft, index) => ({
+        user_id: user.id,
+        conversation_id: conversationId || null,
+        model_id: draft.modelId,
+        model_name: draft.name,
+        model_role: draft.agent,
+        slot_position: parseInt(draft.slotKey.replace('slot_', '')),
+        latency_ms: draft.latency
+      })),
       {
         user_id: user.id,
         conversation_id: conversationId || null,
-        model_id: modelA,
-        model_name: typeof slot1 === 'object' ? slot1.name : modelA,
-        model_role: typeof slot1 === 'object' ? slot1.role : null,
-        slot_position: 1,
-        latency_ms: draftA.latency
-      },
-      {
-        user_id: user.id,
-        conversation_id: conversationId || null,
-        model_id: modelB,
-        model_name: typeof slot2 === 'object' ? slot2.name : modelB,
-        model_role: typeof slot2 === 'object' ? slot2.role : null,
-        slot_position: 2,
-        latency_ms: draftB.latency
-      },
-      {
-        user_id: user.id,
-        conversation_id: conversationId || null,
-        model_id: synthModel,
-        model_name: typeof slot5 === 'object' ? slot5.name : synthModel,
-        model_role: typeof slot5 === 'object' ? slot5.role : null,
-        slot_position: 5,
+        model_id: auditorSlot.id,
+        model_name: auditorSlot.name,
+        model_role: auditorSlot.role,
+        slot_position: parseInt(auditorSlot.slotKey.replace('slot_', '')),
         latency_ms: verdictLatency
       }
     ]
@@ -313,13 +357,11 @@ serve(async (req) => {
     if (analyticsError) {
       console.error("Failed to log analytics:", analyticsError)
     } else {
-      console.log("Analytics events logged successfully")
+      console.log(`Analytics logged for ${analyticsEvents.length} models`)
     }
 
-    console.log("=== Request completed successfully ===")
-
-    // 9. Save to training dataset automatically
-    let trainingDatasetId = null;
+    // 9. Save to training dataset
+    let trainingDatasetId = null
     try {
       const { data: trainingData, error: trainingError } = await adminSupabase
         .from('training_dataset')
@@ -327,35 +369,40 @@ serve(async (req) => {
           user_id: user.id,
           prompt,
           chosen_response: verdictData.choices[0].message.content,
-          rejected_response_a: draftA.data.choices[0].message.content,
-          rejected_response_b: draftB.data.choices[0].message.content,
+          rejected_response_a: drafts[0]?.response || '',
+          rejected_response_b: drafts[1]?.response || '',
           model_config: councilConfig
         })
         .select()
-        .single();
+        .single()
 
-      if (trainingError) {
-        console.error('Failed to save training data:', trainingError);
-        // Don't fail the request if training save fails
-      } else {
-        console.log('Training data saved successfully');
-        trainingDatasetId = trainingData.id;
+      if (!trainingError) {
+        trainingDatasetId = trainingData.id
+        console.log('Training data saved')
       }
     } catch (err) {
-      console.error('Training data insert error:', err);
+      console.error('Training data error:', err)
     }
 
-    // 10. Return results
+    console.log("=== Request completed successfully ===")
+
+    // 10. Return results with dynamic drafts array
     return new Response(
       JSON.stringify({
-        draftA: draftA.data.choices[0].message.content,
-        draftB: draftB.data.choices[0].message.content,
+        drafts: drafts.map(d => ({
+          agent: d.agent,
+          name: d.name,
+          response: d.response
+        })),
         verdict: verdictData.choices[0].message.content,
-        agentNameA: typeof slot1 === 'object' ? slot1.role : null,
-        agentNameB: typeof slot2 === 'object' ? slot2.role : null,
         librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, monthlyLimit - (userUsage.audits_this_month || 0) - 1),
-        trainingDatasetId: trainingDatasetId
+        trainingDatasetId: trainingDatasetId,
+        // Legacy fields for backward compatibility
+        draftA: drafts[0]?.response || '',
+        draftB: drafts[1]?.response || '',
+        agentNameA: drafts[0]?.agent || null,
+        agentNameB: drafts[1]?.agent || null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )

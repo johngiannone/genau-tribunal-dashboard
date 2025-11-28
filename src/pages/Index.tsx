@@ -390,6 +390,7 @@ const Index = () => {
         humanRating: 0,
         agentNameA: data.agentNameA,
         agentNameB: data.agentNameB,
+        drafts: data.drafts || [] // Store the dynamic drafts array
       };
 
       setMessages((prev) =>
