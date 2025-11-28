@@ -130,6 +130,33 @@ const Index = () => {
     setUsage(data);
   };
 
+  const updateCouncilSlot = async (slot: 'slot_1' | 'slot_2', modelId: string, modelName: string) => {
+    if (!session?.user) return;
+
+    const role = slot === 'slot_1' ? 'The Speedster' : 'The Critic';
+    
+    const updatedConfig = {
+      ...councilConfig,
+      [slot]: { id: modelId, name: modelName, role }
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ council_config: updatedConfig })
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error("Error updating council config:", error);
+      toast({
+        title: "Failed to update model",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setCouncilConfig(updatedConfig);
+    }
+  };
+
   const createNewConversation = async (title: string) => {
     if (!session?.user) return null;
 
@@ -537,6 +564,9 @@ const Index = () => {
                     messageId={message.trainingDatasetId}
                     onRatingChange={handleRatingChange}
                     currentRating={message.humanRating}
+                    onModelSwap={updateCouncilSlot}
+                    currentModelAId={councilConfig?.slot_1?.id || councilConfig?.slot_1}
+                    currentModelBId={councilConfig?.slot_2?.id || councilConfig?.slot_2}
                   />
                 ))}
               </div>

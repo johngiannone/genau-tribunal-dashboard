@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -8,6 +8,7 @@ import { Progress } from "./ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { ModelMarketModal } from "./ModelMarketModal";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -23,6 +24,9 @@ interface ConsensusMessageProps {
   messageId?: string;
   onRatingChange?: (messageId: string, rating: number) => void;
   currentRating?: number;
+  onModelSwap?: (slot: 'slot_1' | 'slot_2', modelId: string, modelName: string) => void;
+  currentModelAId?: string;
+  currentModelBId?: string;
 }
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
@@ -74,9 +78,11 @@ interface DraftBoxProps {
   isLoading: boolean;
   animationDelay?: string;
   agentName?: string;
+  onChangeModel?: () => void;
+  isDimmed?: boolean;
 }
 
-const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", agentName }: DraftBoxProps) => {
+const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", agentName, onChangeModel, isDimmed }: DraftBoxProps) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const needsExpansion = content && content.length > 800;
@@ -90,7 +96,7 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
   };
 
   return (
-    <div className="bg-card border border-border rounded overflow-hidden font-mono text-xs">
+    <div className={`bg-card border border-border rounded overflow-hidden font-mono text-xs transition-opacity duration-500 ${isDimmed ? 'opacity-40' : 'opacity-100'}`}>
       <div className="bg-muted/30 px-3 py-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div 
@@ -103,6 +109,18 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-[10px]">{subtitle}</span>
+          {onChangeModel && !isLoading && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[10px] gap-1"
+              onClick={onChangeModel}
+              title="Change model"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Swap
+            </Button>
+          )}
           {!isLoading && content && (
             <Button
               size="sm"
@@ -225,8 +243,13 @@ export const ConsensusMessage = ({
   messageId,
   onRatingChange,
   currentRating = 0,
+  onModelSwap,
+  currentModelAId,
+  currentModelBId,
 }: ConsensusMessageProps) => {
   const [isSharing, setIsSharing] = useState(false);
+  const [showModelMarket, setShowModelMarket] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<'slot_1' | 'slot_2' | null>(null);
   const { toast } = useToast();
 
   const getModelDisplayName = (modelId: string) => {
@@ -302,47 +325,70 @@ export const ConsensusMessage = ({
     }
   };
 
+  const handleChangeModelClick = (slot: 'slot_1' | 'slot_2') => {
+    setSelectedSlot(slot);
+    setShowModelMarket(true);
+  };
+
+  const handleModelSelect = async (modelId: string, modelName?: string) => {
+    if (!selectedSlot || !onModelSwap || !modelName) return;
+    
+    onModelSwap(selectedSlot, modelId, modelName);
+    setShowModelMarket(false);
+    setSelectedSlot(null);
+    
+    toast({
+      title: "Model swapped",
+      description: `${selectedSlot === 'slot_1' ? 'Model A' : 'Model B'} updated to ${modelName}. Future messages will use this model.`,
+    });
+  };
+
   const verdictSections = synthesisResponse ? parseVerdictSections(synthesisResponse) : [];
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
-      {/* User Prompt */}
-      <div className="flex justify-end">
-        <div className="max-w-2xl bg-accent border border-border rounded px-5 py-3">
-          <p className="text-foreground leading-relaxed text-sm">{userPrompt}</p>
+    <>
+      <div className="space-y-5 animate-in fade-in duration-300">
+        {/* User Prompt */}
+        <div className="flex justify-end">
+          <div className="max-w-2xl bg-accent border border-border rounded px-5 py-3">
+            <p className="text-foreground leading-relaxed text-sm">{userPrompt}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Model Outputs - Terminal Style */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-3">
-          <Cpu className="w-4 h-4 text-primary" />
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
-            Model Outputs
-          </h3>
+        {/* Model Outputs - Terminal Style */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Cpu className="w-4 h-4 text-primary" />
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+              Model Outputs
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DraftBox
+              title={getModelDisplayName(modelAName)}
+              subtitle={modelAName}
+              content={modelAResponse}
+              isLoading={isLoading}
+              animationDelay="0s"
+              agentName={agentNameA}
+              onChangeModel={onModelSwap ? () => handleChangeModelClick('slot_1') : undefined}
+              isDimmed={synthesisResponse && !isLoading}
+            />
+            <DraftBox
+              title={getModelDisplayName(modelBName)}
+              subtitle={modelBName}
+              content={modelBResponse}
+              isLoading={isLoading}
+              animationDelay="0.2s"
+              agentName={agentNameB}
+              onChangeModel={onModelSwap ? () => handleChangeModelClick('slot_2') : undefined}
+              isDimmed={synthesisResponse && !isLoading}
+            />
+          </div>
         </div>
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-500 ${synthesisResponse && !isLoading ? 'opacity-40' : 'opacity-100'}`}>
-          <DraftBox
-            title={getModelDisplayName(modelAName)}
-            subtitle={modelAName}
-            content={modelAResponse}
-            isLoading={isLoading}
-            animationDelay="0s"
-            agentName={agentNameA}
-          />
-          <DraftBox
-            title={getModelDisplayName(modelBName)}
-            subtitle={modelBName}
-            content={modelBResponse}
-            isLoading={isLoading}
-            animationDelay="0.2s"
-            agentName={agentNameB}
-          />
-        </div>
-      </div>
 
-      {/* The Synthesis - Report Card */}
-      <div className="space-y-2">
+        {/* The Synthesis - Report Card */}
+        <div className="space-y-2">
         <div className="bg-card border border-synthesis-border rounded-lg overflow-hidden">
           {isLoading && !synthesisResponse ? (
             <div className="p-8">
@@ -539,5 +585,16 @@ export const ConsensusMessage = ({
         </div>
       </div>
     </div>
+      
+    {/* Model Market Modal */}
+    {onModelSwap && (
+      <ModelMarketModal
+        open={showModelMarket}
+        onOpenChange={setShowModelMarket}
+        onModelSelect={handleModelSelect}
+        currentModel={selectedSlot === 'slot_1' ? currentModelAId : currentModelBId}
+      />
+    )}
+  </>
   );
 };
