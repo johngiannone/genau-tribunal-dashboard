@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, Clock, Users, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Loader2, TrendingUp, Clock, Users, Activity, CalendarIcon } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -18,7 +25,9 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { format, subDays, startOfHour } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 interface ActivityTypeCount {
   activity_type: string;
@@ -61,21 +70,31 @@ export const ActivityStatsDashboard = () => {
   const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [totalActivities, setTotalActivities] = useState(0);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  });
 
   useEffect(() => {
-    fetchStatistics();
-  }, []);
+    if (dateRange?.from && dateRange?.to) {
+      fetchStatistics();
+    }
+  }, [dateRange]);
 
   const fetchStatistics = async () => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
     setLoading(true);
     try {
-      const sevenDaysAgo = subDays(new Date(), 7);
+      const fromDate = startOfDay(dateRange.from);
+      const toDate = endOfDay(dateRange.to);
 
-      // Fetch all activity logs from the last 7 days
+      // Fetch all activity logs within the date range
       const { data: logs, error } = await supabase
         .from('activity_logs')
         .select('activity_type, created_at, user_id')
-        .gte('created_at', sevenDaysAgo.toISOString());
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString());
 
       if (error) throw error;
 
@@ -150,6 +169,20 @@ export const ActivityStatsDashboard = () => {
     }
   };
 
+  const setQuickRange = (days: number) => {
+    setDateRange({
+      from: subDays(new Date(), days),
+      to: new Date(),
+    });
+  };
+
+  const getDaysCount = () => {
+    if (!dateRange?.from || !dateRange?.to) return 7;
+    const diffTime = Math.abs(dateRange.to.getTime() - dateRange.from.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -160,19 +193,80 @@ export const ActivityStatsDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with Date Range Filters */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <TrendingUp className="w-6 h-6 text-[#0071E3]" />
           <h2 className="text-2xl font-bold text-[#111111]">Activity Statistics</h2>
           <Badge variant="secondary" className="font-mono text-xs">
-            Last 7 days
+            {dateRange?.from && dateRange?.to
+              ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`
+              : "Select date range"}
           </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-[#0071E3]" />
-          <span className="text-2xl font-bold text-[#111111]">{totalActivities}</span>
-          <span className="text-sm text-[#86868B]">total activities</span>
+        
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Select Buttons */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQuickRange(7)}
+            className={cn(
+              "h-9",
+              getDaysCount() === 7 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+            )}
+          >
+            Last 7 days
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQuickRange(30)}
+            className={cn(
+              "h-9",
+              getDaysCount() === 30 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+            )}
+          >
+            Last 30 days
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQuickRange(90)}
+            className={cn(
+              "h-9",
+              getDaysCount() === 90 && "bg-[#0071E3] text-white hover:bg-[#0071E3]/90 hover:text-white"
+            )}
+          >
+            Last 90 days
+          </Button>
+          
+          {/* Custom Date Range Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9">
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Custom Range
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-white z-50" align="end">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Total Activities Badge */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F9FAFB] border border-[#E5E5EA]">
+            <Activity className="w-4 h-4 text-[#0071E3]" />
+            <span className="text-lg font-bold text-[#111111]">{totalActivities}</span>
+            <span className="text-xs text-[#86868B]">activities</span>
+          </div>
         </div>
       </div>
 
