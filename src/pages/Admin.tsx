@@ -26,6 +26,7 @@ import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
 import { PriceSyncPanel } from "@/components/PriceSyncPanel";
+import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
@@ -35,6 +36,8 @@ interface UserData {
   files_this_month: number;
   is_premium: boolean;
   subscription_tier: string | null;
+  daily_cost_threshold: number | null;
+  per_audit_cost_threshold: number | null;
 }
 
 const Admin = () => {
@@ -130,6 +133,7 @@ const Admin = () => {
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
+                <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users">
@@ -143,6 +147,8 @@ const Admin = () => {
                 <TableHead className="font-semibold text-[#111111]">Files/Month</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Premium</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Tier</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Daily $</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Audit $</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -217,6 +223,46 @@ const Admin = () => {
                     </Select>
                   </TableCell>
                   <TableCell>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={user.daily_cost_threshold || ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value ? parseFloat(e.target.value) : null;
+                        setUsers(users.map(u => 
+                          u.user_id === user.user_id 
+                            ? { ...u, daily_cost_threshold: newValue }
+                            : u
+                        ));
+                      }}
+                      onBlur={() => updateUser(user.user_id, { 
+                        daily_cost_threshold: user.daily_cost_threshold 
+                      })}
+                      className="w-24"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={user.per_audit_cost_threshold || ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value ? parseFloat(e.target.value) : null;
+                        setUsers(users.map(u => 
+                          u.user_id === user.user_id 
+                            ? { ...u, per_audit_cost_threshold: newValue }
+                            : u
+                        ));
+                      }}
+                      onBlur={() => updateUser(user.user_id, { 
+                        per_audit_cost_threshold: user.per_audit_cost_threshold 
+                      })}
+                      className="w-24"
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Button
                       size="sm"
                       variant="outline"
@@ -244,6 +290,10 @@ const Admin = () => {
 
       <TabsContent value="pricing">
         <PriceSyncPanel />
+      </TabsContent>
+
+      <TabsContent value="alerts">
+        <CostAlertsPanel />
       </TabsContent>
     </Tabs>
           </div>
