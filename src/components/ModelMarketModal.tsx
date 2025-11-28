@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { ScrollArea } from "./ui/scroll-area";
 import { Input } from "./ui/input";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { Check, Search, Loader2 } from "lucide-react";
-import { fetchOpenRouterModels, filterModelsByCategory, Model } from "@/lib/openrouter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { Check, Search, Loader2, AlertTriangle } from "lucide-react";
+import { fetchOpenRouterModels, filterModelsByCategory, sortModels, Model } from "@/lib/openrouter";
 
 interface ModelMarketModalProps {
   open: boolean;
@@ -24,6 +26,10 @@ export const ModelMarketModal = ({
 }: ModelMarketModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("popular");
+  const [pendingModel, setPendingModel] = useState<Model | null>(null);
+  const [showExpensiveWarning, setShowExpensiveWarning] = useState(false);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   // Fetch models using TanStack Query
   const { data: models = [], isLoading } = useQuery({
@@ -35,7 +41,7 @@ export const ModelMarketModal = ({
 
   const filteredByCategory = filterModelsByCategory(models, activeCategory);
   
-  const filteredModels = filteredByCategory.filter((model) => {
+  const filteredAndSearched = filteredByCategory.filter((model) => {
     const search = searchTerm.toLowerCase();
     return (
       model.name.toLowerCase().includes(search) ||
@@ -44,6 +50,38 @@ export const ModelMarketModal = ({
       model.description.toLowerCase().includes(search)
     );
   });
+
+  const filteredModels = sortModels(filteredAndSearched, sortBy);
+
+  // Group models into rows (2 per row)
+  const rows = [];
+  for (let i = 0; i < filteredModels.length; i += 2) {
+    rows.push(filteredModels.slice(i, i + 2));
+  }
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 240,
+    overscan: 5,
+  });
+
+  const handleModelClick = (model: Model) => {
+    if (model.avgCostPer1M > 10) {
+      setPendingModel(model);
+      setShowExpensiveWarning(true);
+    } else {
+      onModelSelect(model.id);
+    }
+  };
+
+  const confirmExpensiveModel = () => {
+    if (pendingModel) {
+      onModelSelect(pendingModel.id);
+    }
+    setShowExpensiveWarning(false);
+    setPendingModel(null);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,116 +106,208 @@ export const ModelMarketModal = ({
           </TabsList>
         </Tabs>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search models by name, provider, or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-card/50 border-border/50"
-          />
+        {/* Search Bar and Sort */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search models by name, provider, or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-card/50 border-border/50"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px] bg-card/50 border-border/50">
+              <SelectValue placeholder="Sort by..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="popular">Most Popular</SelectItem>
+              <SelectItem value="cheapest">Cheapest First</SelectItem>
+              <SelectItem value="smartest">Smartest First</SelectItem>
+              <SelectItem value="context">Context Window</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <ScrollArea className="h-[500px] pr-4">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-[400px]">
-              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground font-mono text-sm">Loading models from OpenRouter...</p>
-            </div>
-          ) : filteredModels.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[400px] text-center">
-              <p className="text-muted-foreground font-mono">No models found matching "{searchTerm}"</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm("")}
-                className="mt-4"
-              >
-                Clear Search
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredModels.map((model) => {
-              const isSelected = currentModel === model.id;
-
-              return (
-                <div
-                  key={model.id}
-                  className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
-                    isSelected
-                      ? "border-primary bg-primary/5"
-                      : "border-border/50 hover:border-primary/50 bg-card/50"
-                  }`}
-                  onClick={() => onModelSelect(model.id)}
-                >
-                  {isSelected && (
-                    <div className="absolute top-3 right-3">
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-4 h-4 text-primary-foreground" />
-                      </div>
-                    </div>
-                  )}
-
-                  {model.isFree && (
-                    <div className="absolute top-3 right-3">
-                      <Badge className="text-xs font-mono bg-green-500/20 text-green-400 border-green-500/30">
-                        FREE
-                      </Badge>
-                    </div>
-                  )}
-
-                  {!model.isFree && !isSelected && (
-                    <div className="absolute top-3 right-3">
-                      <Badge className="text-xs font-mono bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                        {'$'.repeat(model.priceTier)}
-                      </Badge>
-                    </div>
-                  )}
-
-                    <div className="space-y-3">
-                    <div>
-                      <h3 className="font-bold text-foreground">{model.name}</h3>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {model.provider}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs font-mono text-primary/80">
-                      <span>{(model.contextLength / 1000).toFixed(0)}k context</span>
-                      {model.contextLength >= 100000 && (
-                        <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
-                          Long Context
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {model.description}
-                      </p>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant={isSelected ? "default" : "outline"}
-                      className="w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onModelSelect(model.id);
-                      }}
-                    >
-                      {isSelected ? "Selected" : "Select Model"}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-[500px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground font-mono text-sm">Loading models from OpenRouter...</p>
           </div>
-          )}
-        </ScrollArea>
+        ) : filteredModels.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[500px] text-center">
+            <p className="text-muted-foreground font-mono">No models found matching "{searchTerm}"</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchTerm("")}
+              className="mt-4"
+            >
+              Clear Search
+            </Button>
+          </div>
+        ) : (
+          <div
+            ref={parentRef}
+            className="h-[500px] overflow-auto pr-4"
+          >
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const rowModels = rows[virtualRow.index];
+                return (
+                  <div
+                    key={virtualRow.index}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+                      {rowModels.map((model) => (
+                        <ModelCard
+                          key={model.id}
+                          model={model}
+                          isSelected={currentModel === model.id}
+                          onClick={() => handleModelClick(model)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <AlertDialog open={showExpensiveWarning} onOpenChange={setShowExpensiveWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                Premium Model Warning
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                <span className="font-semibold">{pendingModel?.name}</span> is a premium model that costs{" "}
+                <span className="text-yellow-500 font-bold">
+                  ${pendingModel?.avgCostPer1M.toFixed(2)} per 1M tokens
+                </span>
+                . This may drain your credits faster than standard models.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingModel(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmExpensiveModel}>Continue Anyway</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
+  );
+};
+
+interface ModelCardProps {
+  model: Model;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+const ModelCard = ({ model, isSelected, onClick }: ModelCardProps) => {
+  const priceDisplay = model.isFree
+    ? "FREE"
+    : `$${model.avgCostPer1M < 1 ? model.avgCostPer1M.toFixed(3) : model.avgCostPer1M.toFixed(2)} / 1M`;
+
+  return (
+    <div
+      className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
+        isSelected
+          ? "border-primary bg-primary/5"
+          : "border-border/50 hover:border-primary/50 bg-card/50"
+      }`}
+      onClick={onClick}
+    >
+      {isSelected && (
+        <div className="absolute top-3 right-3">
+          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+            <Check className="w-4 h-4 text-primary-foreground" />
+          </div>
+        </div>
+      )}
+
+      {model.isFree && !isSelected && (
+        <div className="absolute top-3 right-3">
+          <Badge className="text-xs font-mono bg-green-500/20 text-green-400 border-green-500/30">
+            FREE
+          </Badge>
+        </div>
+      )}
+
+      {!model.isFree && !isSelected && (
+        <div className="absolute top-3 right-3">
+          <Badge className="text-xs font-mono bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+            {priceDisplay}
+          </Badge>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-bold text-foreground">{model.name}</h3>
+          <p className="text-xs text-muted-foreground font-mono">
+            {model.provider}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-mono text-primary/80">
+          <span>{(model.contextLength / 1000).toFixed(0)}k context</span>
+          {model.contextLength >= 100000 && (
+            <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+              Long Context
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {model.description}
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-border/30">
+          <p className="text-xs font-mono">
+            {model.isFree ? (
+              <span className="text-green-400 font-bold">FREE</span>
+            ) : (
+              <>
+                <span className="text-muted-foreground">Price: </span>
+                <span className="text-primary font-semibold">{priceDisplay}</span>
+              </>
+            )}
+          </p>
+        </div>
+
+        <Button
+          size="sm"
+          variant={isSelected ? "default" : "outline"}
+          className="w-full"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+        >
+          {isSelected ? "Selected" : "Select Model"}
+        </Button>
+      </div>
+    </div>
   );
 };
