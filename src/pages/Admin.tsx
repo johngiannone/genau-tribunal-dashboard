@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Shield, Loader2, ArrowLeft } from "lucide-react";
+import { Shield, Loader2, ArrowLeft, Ban } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
@@ -31,6 +31,7 @@ import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface UserData {
   user_id: string;
@@ -42,6 +43,9 @@ interface UserData {
   daily_cost_threshold: number | null;
   per_audit_cost_threshold: number | null;
   monthly_budget_limit: number | null;
+  is_banned: boolean;
+  banned_at: string | null;
+  ban_reason: string | null;
 }
 
 const Admin = () => {
@@ -149,6 +153,7 @@ const Admin = () => {
             <TableHeader>
               <TableRow className="bg-[#F9FAFB]">
                 <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Status</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Total Audits</TableHead>
                 <TableHead className="font-semibold text-[#111111]">This Month</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Premium</TableHead>
@@ -161,9 +166,21 @@ const Admin = () => {
             </TableHeader>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.user_id}>
+                <TableRow key={user.user_id} className={user.is_banned ? "bg-red-50" : ""}>
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {user.user_id.slice(0, 8)}...
+                  </TableCell>
+                  <TableCell>
+                    {user.is_banned ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <Ban className="h-3 w-3" />
+                        Banned
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-green-600 border-green-600">
+                        Active
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>{user.audit_count}</TableCell>
                   <TableCell>

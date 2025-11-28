@@ -388,10 +388,13 @@ export type Database = {
         Row: {
           audit_count: number
           audits_this_month: number | null
+          ban_reason: string | null
+          banned_at: string | null
           created_at: string | null
           daily_cost_threshold: number | null
           files_this_month: number | null
           id: string
+          is_banned: boolean | null
           is_premium: boolean
           last_reset_at: string | null
           monthly_budget_limit: number | null
@@ -403,10 +406,13 @@ export type Database = {
         Insert: {
           audit_count?: number
           audits_this_month?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
           created_at?: string | null
           daily_cost_threshold?: number | null
           files_this_month?: number | null
           id?: string
+          is_banned?: boolean | null
           is_premium?: boolean
           last_reset_at?: string | null
           monthly_budget_limit?: number | null
@@ -418,10 +424,13 @@ export type Database = {
         Update: {
           audit_count?: number
           audits_this_month?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
           created_at?: string | null
           daily_cost_threshold?: number | null
           files_this_month?: number | null
           id?: string
+          is_banned?: boolean | null
           is_premium?: boolean
           last_reset_at?: string | null
           monthly_budget_limit?: number | null
