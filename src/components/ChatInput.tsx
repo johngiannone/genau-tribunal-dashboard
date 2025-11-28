@@ -155,11 +155,11 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 pb-8 pointer-events-none z-50">
+    <div className="fixed bottom-0 left-0 right-0 pb-12 pointer-events-none z-50">
       <div className="max-w-2xl mx-auto px-6 pointer-events-auto">
         {/* File Attachment Badge */}
         {selectedFile && (
-          <div className="mb-3 inline-flex items-center gap-2 bg-secondary text-foreground px-4 py-2 rounded-full text-sm shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 bg-secondary text-foreground px-4 py-2.5 rounded-full text-sm shadow-md border border-border">
             <Paperclip className="h-4 w-4 text-primary" />
             <span className="font-medium">{selectedFile.name}</span>
             <button
@@ -173,12 +173,12 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
         
         {/* Upload Status */}
         {uploadStatus && (
-          <div className="mb-3 text-sm text-muted-foreground">{uploadStatus}</div>
+          <div className="mb-4 text-sm text-muted-foreground">{uploadStatus}</div>
         )}
 
         <form onSubmit={handleSubmit} className="relative">
-          {/* Apple-style Input Field */}
-          <div className="apple-card flex gap-3 items-center bg-card px-5 py-4">
+          {/* Apple-style Input Field with stronger presence */}
+          <div className="apple-card flex gap-3 items-center bg-card px-6 py-5 shadow-lg border border-border h-16">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -196,7 +196,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               disabled={disabled || isUploading}
               size="icon"
               variant="ghost"
-              className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+              className="shrink-0 h-10 w-10 text-muted-foreground hover:text-foreground"
             >
               <Paperclip className="h-5 w-5" />
             </Button>
@@ -220,13 +220,13 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               <button
                 type="submit"
                 disabled={disabled || isUploading}
-                className="shrink-0 w-9 h-9 rounded-full bg-primary hover:opacity-90 flex items-center justify-center transition-all disabled:opacity-50 shadow-sm"
+                className="shrink-0 w-10 h-10 rounded-full bg-primary hover:opacity-90 flex items-center justify-center transition-all disabled:opacity-50 shadow-sm"
               >
                 <ArrowUp className="w-5 h-5 text-primary-foreground" />
               </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground text-center mt-3">
+          <p className="text-xs text-muted-foreground text-center mt-4">
             Press Enter to send • Shift + Enter for new line
           </p>
         </form>
