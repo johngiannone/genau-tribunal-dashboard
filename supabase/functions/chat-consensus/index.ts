@@ -52,7 +52,26 @@ serve(async (req) => {
     // Create admin client for database operations
     const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // 2. Parse request early to get prompt for moderation check
+    // 2. Check if user is banned
+    const { data: banCheck, error: banError } = await adminSupabase
+      .from('user_usage')
+      .select('is_banned, banned_at, ban_reason')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (banCheck?.is_banned) {
+      console.warn("Banned user attempted access:", user.id)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Account suspended',
+          details: banCheck.ban_reason || 'Your account has been suspended due to policy violations. Contact support for assistance.',
+          banned_at: banCheck.banned_at
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    // 3. Parse request early to get prompt for moderation check
     const { prompt, fileUrl, conversationId, councilConfig } = await req.json()
     
     if (!prompt) {
@@ -62,7 +81,7 @@ serve(async (req) => {
       )
     }
 
-    // 3. MODERATION CHECK - Before any LLM calls or quota usage
+    // 4. MODERATION CHECK - Before any LLM calls or quota usage
     console.log("Running OpenAI moderation check...")
     if (!OPENAI_API_KEY) {
       console.error("OPENAI_API_KEY not configured")
@@ -130,7 +149,7 @@ serve(async (req) => {
       // Continue without moderation in case of API errors (fail open)
     }
 
-    // 4. Check usage limits
+    // 5. Check usage limits
     const { data: usage, error: usageError } = await supabase
       .from('user_usage')
       .select('*')
