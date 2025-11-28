@@ -46,6 +46,7 @@ interface UserData {
   is_banned: boolean;
   banned_at: string | null;
   ban_reason: string | null;
+  account_status: 'active' | 'inactive' | 'disabled';
 }
 
 const Admin = () => {
@@ -92,6 +93,21 @@ const Admin = () => {
         .eq('user_id', userId);
 
       if (error) throw error;
+      
+      // Log activity if account_status was changed
+      if (updates.account_status) {
+        await supabase
+          .from('activity_logs')
+          .insert({
+            user_id: userId,
+            activity_type: 'admin_change',
+            description: `Account status changed to ${updates.account_status}`,
+            metadata: {
+              previous_status: users.find(u => u.user_id === userId)?.account_status,
+              new_status: updates.account_status,
+            }
+          });
+      }
       
       toast.success("User updated successfully");
       fetchUsers();
@@ -153,7 +169,8 @@ const Admin = () => {
             <TableHeader>
               <TableRow className="bg-[#F9FAFB]">
                 <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
-                <TableHead className="font-semibold text-[#111111]">Status</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Account Status</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Ban Status</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Total Audits</TableHead>
                 <TableHead className="font-semibold text-[#111111]">This Month</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Premium</TableHead>
@@ -171,14 +188,37 @@ const Admin = () => {
                     {user.user_id.slice(0, 8)}...
                   </TableCell>
                   <TableCell>
+                    <Select
+                      value={user.account_status}
+                      onValueChange={(value) => 
+                        updateUser(user.user_id, { account_status: value as 'active' | 'inactive' | 'disabled' })
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        <SelectItem value="active">
+                          <span className="text-green-600 font-medium">Active</span>
+                        </SelectItem>
+                        <SelectItem value="inactive">
+                          <span className="text-yellow-600 font-medium">Inactive</span>
+                        </SelectItem>
+                        <SelectItem value="disabled">
+                          <span className="text-red-600 font-medium">Disabled</span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
                     {user.is_banned ? (
                       <Badge variant="destructive" className="gap-1">
                         <Ban className="h-3 w-3" />
                         Banned
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        Active
+                      <Badge variant="outline" className="text-gray-600 border-gray-300">
+                        Not Banned
                       </Badge>
                     )}
                   </TableCell>
@@ -219,7 +259,7 @@ const Admin = () => {
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white z-50">
                         <SelectItem value="free">Free</SelectItem>
                         <SelectItem value="pro">Pro</SelectItem>
                         <SelectItem value="max">Max</SelectItem>

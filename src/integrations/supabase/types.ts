@@ -386,6 +386,7 @@ export type Database = {
       }
       user_usage: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           audit_count: number
           audits_this_month: number | null
           ban_reason: string | null
@@ -404,6 +405,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           audit_count?: number
           audits_this_month?: number | null
           ban_reason?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           audit_count?: number
           audits_this_month?: number | null
           ban_reason?: string | null
@@ -466,6 +469,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "active" | "inactive" | "disabled"
       activity_type:
         | "login"
         | "logout"
@@ -602,6 +606,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["active", "inactive", "disabled"],
       activity_type: [
         "login",
         "logout",
