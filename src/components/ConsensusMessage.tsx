@@ -96,15 +96,15 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
   };
 
   return (
-    <div className={`apple-card bg-card transition-all duration-300 ${isDimmed ? 'opacity-50' : 'opacity-100'}`}>
-      <div className="bg-secondary px-6 py-4 border-b border-border flex items-center justify-between">
+    <div className={`bg-white border border-[#E5E5EA] rounded-2xl shadow-sm transition-all duration-300 ${isDimmed ? 'opacity-50' : 'opacity-100'}`}>
+      <div className="bg-[#F5F5F7] px-6 py-4 border-b border-[#E5E5EA] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Cpu className="w-5 h-5 text-primary" />
+          <Cpu className="w-5 h-5 text-[#0071E3]" />
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-sm font-semibold text-[#111111]">
               {agentName ? `${agentName}` : title}
             </h3>
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-xs text-[#86868B]">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -132,13 +132,13 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
       <div className="px-6 py-5">
         {isLoading ? (
           <div className="space-y-3">
-            <div className="h-3 bg-secondary rounded-full w-full animate-pulse" style={{ animationDelay }}></div>
-            <div className="h-3 bg-secondary rounded-full w-5/6 animate-pulse" style={{ animationDelay }}></div>
-            <div className="h-3 bg-secondary rounded-full w-4/6 animate-pulse" style={{ animationDelay }}></div>
+            <div className="h-3 bg-[#F5F5F7] rounded-full w-full animate-pulse" style={{ animationDelay }}></div>
+            <div className="h-3 bg-[#F5F5F7] rounded-full w-5/6 animate-pulse" style={{ animationDelay }}></div>
+            <div className="h-3 bg-[#F5F5F7] rounded-full w-4/6 animate-pulse" style={{ animationDelay }}></div>
           </div>
         ) : (
           <div className={`prose prose-sm max-w-none ${needsExpansion && !expanded ? 'max-h-[300px] overflow-hidden relative' : ''}`}>
-            <div className="text-sm text-foreground leading-relaxed">
+            <div className="text-sm text-[#111111] leading-relaxed">
               <ReactMarkdown
                 components={{
                   code: CodeBlock,
@@ -155,7 +155,7 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
         {needsExpansion && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="mt-4 text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
+            className="mt-4 text-xs text-[#0071E3] hover:text-[#0071E3]/80 font-medium flex items-center gap-1 transition-colors"
           >
             {expanded ? (
               <>
@@ -334,10 +334,10 @@ export const ConsensusMessage = ({
   return (
     <>
       <div className="space-y-8 animate-fadeIn">
-        {/* User Prompt */}
+        {/* User Prompt - Dark bubble with white text */}
         <div className="flex justify-end">
-          <div className="max-w-3xl apple-card bg-secondary px-6 py-4">
-            <p className="text-foreground leading-relaxed">{userPrompt}</p>
+          <div className="max-w-3xl bg-[#1D1D1F] text-white px-6 py-4 rounded-2xl shadow-sm">
+            <p className="leading-relaxed">{userPrompt}</p>
           </div>
         </div>
 
@@ -372,57 +372,34 @@ export const ConsensusMessage = ({
 
         {/* The Synthesis */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
+          <h3 className="text-sm font-semibold text-[#86868B] uppercase tracking-wide px-1">
             Synthesis
           </h3>
-          <div className="apple-card bg-card border-2 border-primary/20 overflow-hidden">
+          <div className="bg-white border-2 border-[#0071E3]/20 rounded-2xl shadow-sm overflow-hidden">
           {isLoading && !synthesisResponse ? (
             <div className="p-8">
               <div className="space-y-3">
-                <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.2s' }} />
-                <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.3s' }} />
-                <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.4s' }} />
-                <div className="h-2 bg-muted/20 rounded w-4/5 animate-shimmer" style={{ animationDelay: '0.5s' }} />
+                <div className="h-2 bg-[#F5F5F7] rounded animate-shimmer" style={{ animationDelay: '0.2s' }} />
+                <div className="h-2 bg-[#F5F5F7] rounded animate-shimmer" style={{ animationDelay: '0.3s' }} />
+                <div className="h-2 bg-[#F5F5F7] rounded animate-shimmer" style={{ animationDelay: '0.4s' }} />
+                <div className="h-2 bg-[#F5F5F7] rounded w-4/5 animate-shimmer" style={{ animationDelay: '0.5s' }} />
               </div>
             </div>
           ) : synthesisResponse ? (
             <>
               {/* Verdict Header */}
-              <div className="bg-secondary px-8 py-8 border-b border-border">
+              <div className="bg-[#F5F5F7] px-8 py-8 border-b border-[#E5E5EA]">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h2 className="text-4xl font-bold text-foreground mb-2">
-                      Synthesis
+                    <h2 className="text-4xl font-bold text-[#111111] mb-2 tracking-tight">
+                      The Synthesis
                     </h2>
-                    <p className="text-muted-foreground text-sm">AI Council Analysis</p>
+                    <p className="text-[#86868B] text-sm">Final AI Council Analysis</p>
                   </div>
                   <div className="flex flex-col items-center gap-2">
-                    <div className="relative w-20 h-20">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={[
-                              { value: confidenceScore },
-                              { value: 100 - confidenceScore }
-                            ]}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={26}
-                            outerRadius={36}
-                            startAngle={90}
-                            endAngle={-270}
-                            dataKey="value"
-                          >
-                            <Cell fill="hsl(var(--gold))" />
-                            <Cell fill="hsl(var(--muted))" />
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-gold">{confidenceScore}%</span>
-                      </div>
+                    <div className="px-4 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
+                      <span className="text-sm font-semibold text-green-600">{confidenceScore}% Confidence</span>
                     </div>
-                    <span className="text-xs text-muted-foreground font-mono">Confidence</span>
                   </div>
                 </div>
               </div>
@@ -430,30 +407,30 @@ export const ConsensusMessage = ({
               {/* Structured Content */}
               <div className="p-8 space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Key Findings</h3>
+                  <h3 className="text-lg font-semibold text-[#111111] mb-4">Key Findings</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {/* Consensus/Conflict Card */}
                     {modelAResponse && modelBResponse && (
-                      <div className={`apple-card p-5 ${
+                      <div className={`bg-white border rounded-2xl p-5 shadow-sm ${
                         modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100)
-                          ? 'bg-success/5 border-success/20'
-                          : 'bg-warning/5 border-warning/20'
+                          ? 'border-green-500/20 bg-green-50/50'
+                          : 'border-yellow-500/20 bg-yellow-50/50'
                       }`}>
                         <div className="flex items-start gap-3">
                           {modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100) ? (
                             <>
-                              <CheckCircle className="w-6 h-6 text-success flex-shrink-0" />
+                              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                               <div>
-                                <h4 className="font-semibold text-foreground mb-1">Consensus</h4>
-                                <p className="text-sm text-muted-foreground">Models aligned on recommendations</p>
+                                <h4 className="font-semibold text-[#111111] mb-1">Consensus</h4>
+                                <p className="text-sm text-[#86868B]">Models aligned on recommendations</p>
                               </div>
                             </>
                           ) : (
                             <>
-                              <AlertCircle className="w-6 h-6 text-warning flex-shrink-0" />
+                              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
                               <div>
-                                <h4 className="font-semibold text-foreground mb-1">Different Views</h4>
-                                <p className="text-sm text-muted-foreground">Models offered varied perspectives</p>
+                                <h4 className="font-semibold text-[#111111] mb-1">Different Views</h4>
+                                <p className="text-sm text-[#86868B]">Models offered varied perspectives</p>
                               </div>
                             </>
                           )}
@@ -462,12 +439,12 @@ export const ConsensusMessage = ({
                     )}
 
                     {/* Analysis Card */}
-                    <div className="apple-card p-5 bg-primary/5 border-primary/20">
+                    <div className="bg-white border border-[#0071E3]/20 rounded-2xl p-5 shadow-sm bg-[#0071E3]/5">
                       <div className="flex items-start gap-3">
-                        <Eye className="w-6 h-6 text-primary flex-shrink-0" />
+                        <Eye className="w-6 h-6 text-[#0071E3] flex-shrink-0" />
                         <div>
-                          <h4 className="font-semibold text-foreground mb-1">Complete</h4>
-                          <p className="text-sm text-muted-foreground">All viewpoints synthesized</p>
+                          <h4 className="font-semibold text-[#111111] mb-1">Complete</h4>
+                          <p className="text-sm text-[#86868B]">All viewpoints synthesized</p>
                         </div>
                       </div>
                     </div>
@@ -475,8 +452,8 @@ export const ConsensusMessage = ({
                 </div>
 
                 {/* The Synthesized Response */}
-                <div className="apple-card p-8 bg-card">
-                  <div className="text-foreground leading-relaxed prose prose-sm max-w-none">
+                <div className="bg-white border border-[#E5E5EA] rounded-2xl p-8 shadow-sm">
+                  <div className="text-[#111111] leading-relaxed prose prose-sm max-w-none">
                     <ReactMarkdown
                       components={{
                         code: CodeBlock,
@@ -489,16 +466,16 @@ export const ConsensusMessage = ({
               </div>
 
               {/* Feedback Section */}
-              <div className="border-t border-border px-8 py-6 flex items-center justify-between gap-4 bg-secondary/50">
+              <div className="border-t border-[#E5E5EA] px-8 py-6 flex items-center justify-between gap-4 bg-[#F5F5F7]/50">
                 <div className="flex items-center gap-3">
                   {messageId && onRatingChange && (
                     <>
-                      <span className="text-sm text-muted-foreground">Rate this synthesis:</span>
+                      <span className="text-sm text-[#86868B]">Rate this synthesis:</span>
                       <Button
                         size="sm"
                         variant={currentRating === 1 ? "default" : "outline"}
                         onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
-                        className="gap-2"
+                        className="gap-2 rounded-full"
                       >
                         <ThumbsUp className="h-4 w-4" />
                         Helpful
@@ -507,7 +484,7 @@ export const ConsensusMessage = ({
                         size="sm"
                         variant={currentRating === -1 ? "destructive" : "outline"}
                         onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
-                        className="gap-2"
+                        className="gap-2 rounded-full"
                       >
                         <ThumbsDown className="h-4 w-4" />
                         Not Helpful
@@ -520,7 +497,7 @@ export const ConsensusMessage = ({
                   variant="outline"
                   onClick={handleShare}
                   disabled={isSharing}
-                  className="gap-2"
+                  className="gap-2 rounded-full"
                 >
                   <Share2 className="h-4 w-4" />
                   {isSharing ? "Creating..." : "Share"}

@@ -460,7 +460,7 @@ const Index = () => {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex h-screen w-full overflow-hidden bg-white">
       {/* Upgrade Modal */}
       <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
       
