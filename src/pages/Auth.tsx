@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain } from "lucide-react";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -172,8 +174,21 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+          
+          <div className="mt-4 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPricing(true)}
+              className="text-primary hover:text-primary/90 text-sm"
+            >
+              View All Pricing Plans
+            </Button>
+          </div>
         </div>
       </div>
+
+      <UpgradeModal open={showPricing} onOpenChange={setShowPricing} />
     </div>
   );
 };
