@@ -412,6 +412,103 @@ serve(async (req) => {
       console.log(`Activity logged with estimated cost: $${estimatedCost.toFixed(6)}`)
     }
 
+    // Check cost thresholds and create alerts
+    const checkCostThresholds = async () => {
+      try {
+        // Check per-audit threshold
+        if (userUsage.per_audit_cost_threshold && estimatedCost > userUsage.per_audit_cost_threshold) {
+          console.log(`Per-audit threshold exceeded: $${estimatedCost} > $${userUsage.per_audit_cost_threshold}`)
+          
+          const { error: alertError } = await adminSupabase
+            .from('cost_alerts')
+            .insert({
+              user_id: user.id,
+              alert_type: 'audit_threshold',
+              estimated_cost: estimatedCost,
+              threshold: userUsage.per_audit_cost_threshold
+            })
+          
+          if (alertError) {
+            console.error("Failed to create audit threshold alert:", alertError)
+          } else {
+            // Trigger email notification
+            await adminSupabase.functions.invoke('send-cost-alert', {
+              body: {
+                userId: user.id,
+                alertType: 'audit_threshold',
+                estimatedCost,
+                threshold: userUsage.per_audit_cost_threshold
+              }
+            })
+          }
+        }
+
+        // Check daily threshold
+        if (userUsage.daily_cost_threshold) {
+          // Get today's total cost from activity logs
+          const today = new Date().toISOString().split('T')[0]
+          const { data: todayLogs, error: logsError } = await adminSupabase
+            .from('activity_logs')
+            .select('metadata')
+            .eq('user_id', user.id)
+            .gte('created_at', `${today}T00:00:00`)
+            .lte('created_at', `${today}T23:59:59`)
+          
+          if (!logsError && todayLogs) {
+            const dailyTotal = todayLogs.reduce((sum, log) => {
+              const cost = (log.metadata as any)?.estimated_cost || 0
+              return sum + cost
+            }, 0)
+            
+            console.log(`Daily cost total: $${dailyTotal}`)
+            
+            if (dailyTotal > userUsage.daily_cost_threshold) {
+              console.log(`Daily threshold exceeded: $${dailyTotal} > $${userUsage.daily_cost_threshold}`)
+              
+              // Check if we already alerted today
+              const { data: existingAlert } = await adminSupabase
+                .from('cost_alerts')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('alert_type', 'daily_threshold')
+                .gte('created_at', `${today}T00:00:00`)
+                .single()
+              
+              if (!existingAlert) {
+                const { error: alertError } = await adminSupabase
+                  .from('cost_alerts')
+                  .insert({
+                    user_id: user.id,
+                    alert_type: 'daily_threshold',
+                    estimated_cost: dailyTotal,
+                    threshold: userUsage.daily_cost_threshold
+                  })
+                
+                if (alertError) {
+                  console.error("Failed to create daily threshold alert:", alertError)
+                } else {
+                  // Trigger email notification
+                  await adminSupabase.functions.invoke('send-cost-alert', {
+                    body: {
+                      userId: user.id,
+                      alertType: 'daily_threshold',
+                      estimatedCost: dailyTotal,
+                      threshold: userUsage.daily_cost_threshold
+                    }
+                  })
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Threshold check error:", err)
+      }
+    }
+
+    // Run threshold checks in background
+    checkCostThresholds().catch(err => console.error("Background threshold check error:", err))
+
     // 9. Save to training dataset
     let trainingDatasetId = null
     try {

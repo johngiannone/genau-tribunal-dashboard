@@ -142,6 +142,39 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_alerts: {
+        Row: {
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          created_at: string
+          email_sent_at: string | null
+          estimated_cost: number
+          id: string
+          notified_via_email: boolean | null
+          threshold: number
+          user_id: string
+        }
+        Insert: {
+          alert_type: Database["public"]["Enums"]["alert_type"]
+          created_at?: string
+          email_sent_at?: string | null
+          estimated_cost: number
+          id?: string
+          notified_via_email?: boolean | null
+          threshold: number
+          user_id: string
+        }
+        Update: {
+          alert_type?: Database["public"]["Enums"]["alert_type"]
+          created_at?: string
+          email_sent_at?: string | null
+          estimated_cost?: number
+          id?: string
+          notified_via_email?: boolean | null
+          threshold?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           confidence: number | null
@@ -320,10 +353,12 @@ export type Database = {
           audit_count: number
           audits_this_month: number | null
           created_at: string | null
+          daily_cost_threshold: number | null
           files_this_month: number | null
           id: string
           is_premium: boolean
           last_reset_at: string | null
+          per_audit_cost_threshold: number | null
           subscription_tier: string | null
           updated_at: string | null
           user_id: string
@@ -332,10 +367,12 @@ export type Database = {
           audit_count?: number
           audits_this_month?: number | null
           created_at?: string | null
+          daily_cost_threshold?: number | null
           files_this_month?: number | null
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
           user_id: string
@@ -344,10 +381,12 @@ export type Database = {
           audit_count?: number
           audits_this_month?: number | null
           created_at?: string | null
+          daily_cost_threshold?: number | null
           files_this_month?: number | null
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
           user_id?: string
@@ -375,6 +414,7 @@ export type Database = {
         | "admin_change"
         | "profile_update"
         | "file_upload"
+      alert_type: "daily_threshold" | "audit_threshold"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -511,6 +551,7 @@ export const Constants = {
         "profile_update",
         "file_upload",
       ],
+      alert_type: ["daily_threshold", "audit_threshold"],
       app_role: ["admin", "user"],
     },
   },
