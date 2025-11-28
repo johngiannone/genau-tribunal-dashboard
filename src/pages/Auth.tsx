@@ -58,6 +58,9 @@ const Auth = () => {
 
       if (error) throw error;
 
+      // Store login timestamp for session duration tracking
+      localStorage.setItem('session_start', new Date().toISOString());
+
       // Log login activity in background
       supabase.functions.invoke('log-activity', {
         body: {

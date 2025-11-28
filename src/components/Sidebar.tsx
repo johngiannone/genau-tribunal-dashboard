@@ -91,6 +91,28 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   };
 
   const handleLogout = async () => {
+    // Calculate session duration
+    const sessionStart = localStorage.getItem('session_start');
+    const sessionDurationMs = sessionStart 
+      ? Date.now() - new Date(sessionStart).getTime()
+      : 0;
+    const sessionDurationMinutes = Math.round(sessionDurationMs / 60000);
+
+    // Log logout activity in background
+    supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'logout',
+        description: 'User signed out',
+        metadata: {
+          session_duration_minutes: sessionDurationMinutes,
+          session_duration_ms: sessionDurationMs
+        }
+      }
+    }).catch(err => console.error('Failed to log logout activity:', err));
+
+    // Clear session start timestamp
+    localStorage.removeItem('session_start');
+
     await supabase.auth.signOut();
     navigate("/auth");
   };
