@@ -20,6 +20,8 @@ interface Message {
   isLoading?: boolean;
   trainingDatasetId?: string;
   humanRating?: number;
+  agentNameA?: string;
+  agentNameB?: string;
 }
 
 const Index = () => {
@@ -359,6 +361,8 @@ const Index = () => {
         isLoading: false,
         trainingDatasetId: data.trainingDatasetId,
         humanRating: 0,
+        agentNameA: data.agentNameA,
+        agentNameB: data.agentNameB,
       };
 
       setMessages((prev) =>
@@ -528,6 +532,8 @@ const Index = () => {
                     isLoading={message.isLoading}
                     modelAName={councilConfig?.slot_1?.name || councilConfig?.slot_1 || "Model A"}
                     modelBName={councilConfig?.slot_2?.name || councilConfig?.slot_2 || "Model B"}
+                    agentNameA={message.agentNameA || councilConfig?.slot_1?.role}
+                    agentNameB={message.agentNameB || councilConfig?.slot_2?.role}
                     messageId={message.trainingDatasetId}
                     onRatingChange={handleRatingChange}
                     currentRating={message.humanRating}

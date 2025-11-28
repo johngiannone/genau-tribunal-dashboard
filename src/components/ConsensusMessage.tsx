@@ -18,6 +18,8 @@ interface ConsensusMessageProps {
   isLoading?: boolean;
   modelAName?: string;
   modelBName?: string;
+  agentNameA?: string;
+  agentNameB?: string;
   messageId?: string;
   onRatingChange?: (messageId: string, rating: number) => void;
   currentRating?: number;
@@ -71,9 +73,10 @@ interface DraftBoxProps {
   content?: string;
   isLoading: boolean;
   animationDelay?: string;
+  agentName?: string;
 }
 
-const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s" }: DraftBoxProps) => {
+const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", agentName }: DraftBoxProps) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const needsExpansion = content && content.length > 800;
@@ -94,7 +97,9 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s" }
             className="w-2 h-2 rounded-full bg-primary animate-pulse" 
             style={{ animationDelay }}
           />
-          <span className="text-foreground font-semibold">{title}</span>
+          <span className="text-foreground font-semibold">
+            {agentName ? `${agentName} (${title})` : title}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-[10px]">{subtitle}</span>
@@ -215,6 +220,8 @@ export const ConsensusMessage = ({
   isLoading = false,
   modelAName = "Model A",
   modelBName = "Model B",
+  agentNameA,
+  agentNameB,
   messageId,
   onRatingChange,
   currentRating = 0,
@@ -321,6 +328,7 @@ export const ConsensusMessage = ({
             content={modelAResponse}
             isLoading={isLoading}
             animationDelay="0s"
+            agentName={agentNameA}
           />
           <DraftBox
             title={getModelDisplayName(modelBName)}
@@ -328,6 +336,7 @@ export const ConsensusMessage = ({
             content={modelBResponse}
             isLoading={isLoading}
             animationDelay="0.2s"
+            agentName={agentNameB}
           />
         </div>
       </div>

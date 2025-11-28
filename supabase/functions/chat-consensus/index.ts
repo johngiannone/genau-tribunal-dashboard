@@ -351,6 +351,8 @@ serve(async (req) => {
         draftA: draftA.data.choices[0].message.content,
         draftB: draftB.data.choices[0].message.content,
         verdict: verdictData.choices[0].message.content,
+        agentNameA: typeof slot1 === 'object' ? slot1.role : null,
+        agentNameB: typeof slot2 === 'object' ? slot2.role : null,
         librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, monthlyLimit - (userUsage.audits_this_month || 0) - 1),
         trainingDatasetId: trainingDatasetId
