@@ -113,19 +113,30 @@ function getFallbackModels(): Model[] {
   ];
 }
 
-export function sortModels(models: Model[], sortBy: string): Model[] {
+export function sortModels(models: Model[], sortBy: string, favoriteIds: string[] = []): Model[] {
   const sorted = [...models];
   
+  // Sort by the selected criteria
+  let sortedModels: Model[];
   switch (sortBy) {
     case 'cheapest':
-      return sorted.sort((a, b) => a.avgCostPer1M - b.avgCostPer1M);
+      sortedModels = sorted.sort((a, b) => a.avgCostPer1M - b.avgCostPer1M);
+      break;
     case 'smartest':
-      return sorted.sort((a, b) => b.avgCostPer1M - a.avgCostPer1M);
+      sortedModels = sorted.sort((a, b) => b.avgCostPer1M - a.avgCostPer1M);
+      break;
     case 'context':
-      return sorted.sort((a, b) => b.contextLength - a.contextLength);
+      sortedModels = sorted.sort((a, b) => b.contextLength - a.contextLength);
+      break;
     default: // 'popular'
-      return sorted;
+      sortedModels = sorted;
   }
+  
+  // Always put favorites at the top
+  const favorites = sortedModels.filter(m => favoriteIds.includes(m.id));
+  const nonFavorites = sortedModels.filter(m => !favoriteIds.includes(m.id));
+  
+  return [...favorites, ...nonFavorites];
 }
 
 export function filterModelsByCategory(models: Model[], category: string): Model[] {
