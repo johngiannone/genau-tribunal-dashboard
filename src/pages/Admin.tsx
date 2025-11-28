@@ -29,6 +29,7 @@ import { PriceSyncPanel } from "@/components/PriceSyncPanel";
 import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
+import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
@@ -139,6 +140,7 @@ const Admin = () => {
                 <TabsTrigger value="forecast">Forecast</TabsTrigger>
                 <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
                 <TabsTrigger value="reports">Cost Reports</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users">
@@ -309,6 +311,10 @@ const Admin = () => {
 
       <TabsContent value="reports">
         <CostBreakdownPanel />
+      </TabsContent>
+
+      <TabsContent value="security">
+        <SecurityLogsPanel />
       </TabsContent>
     </Tabs>
           </div>

@@ -297,6 +297,33 @@ export type Database = {
         }
         Relationships: []
       }
+      security_logs: {
+        Row: {
+          flag_category: string
+          flagged_at: string
+          id: string
+          metadata: Json | null
+          prompt: string
+          user_id: string
+        }
+        Insert: {
+          flag_category: string
+          flagged_at?: string
+          id?: string
+          metadata?: Json | null
+          prompt: string
+          user_id: string
+        }
+        Update: {
+          flag_category?: string
+          flagged_at?: string
+          id?: string
+          metadata?: Json | null
+          prompt?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       training_dataset: {
         Row: {
           chosen_response: string
