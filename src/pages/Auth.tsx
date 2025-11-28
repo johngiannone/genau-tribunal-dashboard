@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain } from "lucide-react";
-import { UpgradeModal } from "@/components/UpgradeModal";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -176,19 +174,18 @@ const Auth = () => {
           </Tabs>
           
           <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPricing(true)}
-              className="text-primary hover:text-primary/90 text-sm"
-            >
-              View All Pricing Plans
-            </Button>
+            <Link to="/pricing">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:text-primary/90 text-sm"
+              >
+                View Membership Options
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
-
-      <UpgradeModal open={showPricing} onOpenChange={setShowPricing} />
     </div>
   );
 };
