@@ -18,6 +18,8 @@ interface Message {
   synthesisResponse?: string;
   confidenceScore?: number;
   isLoading?: boolean;
+  trainingDatasetId?: string;
+  humanRating?: number;
 }
 
 const Index = () => {
@@ -179,6 +181,42 @@ const Index = () => {
     setHasContext(false);
   };
 
+  const handleRatingChange = async (trainingDatasetId: string, rating: number) => {
+    try {
+      const { error } = await supabase
+        .from('training_dataset')
+        .update({ human_rating: rating })
+        .eq('id', trainingDatasetId);
+
+      if (error) {
+        console.error('Error updating rating:', error);
+        toast({
+          title: "Failed to save rating",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        // Update local message state
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.trainingDatasetId === trainingDatasetId 
+              ? { ...msg, humanRating: rating }
+              : msg
+          )
+        );
+        toast({
+          title: rating === 1 ? "Marked as good" : rating === -1 ? "Marked as bad" : "Rating cleared",
+        });
+      }
+    } catch (err) {
+      console.error('Rating update error:', err);
+      toast({
+        title: "Failed to save rating",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
     if (!session?.user) {
       navigate("/auth");
@@ -270,6 +308,8 @@ const Index = () => {
         synthesisResponse: data.verdict,
         confidenceScore: 99,
         isLoading: false,
+        trainingDatasetId: data.trainingDatasetId,
+        humanRating: 0,
       };
 
       setMessages((prev) =>
@@ -411,8 +451,11 @@ const Index = () => {
                     synthesisResponse={message.synthesisResponse}
                     confidenceScore={message.confidenceScore}
                     isLoading={message.isLoading}
-                    modelAName={councilConfig?.slot_1 || "Model A"}
-                    modelBName={councilConfig?.slot_2 || "Model B"}
+                    modelAName={councilConfig?.slot_1?.name || councilConfig?.slot_1 || "Model A"}
+                    modelBName={councilConfig?.slot_2?.name || councilConfig?.slot_2 || "Model B"}
+                    messageId={message.trainingDatasetId}
+                    onRatingChange={handleRatingChange}
+                    currentRating={message.humanRating}
                   />
                 ))}
               </div>

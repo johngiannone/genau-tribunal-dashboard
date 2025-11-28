@@ -297,14 +297,42 @@ serve(async (req) => {
 
     console.log("=== Request completed successfully ===")
 
-    // 9. Return results
+    // 9. Save to training dataset automatically
+    let trainingDatasetId = null;
+    try {
+      const { data: trainingData, error: trainingError } = await adminSupabase
+        .from('training_dataset')
+        .insert({
+          user_id: user.id,
+          prompt,
+          chosen_response: verdictData.choices[0].message.content,
+          rejected_response_a: draftA.data.choices[0].message.content,
+          rejected_response_b: draftB.data.choices[0].message.content,
+          model_config: councilConfig
+        })
+        .select()
+        .single();
+
+      if (trainingError) {
+        console.error('Failed to save training data:', trainingError);
+        // Don't fail the request if training save fails
+      } else {
+        console.log('Training data saved successfully');
+        trainingDatasetId = trainingData.id;
+      }
+    } catch (err) {
+      console.error('Training data insert error:', err);
+    }
+
+    // 10. Return results
     return new Response(
       JSON.stringify({
         draftA: draftA.data.choices[0].message.content,
         draftB: draftB.data.choices[0].message.content,
         verdict: verdictData.choices[0].message.content,
         librarianAnalysis: librarianAnalysis || null,
-        remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1)
+        remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1),
+        trainingDatasetId: trainingDatasetId
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )

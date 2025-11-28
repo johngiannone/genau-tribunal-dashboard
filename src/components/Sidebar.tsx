@@ -1,4 +1,4 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2 } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,6 +144,13 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           </div>
         )}
         <div className="flex gap-2">
+          <button 
+            onClick={() => navigate("/vault")}
+            className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"
+            title="Data Vault"
+          >
+            <Database className="w-4 h-4" />
+          </button>
           <button 
             onClick={() => navigate("/analytics")}
             className="p-2 rounded hover:bg-sidebar-accent/50 transition-all text-muted-foreground hover:text-sidebar-foreground"
