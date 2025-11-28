@@ -60,29 +60,27 @@ export default {
         synthesis: {
           border: "hsl(var(--synthesis-border))",
         },
-        model: {
-          a: "hsl(var(--model-a))",
-          b: "hsl(var(--model-b))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
-        confidence: {
-          bg: "hsl(var(--confidence-bg))",
-          fg: "hsl(var(--confidence-fg))",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
-        gold: {
-          DEFAULT: "hsl(var(--gold))",
-          foreground: "hsl(var(--gold-foreground))",
-        },
-        consensus: {
-          green: "hsl(var(--consensus-green))",
-        },
-        conflict: {
-          yellow: "hsl(var(--conflict-yellow))",
+        "model-card": {
+          DEFAULT: "hsl(var(--model-card))",
+          foreground: "hsl(var(--model-card-foreground))",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
-        serif: ["Merriweather", "Georgia", "serif"],
+        sans: [
+          "Inter",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "system-ui",
+          "sans-serif"
+        ],
       },
       borderRadius: {
         lg: "var(--radius)",

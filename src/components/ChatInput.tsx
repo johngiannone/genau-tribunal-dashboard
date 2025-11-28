@@ -155,29 +155,30 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 pb-6 pointer-events-none">
-      <div className="max-w-[700px] mx-auto px-6 pointer-events-auto">
-        {/* File Pill */}
+    <div className="fixed bottom-0 left-0 right-0 pb-8 pointer-events-none z-50">
+      <div className="max-w-2xl mx-auto px-6 pointer-events-auto">
+        {/* File Attachment Badge */}
         {selectedFile && (
-          <div className="mb-2 inline-flex items-center gap-2 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-3 py-1.5 rounded-full text-xs font-mono">
-            📎 {selectedFile.name}
+          <div className="mb-3 inline-flex items-center gap-2 bg-secondary text-foreground px-4 py-2 rounded-full text-sm shadow-sm">
+            <Paperclip className="h-4 w-4 text-primary" />
+            <span className="font-medium">{selectedFile.name}</span>
             <button
               onClick={handleRemoveFile}
-              className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+              className="ml-2 hover:bg-muted rounded-full p-1 transition-colors"
             >
-              <X className="h-3 w-3" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
         
         {/* Upload Status */}
         {uploadStatus && (
-          <div className="mb-2 text-xs text-primary/70 font-mono">{uploadStatus}</div>
+          <div className="mb-3 text-sm text-muted-foreground">{uploadStatus}</div>
         )}
 
         <form onSubmit={handleSubmit} className="relative">
-          {/* Floating Command Bar */}
-          <div className="flex gap-2 items-center bg-card/50 backdrop-blur-xl border border-primary/40 rounded-xl px-4 py-2 shadow-lg shadow-primary/5 hover:border-primary/60 focus-within:border-primary transition-all">
+          {/* Apple-style Input Field */}
+          <div className="apple-card flex gap-3 items-center bg-card px-5 py-4">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -195,38 +196,38 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
               disabled={disabled || isUploading}
               size="icon"
               variant="ghost"
-              className="shrink-0 h-7 w-7 hover:bg-muted transition-colors"
+              className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
             >
-              <Paperclip className="h-4 w-4" />
+              <Paperclip className="h-5 w-5" />
             </Button>
 
             {isUploading && (
-              <span className="text-xs text-muted-foreground font-mono">{uploadStatus || "Preparing file..."}</span>
+              <span className="text-sm text-muted-foreground">{uploadStatus || "Preparing file..."}</span>
             )}
 
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Enter query..."
+              placeholder="Ask your question..."
               disabled={disabled}
-              className="min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/60 text-sm leading-relaxed"
+              className="min-h-[44px] max-h-[160px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground text-base leading-relaxed"
               rows={1}
             />
             
-            {/* Minimal Arrow Icon - only shows when typing */}
+            {/* Submit Button - only shows when typing */}
             {message.trim() && (
               <button
                 type="submit"
                 disabled={disabled || isUploading}
-                className="shrink-0 w-7 h-7 rounded-lg bg-primary/90 hover:bg-primary flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50"
+                className="shrink-0 w-9 h-9 rounded-full bg-primary hover:opacity-90 flex items-center justify-center transition-all disabled:opacity-50 shadow-sm"
               >
-                <ArrowUp className="w-4 h-4 text-primary-foreground" />
+                <ArrowUp className="w-5 h-5 text-primary-foreground" />
               </button>
             )}
           </div>
-          <p className="text-[10px] text-muted-foreground/50 text-center mt-2 font-mono">
-            ENTER to send • SHIFT+ENTER for new line
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Press Enter to send • Shift + Enter for new line
           </p>
         </form>
       </div>
