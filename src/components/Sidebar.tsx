@@ -1,11 +1,22 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useToast } from "@/hooks/use-toast";
 
 interface Conversation {
   id: string;
@@ -22,8 +33,11 @@ interface SidebarProps {
 export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationId }: SidebarProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
+  const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -81,9 +95,70 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
     navigate("/auth");
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, conversationId: string) => {
+    e.stopPropagation(); // Prevent loading the conversation
+    setConversationToDelete(conversationId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!conversationToDelete) return;
+
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationToDelete);
+
+    if (error) {
+      console.error("Error deleting conversation:", error);
+      toast({
+        title: "Failed to delete conversation",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If the deleted conversation was the current one, clear the view
+    if (currentConversationId === conversationToDelete) {
+      onNewSession();
+    }
+
+    // Refresh conversations list
+    fetchConversations();
+    
+    toast({
+      title: "Conversation deleted",
+    });
+
+    setDeleteDialogOpen(false);
+    setConversationToDelete(null);
+  };
+
   return (
-    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
-      {/* Header with Logo */}
+    <>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this conversation and all its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
+        {/* Header with Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <h1 className="text-2xl font-bold text-sidebar-foreground tracking-tight font-mono">
           GENAU
@@ -113,23 +188,36 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             <p className="text-xs text-muted-foreground/50 px-2 py-2">No sessions yet</p>
           ) : (
             conversations.map((conversation) => (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => onLoadConversation(conversation.id)}
-                className={`w-full text-left px-2 py-2 rounded hover:bg-sidebar-accent/50 transition-all group flex items-center justify-between gap-2 ${
+                className={`w-full rounded hover:bg-sidebar-accent/50 transition-all group ${
                   currentConversationId === conversation.id ? 'bg-sidebar-accent/30' : ''
                 }`}
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Cpu className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0" />
-                  <p className="text-xs text-muted-foreground/70 group-hover:text-sidebar-foreground truncate">
-                    {conversation.title}
-                  </p>
+                <div className="flex items-center justify-between gap-1 px-2 py-2">
+                  <button
+                    onClick={() => onLoadConversation(conversation.id)}
+                    className="flex items-center gap-2 flex-1 min-w-0"
+                  >
+                    <Cpu className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground/70 group-hover:text-sidebar-foreground truncate">
+                      {conversation.title}
+                    </p>
+                  </button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="text-[10px] text-muted-foreground/50 font-mono">
+                      {formatTime(conversation.updated_at)}
+                    </span>
+                    <button
+                      onClick={(e) => handleDeleteClick(e, conversation.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/20 rounded transition-all"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[10px] text-muted-foreground/50 font-mono flex-shrink-0">
-                  {formatTime(conversation.updated_at)}
-                </span>
-              </button>
+              </div>
             ))
           )}
         </div>
@@ -185,6 +273,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
