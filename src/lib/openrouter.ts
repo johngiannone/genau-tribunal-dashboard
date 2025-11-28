@@ -24,6 +24,7 @@ export interface OpenRouterModel {
   architecture?: {
     modality?: string;
   };
+  created?: number; // Unix timestamp
 }
 
 export interface Model {
@@ -40,6 +41,7 @@ export interface Model {
   priceTier: number; // 1-4 for $, $$, $$$, $$$$
   avgCostPer1M: number; // Average cost per 1M tokens
   isPopular?: boolean; // Whether this is a trending/popular model
+  isNew?: boolean; // Whether this model was added in the last 30 days
 }
 
 export async function fetchOpenRouterModels(): Promise<Model[]> {
@@ -77,6 +79,11 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
       else if (avgCost < 15) priceTier = 3; // $$$
       else priceTier = 4; // $$$$
       
+      // Check if model is new (added in last 30 days)
+      const isNew = model.created 
+        ? Date.now() - (model.created * 1000) < 30 * 24 * 60 * 60 * 1000
+        : false;
+      
       return {
         id: model.id,
         name: model.name,
@@ -88,6 +95,7 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
         priceTier,
         avgCostPer1M: avgCost,
         isPopular: TRENDING_IDS.includes(model.id),
+        isNew,
       };
     });
 

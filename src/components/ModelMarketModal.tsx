@@ -438,11 +438,16 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
         </div>
 
         {/* Model Name - Larger and Bolder */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-lg font-bold text-gray-900 leading-tight">{model.name}</h3>
           {model.isPopular && (
             <Badge className="text-xs font-medium bg-orange-100 text-orange-700 border-orange-300">
               🔥 Popular
+            </Badge>
+          )}
+          {model.isNew && (
+            <Badge className="text-xs font-medium bg-green-100 text-green-700 border-green-300">
+              ✨ New
             </Badge>
           )}
         </div>
