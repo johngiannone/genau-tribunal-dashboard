@@ -58,6 +58,17 @@ const Auth = () => {
 
       if (error) throw error;
 
+      // Log login activity in background
+      supabase.functions.invoke('log-activity', {
+        body: {
+          activity_type: 'login',
+          description: 'User signed in successfully',
+          metadata: {
+            method: 'email_password'
+          }
+        }
+      }).catch(err => console.error('Failed to log login activity:', err));
+
       navigate("/app");
     } catch (error: any) {
       toast({
