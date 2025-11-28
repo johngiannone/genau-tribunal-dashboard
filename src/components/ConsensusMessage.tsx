@@ -388,49 +388,71 @@ export const ConsensusMessage = ({
           ) : synthesisResponse ? (
             <>
               {/* Verdict Header */}
-              <div className="bg-[#F5F5F7] px-8 py-8 border-b border-[#E5E5EA]">
-                <div className="flex items-center justify-between">
+              <div className="bg-white px-8 py-8 border-b border-[#E5E5EA]">
+                <div className="flex items-center justify-between gap-8">
                   <div className="flex-1">
-                    <h2 className="text-4xl font-bold text-[#111111] mb-2 tracking-tight">
-                      The Synthesis
+                    <h2 className="text-5xl font-black text-[#111111] mb-3 font-serif tracking-tight">
+                      The Council's Verdict
                     </h2>
-                    <p className="text-[#86868B] text-sm">Final AI Council Analysis</p>
+                    <p className="text-[#86868B] text-base leading-relaxed">Comprehensive multi-model analysis</p>
                   </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="px-4 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
-                      <span className="text-sm font-semibold text-green-600">{confidenceScore}% Confidence</span>
+                  <div className="flex-shrink-0">
+                    <div className="relative w-28 h-28">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Confidence', value: confidenceScore },
+                              { name: 'Remaining', value: 100 - confidenceScore }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={35}
+                            outerRadius={50}
+                            startAngle={90}
+                            endAngle={-270}
+                            dataKey="value"
+                          >
+                            <Cell fill="#22c55e" />
+                            <Cell fill="#f3f4f6" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-[#111111]">{confidenceScore}%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Structured Content */}
-              <div className="p-8 space-y-6">
+              <div className="p-8 space-y-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-[#111111] mb-4">Key Findings</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <h3 className="text-xl font-bold text-[#111111] mb-5">Key Findings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Consensus/Conflict Card */}
                     {modelAResponse && modelBResponse && (
-                      <div className={`bg-white border rounded-2xl p-5 shadow-sm ${
+                      <div className={`border rounded-xl p-6 ${
                         modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100)
-                          ? 'border-green-500/20 bg-green-50/50'
-                          : 'border-yellow-500/20 bg-yellow-50/50'
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-yellow-200 bg-yellow-50'
                       }`}>
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-4">
                           {modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100) ? (
                             <>
-                              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                              <CheckCircle className="w-7 h-7 text-green-600 flex-shrink-0 mt-0.5" />
                               <div>
-                                <h4 className="font-semibold text-[#111111] mb-1">Consensus</h4>
-                                <p className="text-sm text-[#86868B]">Models aligned on recommendations</p>
+                                <h4 className="font-bold text-[#111111] mb-2 text-base">Consensus Reached</h4>
+                                <p className="text-sm text-[#111111]/70 leading-relaxed">Models demonstrated strong alignment on key recommendations and analysis.</p>
                               </div>
                             </>
                           ) : (
                             <>
-                              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+                              <AlertCircle className="w-7 h-7 text-yellow-600 flex-shrink-0 mt-0.5" />
                               <div>
-                                <h4 className="font-semibold text-[#111111] mb-1">Different Views</h4>
-                                <p className="text-sm text-[#86868B]">Models offered varied perspectives</p>
+                                <h4 className="font-bold text-[#111111] mb-2 text-base">Conflict Detected</h4>
+                                <p className="text-sm text-[#111111]/70 leading-relaxed">Models provided different perspectives requiring careful synthesis.</p>
                               </div>
                             </>
                           )}
@@ -439,24 +461,50 @@ export const ConsensusMessage = ({
                     )}
 
                     {/* Analysis Card */}
-                    <div className="bg-white border border-[#0071E3]/20 rounded-2xl p-5 shadow-sm bg-[#0071E3]/5">
-                      <div className="flex items-start gap-3">
-                        <Eye className="w-6 h-6 text-[#0071E3] flex-shrink-0" />
+                    <div className="border border-[#0071E3] bg-[#0071E3]/5 rounded-xl p-6">
+                      <div className="flex items-start gap-4">
+                        <Eye className="w-7 h-7 text-[#0071E3] flex-shrink-0 mt-0.5" />
                         <div>
-                          <h4 className="font-semibold text-[#111111] mb-1">Complete</h4>
-                          <p className="text-sm text-[#86868B]">All viewpoints synthesized</p>
+                          <h4 className="font-bold text-[#111111] mb-2 text-base">Analysis Complete</h4>
+                          <p className="text-sm text-[#111111]/70 leading-relaxed">All council viewpoints have been thoroughly synthesized and validated.</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* The Synthesized Response */}
-                <div className="bg-white border border-[#E5E5EA] rounded-2xl p-8 shadow-sm">
-                  <div className="text-[#111111] leading-relaxed prose prose-sm max-w-none">
+                {/* The Synthesized Response - Gold Final Answer Box */}
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-xl p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-[#111111] font-serif">Final Synthesis</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (synthesisResponse) {
+                          navigator.clipboard.writeText(synthesisResponse);
+                          toast({ title: "Copied to clipboard" });
+                        }
+                      }}
+                      className="h-8"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="text-[#111111] leading-[1.7] prose prose-sm max-w-none">
                     <ReactMarkdown
                       components={{
                         code: CodeBlock,
+                        p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-bold text-[#1D1D1F]">{children}</strong>,
+                        ul: ({ children }) => <ul className="space-y-2 my-4">{children}</ul>,
+                        li: ({ children }) => (
+                          <li className="flex items-start gap-2">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0071E3] mt-2 flex-shrink-0" />
+                            <span className="flex-1">{children}</span>
+                          </li>
+                        ),
                       }}
                     >
                       {synthesisResponse}
