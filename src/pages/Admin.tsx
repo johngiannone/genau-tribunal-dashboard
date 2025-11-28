@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Shield, Loader2 } from "lucide-react";
+import { ActivityLogTable } from "@/components/ActivityLogTable";
 
 interface UserData {
   user_id: string;
@@ -98,26 +99,26 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-white p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          <h1 className="text-4xl font-mono font-bold gradient-text">
+          <Shield className="w-8 h-8 text-[#0071E3]" />
+          <h1 className="text-4xl font-bold text-[#111111]">
             Admin Panel
           </h1>
         </div>
 
-        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="font-mono">User ID</TableHead>
-                <TableHead className="font-mono">Total Audits</TableHead>
-                <TableHead className="font-mono">This Month</TableHead>
-                <TableHead className="font-mono">Files/Month</TableHead>
-                <TableHead className="font-mono">Premium</TableHead>
-                <TableHead className="font-mono">Tier</TableHead>
-                <TableHead className="font-mono">Actions</TableHead>
+              <TableRow className="bg-[#F9FAFB]">
+                <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Total Audits</TableHead>
+                <TableHead className="font-semibold text-[#111111]">This Month</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Files/Month</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Premium</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Tier</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,6 +207,9 @@ const Admin = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* Activity Log Section */}
+        <ActivityLogTable />
       </div>
     </div>
   );
