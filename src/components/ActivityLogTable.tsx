@@ -422,13 +422,14 @@ export const ActivityLogTable = () => {
               <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
               <TableHead className="font-semibold text-[#111111]">Type</TableHead>
               <TableHead className="font-semibold text-[#111111]">Description</TableHead>
+              <TableHead className="font-semibold text-[#111111]">Changed By</TableHead>
               <TableHead className="font-semibold text-[#111111]">IP Address</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-[#86868B]">
+                <TableCell colSpan={6} className="text-center py-12 text-[#86868B]">
                   No activity logs found
                 </TableCell>
               </TableRow>
@@ -442,8 +443,46 @@ export const ActivityLogTable = () => {
                     {log.user_id.slice(0, 8)}...
                   </TableCell>
                   <TableCell>{getActivityBadge(log.activity_type)}</TableCell>
-                  <TableCell className="text-sm text-[#111111] max-w-md truncate">
-                    {log.description}
+                  <TableCell className="text-sm text-[#111111] max-w-md">
+                    <div className="space-y-1">
+                      <div className="truncate">{log.description}</div>
+                      {log.activity_type === 'admin_change' && log.metadata && (
+                        <div className="text-xs text-[#86868B] space-y-0.5">
+                          {log.metadata.previous_status && log.metadata.new_status && (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {log.metadata.previous_status}
+                              </Badge>
+                              <span>→</span>
+                              <Badge variant="outline" className="text-xs">
+                                {log.metadata.new_status}
+                              </Badge>
+                            </div>
+                          )}
+                          {log.metadata.automated && (
+                            <Badge variant="secondary" className="text-xs">
+                              Automated
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-[#86868B]">
+                    {log.metadata?.changed_by ? (
+                      <div className="space-y-0.5">
+                        <div>{log.metadata.changed_by.slice(0, 8)}...</div>
+                        {log.metadata.changed_by_email && (
+                          <div className="text-[10px] text-[#86868B]">
+                            {log.metadata.changed_by_email}
+                          </div>
+                        )}
+                      </div>
+                    ) : log.metadata?.automated ? (
+                      <Badge variant="secondary" className="text-xs">System</Badge>
+                    ) : (
+                      "N/A"
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-[#86868B]">
                     {log.ip_address || "N/A"}

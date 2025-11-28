@@ -96,6 +96,8 @@ const Admin = () => {
       
       // Log activity if account_status was changed
       if (updates.account_status) {
+        const { data: { user: currentAdmin } } = await supabase.auth.getUser();
+        
         await supabase
           .from('activity_logs')
           .insert({
@@ -105,6 +107,8 @@ const Admin = () => {
             metadata: {
               previous_status: users.find(u => u.user_id === userId)?.account_status,
               new_status: updates.account_status,
+              changed_by: currentAdmin?.id,
+              changed_by_email: currentAdmin?.email,
             }
           });
       }
