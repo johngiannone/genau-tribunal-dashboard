@@ -55,6 +55,37 @@ export const ActivityLogTable = () => {
     fetchActivityLogs();
   }, [searchQuery, activityTypeFilter, userIdFilter, dateRange]);
 
+  // Set up realtime subscription for new activity logs
+  useEffect(() => {
+    const channel = supabase
+      .channel('activity-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_logs'
+        },
+        (payload) => {
+          console.log('New activity log received:', payload);
+          
+          // Add the new log to the beginning of the list
+          setLogs((currentLogs) => [payload.new as ActivityLog, ...currentLogs]);
+          
+          // Show toast notification for new activity
+          toast.info('New Activity', {
+            description: (payload.new as ActivityLog).description,
+            duration: 3000,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchActivityLogs = async () => {
     setLoading(true);
     try {
