@@ -81,6 +81,11 @@ export default {
           "system-ui",
           "sans-serif"
         ],
+        serif: [
+          "Merriweather",
+          "Georgia",
+          "serif"
+        ],
       },
       borderRadius: {
         lg: "var(--radius)",
