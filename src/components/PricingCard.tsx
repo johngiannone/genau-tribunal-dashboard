@@ -1,5 +1,6 @@
 import { Button } from "./ui/button";
 import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PricingCardProps {
   name: string;
@@ -9,6 +10,7 @@ interface PricingCardProps {
   isPopular?: boolean;
   stripeLink: string;
   isPrimary?: boolean;
+  mode?: "public" | "authenticated";
 }
 
 export const PricingCard = ({ 
@@ -18,8 +20,21 @@ export const PricingCard = ({
   features, 
   isPopular = false,
   stripeLink,
-  isPrimary = false
+  isPrimary = false,
+  mode = "authenticated"
 }: PricingCardProps) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (mode === "public") {
+      // Redirect to auth with plan name as query param
+      const planSlug = name.toLowerCase().replace(/\s+/g, "-");
+      navigate(`/auth?plan=${planSlug}`);
+    } else {
+      // Open Stripe link for authenticated users
+      window.open(stripeLink, "_blank");
+    }
+  };
   return (
     <div 
       className={`relative rounded-xl border bg-card p-6 transition-all hover:border-primary/50 ${
@@ -55,14 +70,14 @@ export const PricingCard = ({
         </ul>
 
         <Button
-          onClick={() => window.open(stripeLink, "_blank")}
+          onClick={handleClick}
           className={`w-full ${
             isPrimary 
               ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
               : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}
         >
-          {price === 0 ? 'Current Plan' : 'Get Started'}
+          {price === 0 ? (mode === "public" ? 'Sign Up Free' : 'Current Plan') : 'Get Started'}
         </Button>
       </div>
     </div>

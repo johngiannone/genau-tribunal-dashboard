@@ -60,7 +60,11 @@ const businessPlans = [
   },
 ];
 
-export const PricingSection = () => {
+interface PricingSectionProps {
+  mode?: "public" | "authenticated";
+}
+
+export const PricingSection = ({ mode = "authenticated" }: PricingSectionProps) => {
   const [isBusiness, setIsBusiness] = useState(false);
   const plans = isBusiness ? businessPlans : personalPlans;
 
@@ -90,7 +94,7 @@ export const PricingSection = () => {
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
         {plans.map((plan, index) => (
-          <PricingCard key={index} {...plan} />
+          <PricingCard key={index} {...plan} mode={mode} />
         ))}
       </div>
 
