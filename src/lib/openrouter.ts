@@ -6,7 +6,7 @@ export interface OpenRouterModel {
     prompt: string;
     completion: string;
   };
-  context_length?: number;
+  context_length: number;
   architecture?: {
     modality?: string;
   };
@@ -21,7 +21,9 @@ export interface Model {
     prompt: string;
     completion: string;
   };
+  contextLength: number;
   isFree: boolean;
+  priceTier: number; // 1-4 for $, $$, $$$, $$$$
 }
 
 export async function fetchOpenRouterModels(): Promise<Model[]> {
@@ -39,13 +41,27 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
       const provider = model.id.split('/')[0];
       const isFree = model.pricing.prompt === "0" || model.pricing.prompt === "0.0";
       
+      // Calculate price tier based on average cost per 1M tokens
+      const promptCost = parseFloat(model.pricing.prompt);
+      const completionCost = parseFloat(model.pricing.completion);
+      const avgCost = (promptCost + completionCost) / 2;
+      
+      let priceTier = 1;
+      if (avgCost === 0) priceTier = 0; // Free
+      else if (avgCost < 1) priceTier = 1; // $
+      else if (avgCost < 5) priceTier = 2; // $$
+      else if (avgCost < 15) priceTier = 3; // $$$
+      else priceTier = 4; // $$$$
+      
       return {
         id: model.id,
         name: model.name,
         provider: provider.charAt(0).toUpperCase() + provider.slice(1),
         description: model.description || 'No description available',
         pricing: model.pricing,
+        contextLength: model.context_length || 0,
         isFree,
+        priceTier,
       };
     });
 
@@ -65,7 +81,9 @@ function getFallbackModels(): Model[] {
       provider: "OpenAI",
       description: "All-Purpose Leadership - Vision, reasoning, long context",
       pricing: { prompt: "5", completion: "15" },
+      contextLength: 128000,
       isFree: false,
+      priceTier: 3,
     },
     {
       id: "anthropic/claude-3.5-sonnet",
@@ -73,7 +91,9 @@ function getFallbackModels(): Model[] {
       provider: "Anthropic",
       description: "Deep Analysis Expert - Code understanding, nuanced critique",
       pricing: { prompt: "3", completion: "15" },
+      contextLength: 200000,
       isFree: false,
+      priceTier: 3,
     },
     {
       id: "meta-llama/llama-3.3-70b",
@@ -81,7 +101,9 @@ function getFallbackModels(): Model[] {
       provider: "Meta",
       description: "Fast Execution - Rapid inference, cost-effective",
       pricing: { prompt: "0", completion: "0" },
+      contextLength: 128000,
       isFree: true,
+      priceTier: 0,
     },
   ];
 }
