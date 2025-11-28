@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { ActivityHeatmap } from "./ActivityHeatmap";
 
 interface ActivityTypeCount {
   activity_type: string;
@@ -91,6 +92,10 @@ export const ActivityStatsDashboard = () => {
   const [comparisonDailyActivity, setComparisonDailyActivity] = useState<DailyActivity[]>([]);
   const [comparisonTopUsers, setComparisonTopUsers] = useState<TopUser[]>([]);
   const [comparisonTotalActivities, setComparisonTotalActivities] = useState(0);
+  
+  // Raw logs for heatmap
+  const [rawLogs, setRawLogs] = useState<{ created_at: string }[]>([]);
+  const [comparisonRawLogs, setComparisonRawLogs] = useState<{ created_at: string }[]>([]);
 
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -243,6 +248,7 @@ export const ActivityStatsDashboard = () => {
       if (error) throw error;
 
       setTotalActivities(logs?.length || 0);
+      setRawLogs(logs || []);
 
       // Process activity type counts
       const typeCounts: Record<string, number> = {};
@@ -344,6 +350,7 @@ export const ActivityStatsDashboard = () => {
       if (error) throw error;
 
       setComparisonTotalActivities(logs?.length || 0);
+      setComparisonRawLogs(logs || []);
 
       const typeCounts: Record<string, number> = {};
       const userCounts: Record<string, number> = {};
@@ -1188,6 +1195,41 @@ export const ActivityStatsDashboard = () => {
               )}
             </CardContent>
           </Card>
+        )}
+      </div>
+
+      {/* Activity Heatmap */}
+      <div className={cn("grid gap-6", comparisonMode ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
+        <ActivityHeatmap 
+          logs={rawLogs} 
+          title={comparisonMode ? "Activity Heatmap (Primary)" : "Activity Heatmap"}
+          isPrimary={true}
+        />
+        
+        {comparisonMode && (
+          comparisonLoading ? (
+            <Card className="border-[#E5E5EA] border-purple-200">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
+                  Activity Heatmap (Comparison)
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                    Period 2
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center h-[400px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <ActivityHeatmap 
+              logs={comparisonRawLogs} 
+              title="Activity Heatmap (Comparison)"
+              isPrimary={false}
+            />
+          )
         )}
       </div>
     </div>
