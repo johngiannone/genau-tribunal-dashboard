@@ -24,10 +24,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, Activity, Search, Filter, X, CalendarIcon } from "lucide-react";
+import { Loader2, Activity, Search, Filter, X, CalendarIcon, Download, FileJson, FileText } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ActivityLog {
   id: string;
@@ -110,6 +111,73 @@ export const ActivityLogTable = () => {
 
   const hasActiveFilters = searchQuery || activityTypeFilter !== "all" || userIdFilter || dateRange;
 
+  const exportToCSV = () => {
+    if (logs.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    // CSV headers
+    const headers = ["Time", "User ID", "Activity Type", "Description", "IP Address", "User Agent", "Metadata"];
+    
+    // Convert logs to CSV rows
+    const rows = logs.map(log => [
+      format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss"),
+      log.user_id,
+      log.activity_type,
+      `"${log.description.replace(/"/g, '""')}"`, // Escape quotes
+      log.ip_address || "N/A",
+      log.user_agent ? `"${log.user_agent.replace(/"/g, '""')}"` : "N/A",
+      JSON.stringify(log.metadata || {})
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `activity-logs-${format(new Date(), "yyyy-MM-dd-HHmmss")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`Exported ${logs.length} records to CSV`);
+  };
+
+  const exportToJSON = () => {
+    if (logs.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    // Format logs with readable timestamps
+    const formattedLogs = logs.map(log => ({
+      ...log,
+      created_at: format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss"),
+    }));
+
+    // Create JSON blob and download
+    const jsonContent = JSON.stringify(formattedLogs, null, 2);
+    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `activity-logs-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`Exported ${logs.length} records to JSON`);
+  };
+
   const getActivityBadge = (type: string) => {
     const badges: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
       login: { variant: "default", label: "Login" },
@@ -142,18 +210,44 @@ export const ActivityLogTable = () => {
         <div className="flex items-center gap-3">
           <Activity className="w-6 h-6 text-[#0071E3]" />
           <h2 className="text-2xl font-bold text-[#111111]">Activity Log</h2>
+          <Badge variant="secondary" className="font-mono text-xs">
+            {logs.length} records
+          </Badge>
         </div>
-        {hasActiveFilters && (
+        <div className="flex items-center gap-2">
+          {/* Export Buttons */}
           <Button
             variant="outline"
             size="sm"
-            onClick={clearFilters}
+            onClick={exportToCSV}
+            disabled={logs.length === 0}
             className="rounded-full"
           >
-            <X className="w-4 h-4 mr-2" />
-            Clear Filters
+            <FileText className="w-4 h-4 mr-2" />
+            Export CSV
           </Button>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportToJSON}
+            disabled={logs.length === 0}
+            className="rounded-full"
+          >
+            <FileJson className="w-4 h-4 mr-2" />
+            Export JSON
+          </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="rounded-full"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters Section */}
