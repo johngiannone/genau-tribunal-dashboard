@@ -72,7 +72,14 @@ serve(async (req) => {
       console.log("Creating usage record for new user")
       const { data: newUsage, error: createError } = await supabase
         .from('user_usage')
-        .insert({ user_id: user.id, audit_count: 0, is_premium: false })
+        .insert({ 
+          user_id: user.id, 
+          audit_count: 0, 
+          is_premium: false,
+          audits_this_month: 0,
+          files_this_month: 0,
+          subscription_tier: 'free'
+        })
         .select()
         .single()
       
@@ -86,13 +93,24 @@ serve(async (req) => {
       userUsage = newUsage
     }
 
-    // Check limits
-    if (!userUsage.is_premium && userUsage.audit_count >= 5) {
+    // Check limits based on subscription tier
+    const getMonthlyLimit = (tier: string | null) => {
+      if (tier === 'pro') return 200;
+      if (tier === 'max') return 800;
+      if (tier === 'team') return 1500;
+      if (tier === 'agency') return 5000;
+      return 3; // Free tier
+    };
+
+    const monthlyLimit = getMonthlyLimit(userUsage.subscription_tier);
+    const auditsUsed = userUsage.audits_this_month || 0;
+
+    if (!userUsage.is_premium && auditsUsed >= monthlyLimit) {
       return new Response(
         JSON.stringify({ 
           error: 'Usage limit reached',
           limitReached: true,
-          message: 'You have reached your daily limit of 5 free audits.'
+          message: `You have reached your monthly limit of ${monthlyLimit} audits.`
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
@@ -248,10 +266,13 @@ serve(async (req) => {
     const verdictLatency = Date.now() - startTimeVerdict
     console.log("Synthesis complete")
 
-    // 7. Update usage count
+    // 7. Update usage count (increment monthly counter and total)
     await supabase
       .from('user_usage')
-      .update({ audit_count: userUsage.audit_count + 1 })
+      .update({ 
+        audit_count: userUsage.audit_count + 1,
+        audits_this_month: (userUsage.audits_this_month || 0) + 1
+      })
       .eq('user_id', user.id)
 
     // 8. Log analytics events
@@ -331,7 +352,7 @@ serve(async (req) => {
         draftB: draftB.data.choices[0].message.content,
         verdict: verdictData.choices[0].message.content,
         librarianAnalysis: librarianAnalysis || null,
-        remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1),
+        remainingAudits: userUsage.is_premium ? -1 : Math.max(0, monthlyLimit - (userUsage.audits_this_month || 0) - 1),
         trainingDatasetId: trainingDatasetId
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
