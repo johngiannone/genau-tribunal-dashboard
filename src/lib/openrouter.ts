@@ -29,13 +29,21 @@ export interface Model {
 
 export async function fetchOpenRouterModels(): Promise<Model[]> {
   try {
+    console.log('Fetching models from OpenRouter API...');
     const response = await fetch('https://openrouter.ai/api/v1/models');
     
     if (!response.ok) {
-      throw new Error('Failed to fetch models from OpenRouter');
+      console.error('OpenRouter API returned error:', response.status, response.statusText);
+      throw new Error(`Failed to fetch models from OpenRouter: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Successfully fetched models from OpenRouter:', data.data?.length || 0, 'models');
+    
+    if (!data.data || !Array.isArray(data.data)) {
+      console.error('Invalid response format from OpenRouter:', data);
+      throw new Error('Invalid response format from OpenRouter');
+    }
     
     // Map the OpenRouter response to our Model format
     const models: Model[] = data.data.map((model: OpenRouterModel) => {
@@ -67,9 +75,11 @@ export async function fetchOpenRouterModels(): Promise<Model[]> {
       };
     });
 
+    console.log('Processed models:', models.length);
     return models;
   } catch (error) {
     console.error('Error fetching OpenRouter models:', error);
+    console.log('Using fallback models instead');
     // Return fallback models if API fails
     return getFallbackModels();
   }

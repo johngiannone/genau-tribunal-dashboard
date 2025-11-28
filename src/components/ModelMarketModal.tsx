@@ -36,11 +36,12 @@ export const ModelMarketModal = ({
   const { toast } = useToast();
 
   // Fetch models using TanStack Query
-  const { data: models = [], isLoading } = useQuery({
+  const { data: models = [], isLoading, error, refetch } = useQuery({
     queryKey: ['openrouter-models'],
     queryFn: fetchOpenRouterModels,
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: open, // Only fetch when modal is open
+    retry: 2, // Retry failed requests twice
   });
 
   // Fetch user's favorite models from Supabase
@@ -165,7 +166,13 @@ export const ModelMarketModal = ({
             Model Market
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Choose from {models.length}+ AI models. Each model brings unique strengths to the analysis.
+            {isLoading ? (
+              "Loading available models..."
+            ) : error ? (
+              "Failed to load models from OpenRouter"
+            ) : (
+              `Choose from ${models.length} AI models. Each model brings unique strengths to the analysis.`
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -212,6 +219,24 @@ export const ModelMarketModal = ({
           <div className="flex flex-col items-center justify-center h-[500px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
             <p className="text-muted-foreground font-mono text-sm">Loading models from OpenRouter...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-[500px] text-center">
+            <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
+            <p className="text-foreground font-semibold mb-2">Failed to load models</p>
+            <p className="text-muted-foreground text-sm mb-4">
+              {error instanceof Error ? error.message : 'Unable to connect to OpenRouter'}
+            </p>
+            <Button onClick={() => refetch()} variant="outline">
+              Retry
+            </Button>
+          </div>
+        ) : models.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[500px] text-center">
+            <p className="text-muted-foreground font-mono mb-2">No models available</p>
+            <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-4">
+              Refresh
+            </Button>
           </div>
         ) : filteredModels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[500px] text-center">
