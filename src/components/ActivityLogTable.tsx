@@ -9,7 +9,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Activity } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Activity, Search, Filter, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface ActivityLog {
@@ -23,21 +32,44 @@ interface ActivityLog {
   created_at: string;
 }
 
+type ActivityTypeFilter = "all" | "login" | "logout" | "audit_completed" | "admin_change" | "profile_update" | "file_upload";
+
 export const ActivityLogTable = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activityTypeFilter, setActivityTypeFilter] = useState<ActivityTypeFilter>("all");
+  const [userIdFilter, setUserIdFilter] = useState("");
 
   useEffect(() => {
     fetchActivityLogs();
-  }, []);
+  }, [searchQuery, activityTypeFilter, userIdFilter]);
 
   const fetchActivityLogs = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
+
+      // Apply activity type filter
+      if (activityTypeFilter && activityTypeFilter !== "all") {
+        query = query.eq('activity_type', activityTypeFilter);
+      }
+
+      // Apply user ID filter
+      if (userIdFilter.trim()) {
+        query = query.ilike('user_id', `${userIdFilter.trim()}%`);
+      }
+
+      // Apply search query (description or IP address)
+      if (searchQuery.trim()) {
+        query = query.or(`description.ilike.%${searchQuery.trim()}%,ip_address.ilike.%${searchQuery.trim()}%`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setLogs(data || []);
@@ -47,6 +79,14 @@ export const ActivityLogTable = () => {
       setLoading(false);
     }
   };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setActivityTypeFilter("all");
+    setUserIdFilter("");
+  };
+
+  const hasActiveFilters = searchQuery || activityTypeFilter !== "all" || userIdFilter;
 
   const getActivityBadge = (type: string) => {
     const badges: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
@@ -76,9 +116,78 @@ export const ActivityLogTable = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Activity className="w-6 h-6 text-[#0071E3]" />
-        <h2 className="text-2xl font-bold text-[#111111]">Activity Log</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Activity className="w-6 h-6 text-[#0071E3]" />
+          <h2 className="text-2xl font-bold text-[#111111]">Activity Log</h2>
+        </div>
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearFilters}
+            className="rounded-full"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
+      {/* Filters Section */}
+      <div className="bg-[#F9FAFB] rounded-2xl border border-[#E5E5EA] p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-[#86868B]" />
+          <h3 className="font-semibold text-[#111111]">Filters</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#86868B]">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#86868B]" />
+              <Input
+                type="text"
+                placeholder="Description or IP address..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 rounded-xl border-[#E5E5EA] focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+              />
+            </div>
+          </div>
+
+          {/* Activity Type Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#86868B]">Activity Type</label>
+            <Select value={activityTypeFilter} onValueChange={(value) => setActivityTypeFilter(value as ActivityTypeFilter)}>
+              <SelectTrigger className="h-11 rounded-xl border-[#E5E5EA]">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="logout">Logout</SelectItem>
+                <SelectItem value="audit_completed">Audit Completed</SelectItem>
+                <SelectItem value="admin_change">Admin Change</SelectItem>
+                <SelectItem value="profile_update">Profile Update</SelectItem>
+                <SelectItem value="file_upload">File Upload</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* User ID Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#86868B]">User ID</label>
+            <Input
+              type="text"
+              placeholder="Filter by user ID..."
+              value={userIdFilter}
+              onChange={(e) => setUserIdFilter(e.target.value)}
+              className="h-11 rounded-xl border-[#E5E5EA] focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20 font-mono text-sm"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
