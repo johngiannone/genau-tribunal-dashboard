@@ -1,6 +1,7 @@
 import { Button } from "./ui/button";
 import { Check, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -37,6 +38,11 @@ export const PricingCard = ({
       const planSlug = name.toLowerCase().replace(/\s+/g, "-");
       navigate(`/auth?plan=${planSlug}`);
     } else {
+      // Check if it's a placeholder link
+      if (stripeLink.startsWith("https://stripe.com/") || stripeLink === "#") {
+        toast.error("Stripe checkout not configured yet. Please contact support to upgrade.");
+        return;
+      }
       // Open Stripe link for authenticated users
       window.open(stripeLink, "_blank");
     }
