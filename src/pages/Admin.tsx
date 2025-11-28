@@ -41,7 +41,7 @@ const Admin = () => {
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
       toast.error("Unauthorized access");
-      navigate("/");
+      navigate("/app");
     }
   }, [isAdmin, adminLoading, navigate]);
 

@@ -87,7 +87,7 @@ const Share = () => {
           <p className="text-muted-foreground mb-6">
             This shared audit doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate("/")}>
+          <Button onClick={() => navigate("/auth")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go to Home
           </Button>
@@ -154,7 +154,7 @@ const Share = () => {
             <p className="text-sm text-muted-foreground mb-3">
               Want to run your own consensus audits?
             </p>
-            <Button onClick={() => navigate("/")} size="lg">
+            <Button onClick={() => navigate("/auth")} size="lg">
               Get Started with GENAU
             </Button>
           </div>
