@@ -479,29 +479,25 @@ const Index = () => {
               </div>
             )}
             {messages.length === 0 ? (
-              <div className="relative flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center">
-                {/* Geometric Background Pattern */}
-                <div className="geometric-grid" />
-                <div className="geometric-mesh" />
-                
+              <div className="relative flex flex-col items-center justify-center h-[calc(100vh-300px)] text-center p-12">
                 {/* Hero Content */}
-                <div className="relative z-10">
+                <div className="relative z-10 max-w-4xl">
                   {currentConversationId ? (
                     <>
-                      <h1 className="text-3xl md:text-4xl font-bold mb-4 text-muted-foreground font-sans tracking-tight">
+                      <h1 className="text-4xl md:text-5xl font-bold mb-6 text-[#111111] tracking-tight">
                         Empty Conversation
                       </h1>
-                      <p className="text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed text-sm font-mono">
+                      <p className="text-muted-foreground max-w-2xl mx-auto mb-8 leading-[1.6] text-lg">
                         This conversation has no completed audits yet. Send a message to start.
                       </p>
                     </>
                   ) : (
                     <>
-                      <h1 className="text-5xl md:text-6xl font-bold mb-6 gradient-text font-sans tracking-tight">
+                      <h1 className="text-6xl md:text-7xl font-extrabold mb-8 text-[#111111] tracking-tight leading-[1.1]">
                         Ask once. Get the consensus.
                       </h1>
-                      <p className="text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed text-base font-mono">
-                        Running {councilConfig?.slot_1?.name || 'Llama 3'}, {councilConfig?.slot_2?.name || 'Claude 3.5'}, and {councilConfig?.slot_3?.name || 'DeepSeek R1'} in parallel for precision auditing.
+                      <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-16 leading-[1.6]">
+                        Running multiple AI models in parallel for precision analysis
                       </p>
                     </>
                   )}
@@ -511,7 +507,7 @@ const Index = () => {
                     <>
                       {/* Usage indicator */}
                       {usage && !usage.is_premium && (
-                        <div className="mb-6">
+                        <div className="mb-8">
                           <p className="text-sm text-muted-foreground">
                             {(() => {
                               const monthlyLimit = usage.subscription_tier === 'pro' ? 200 
@@ -526,21 +522,21 @@ const Index = () => {
                         </div>
                       )}
                       
-                      {/* System Status Bar */}
-                      <div className="inline-flex items-center gap-4 bg-card/70 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50 text-xs font-mono">
+                      {/* Model Status Pills - Larger and more prominent */}
+                      <div className="inline-flex items-center gap-3 bg-secondary/50 backdrop-blur-sm px-6 py-3 rounded-full border border-border shadow-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          <span className="text-foreground/80">{councilConfig?.slot_1?.name?.toUpperCase().replace(/\s+/g, '_') || 'LLAMA_3'}</span>
+                          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                          <span className="text-sm font-medium text-foreground">{councilConfig?.slot_1?.name || 'Llama 3'}</span>
                         </div>
-                        <div className="h-4 w-px bg-border/50" />
+                        <div className="h-4 w-px bg-border" />
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
-                          <span className="text-foreground/80">{councilConfig?.slot_2?.name?.toUpperCase().replace(/\s+/g, '_') || 'CLAUDE_3.5'}</span>
+                          <div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ animationDelay: '0.3s' }} />
+                          <span className="text-sm font-medium text-foreground">{councilConfig?.slot_2?.name || 'Claude 3.5'}</span>
                         </div>
-                        <div className="h-4 w-px bg-border/50" />
+                        <div className="h-4 w-px bg-border" />
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
-                          <span className="text-foreground/80">{councilConfig?.slot_3?.name?.toUpperCase().replace(/\s+/g, '_') || 'DEEPSEEK_R1'}</span>
+                          <div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ animationDelay: '0.6s' }} />
+                          <span className="text-sm font-medium text-foreground">{councilConfig?.slot_3?.name || 'DeepSeek R1'}</span>
                         </div>
                       </div>
                     </>
