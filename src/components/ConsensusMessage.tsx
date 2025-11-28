@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -216,9 +218,80 @@ export const ConsensusMessage = ({
   onRatingChange,
   currentRating = 0,
 }: ConsensusMessageProps) => {
+  const [isSharing, setIsSharing] = useState(false);
+  const { toast } = useToast();
+
   const getModelDisplayName = (modelId: string) => {
     if (modelId === "Model A" || modelId === "Model B") return modelId;
     return modelId.split('/')[1]?.replace(/-/g, ' ').toUpperCase() || modelId;
+  };
+
+  const generateSlug = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let slug = '';
+    for (let i = 0; i < 8; i++) {
+      slug += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return slug;
+  };
+
+  const handleShare = async () => {
+    if (!modelAResponse || !modelBResponse || !synthesisResponse) {
+      toast({
+        title: "Cannot share incomplete audit",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSharing(true);
+
+    try {
+      const slug = generateSlug();
+      const { data: session } = await supabase.auth.getSession();
+
+      const { error } = await supabase
+        .from('public_shares')
+        .insert({
+          share_slug: slug,
+          user_prompt: userPrompt,
+          model_a_name: modelAName,
+          model_a_response: modelAResponse,
+          model_b_name: modelBName,
+          model_b_response: modelBResponse,
+          synthesis: synthesisResponse,
+          confidence: confidenceScore,
+          created_by: session.session?.user.id || null,
+        });
+
+      if (error) {
+        console.error("Error creating share:", error);
+        toast({
+          title: "Failed to create share link",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const shareUrl = `${window.location.origin}/share/${slug}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      
+      toast({
+        title: "Share link copied!",
+        description: "Anyone with this link can view this audit",
+      });
+    } catch (error) {
+      console.error("Share error:", error);
+      toast({
+        title: "Failed to create share link",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const verdictSections = synthesisResponse ? parseVerdictSections(synthesisResponse) : [];
@@ -369,26 +442,42 @@ export const ConsensusMessage = ({
           </div>
 
           {/* Feedback Buttons */}
-          {!isLoading && synthesisResponse && messageId && onRatingChange && (
-            <div className="border-t border-border px-5 py-3 flex items-center justify-center gap-3">
-              <span className="text-xs text-muted-foreground font-mono mr-2">Rate this verdict:</span>
+          {!isLoading && synthesisResponse && (
+            <div className="border-t border-border px-5 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {messageId && onRatingChange && (
+                  <>
+                    <span className="text-xs text-muted-foreground font-mono mr-2">Rate this verdict:</span>
+                    <Button
+                      size="sm"
+                      variant={currentRating === 1 ? "default" : "outline"}
+                      onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
+                      className="gap-2"
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                      Good
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={currentRating === -1 ? "destructive" : "outline"}
+                      onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
+                      className="gap-2"
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                      Bad
+                    </Button>
+                  </>
+                )}
+              </div>
               <Button
                 size="sm"
-                variant={currentRating === 1 ? "default" : "outline"}
-                onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
+                variant="outline"
+                onClick={handleShare}
+                disabled={isSharing}
                 className="gap-2"
               >
-                <ThumbsUp className="h-4 w-4" />
-                Good
-              </Button>
-              <Button
-                size="sm"
-                variant={currentRating === -1 ? "destructive" : "outline"}
-                onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
-                className="gap-2"
-              >
-                <ThumbsDown className="h-4 w-4" />
-                Bad
+                <Share2 className="h-4 w-4" />
+                {isSharing ? "Generating..." : "Share"}
               </Button>
             </div>
           )}

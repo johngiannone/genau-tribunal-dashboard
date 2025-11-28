@@ -153,6 +153,51 @@ export type Database = {
         }
         Relationships: []
       }
+      public_shares: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          model_a_name: string
+          model_a_response: string
+          model_b_name: string
+          model_b_response: string
+          share_slug: string
+          synthesis: string
+          user_prompt: string
+          view_count: number | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          model_a_name: string
+          model_a_response: string
+          model_b_name: string
+          model_b_response: string
+          share_slug: string
+          synthesis: string
+          user_prompt: string
+          view_count?: number | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          model_a_name?: string
+          model_a_response?: string
+          model_b_name?: string
+          model_b_response?: string
+          share_slug?: string
+          synthesis?: string
+          user_prompt?: string
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       training_dataset: {
         Row: {
           chosen_response: string
