@@ -21,8 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
+import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 
 interface UserData {
   user_id: string;
@@ -99,14 +100,25 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-[#0071E3]" />
-          <h1 className="text-4xl font-bold text-[#111111]">
-            Admin Panel
-          </h1>
-        </div>
+    <div className="min-h-screen bg-white">
+      <div className="flex">
+        {/* Main Content Area */}
+        <div className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/app")}
+                className="text-[#86868B] hover:text-[#0071E3]"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <Shield className="w-8 h-8 text-[#0071E3]" />
+              <h1 className="text-4xl font-bold text-[#111111]">
+                Admin Panel
+              </h1>
+            </div>
 
         <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
           <Table>
@@ -208,8 +220,15 @@ const Admin = () => {
           </Table>
         </div>
 
-        {/* Activity Log Section */}
-        <ActivityLogTable />
+            {/* Activity Log Section */}
+            <ActivityLogTable />
+          </div>
+        </div>
+
+        {/* Right Sidebar - Live Activity Feed */}
+        <aside className="w-96 border-l border-[#E5E5EA] bg-[#F9FAFB] p-6 sticky top-0 h-screen overflow-y-auto">
+          <LiveActivityFeed />
+        </aside>
       </div>
     </div>
   );
