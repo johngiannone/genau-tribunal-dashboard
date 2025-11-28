@@ -53,6 +53,7 @@ const getActivityColor = (type: string) => {
 
 export const LiveActivityFeed = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchRecentActivities();
@@ -72,10 +73,14 @@ export const LiveActivityFeed = () => {
         (payload) => {
           console.log('New activity in feed:', payload);
           
-          // Add new activity to the top and keep only 5 most recent
-          setActivities((current) => 
-            [payload.new as ActivityLog, ...current].slice(0, 5)
-          );
+          const newActivity = payload.new as ActivityLog;
+          
+          // Only add if it matches the current filter
+          if (selectedFilter === 'all' || newActivity.activity_type === selectedFilter) {
+            setActivities((current) => 
+              [newActivity, ...current].slice(0, 5)
+            );
+          }
         }
       )
       .subscribe();
@@ -83,22 +88,46 @@ export const LiveActivityFeed = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedFilter]);
 
   const fetchRecentActivities = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('activity_logs')
       .select('id, user_id, activity_type, description, created_at')
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(20);
+
+    // Apply filter if not 'all'
+    if (selectedFilter !== 'all') {
+      query = query.eq('activity_type', selectedFilter as any);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching activities:', error);
       return;
     }
 
-    setActivities(data || []);
+    setActivities((data || []).slice(0, 5));
   };
+
+  // Refetch when filter changes
+  useEffect(() => {
+    fetchRecentActivities();
+  }, [selectedFilter]);
+
+  const filterButtons = [
+    { value: 'all', label: 'All', icon: Activity },
+    { value: 'login', label: 'Login', icon: LogIn },
+    { value: 'logout', label: 'Logout', icon: LogOut },
+    { value: 'audit_completed', label: 'Audits', icon: Activity },
+    { value: 'file_upload', label: 'Files', icon: FileUp },
+    { value: 'profile_update', label: 'Profile', icon: User },
+    { value: 'admin_change', label: 'Admin', icon: Settings },
+  ];
+
+  const filteredActivities = activities;
 
   return (
     <Card className="border-[#E5E5EA] shadow-sm">
@@ -108,13 +137,40 @@ export const LiveActivityFeed = () => {
           Live Activity Feed
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {activities.length === 0 ? (
+      <CardContent className="space-y-4">
+        {/* Filter Buttons */}
+        <div className="flex flex-wrap gap-1.5">
+          {filterButtons.map((filter) => {
+            const Icon = filter.icon;
+            const isActive = selectedFilter === filter.value;
+            
+            return (
+              <button
+                key={filter.value}
+                onClick={() => setSelectedFilter(filter.value)}
+                className={`
+                  px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                  flex items-center gap-1.5
+                  ${isActive 
+                    ? 'bg-[#0071E3] text-white shadow-sm' 
+                    : 'bg-white text-[#86868B] hover:bg-[#F9FAFB] hover:text-[#111111] border border-[#E5E5EA]'
+                  }
+                `}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Activity List */}
+        {filteredActivities.length === 0 ? (
           <p className="text-sm text-[#86868B] text-center py-4">
-            No recent activity
+            {selectedFilter === 'all' ? 'No recent activity' : `No ${selectedFilter.replace('_', ' ')} activities`}
           </p>
         ) : (
-          activities.map((activity, index) => (
+          filteredActivities.map((activity, index) => (
             <div
               key={activity.id}
               className="flex items-start gap-3 p-3 rounded-xl border border-[#E5E5EA] bg-[#F9FAFB] hover:bg-white transition-all animate-fade-in"
