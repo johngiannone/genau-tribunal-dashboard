@@ -184,6 +184,48 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          email_type: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          sent_at: string
+          sent_by: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          email_type: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           confidence: number | null

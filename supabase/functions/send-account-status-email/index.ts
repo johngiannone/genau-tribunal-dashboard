@@ -38,12 +38,14 @@ const handler = async (req: Request): Promise<Response> => {
     // Get admin info who made the change
     const authHeader = req.headers.get("Authorization");
     let adminEmail = "System";
+    let sentById = null;
     
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
       const { data: { user } } = await supabaseClient.auth.getUser(token);
-      if (user?.email) {
-        adminEmail = user.email;
+      if (user) {
+        adminEmail = user.email || "Admin";
+        sentById = user.id;
       }
     }
 
@@ -193,6 +195,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
+    // Log the email to email_logs table
+    const { error: logError } = await supabaseClient
+      .from('email_logs')
+      .insert({
+        user_id: userId,
+        email_type: 'status_change',
+        recipient_email: userEmail,
+        subject: `${config.title} - Consensus`,
+        status: 'sent',
+        metadata: {
+          new_status: newStatus,
+          previous_status: previousStatus,
+          reason: reason || null,
+          custom_message: customMessage || null,
+        },
+        sent_by: sentById,
+        message_id: emailResponse.data?.id || null,
+      });
+
+    if (logError) {
+      console.error("Error logging email to database:", logError);
+      // Don't fail the request if logging fails
+    }
+
     return new Response(JSON.stringify({ 
       success: true, 
       messageId: emailResponse.data?.id 
@@ -205,6 +231,45 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-account-status-email function:", error);
+
+    // Try to log the failed email attempt
+    try {
+      const requestBody = await req.clone().json();
+      const { userId, userEmail, newStatus, previousStatus } = requestBody;
+      
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+
+      const authHeaderForError = req.headers.get("Authorization");
+      let errorSentById = null;
+      
+      if (authHeaderForError) {
+        const token = authHeaderForError.replace("Bearer ", "");
+        const { data: { user } } = await supabaseClient.auth.getUser(token);
+        errorSentById = user?.id || null;
+      }
+
+      await supabaseClient
+        .from('email_logs')
+        .insert({
+          user_id: userId,
+          email_type: 'status_change',
+          recipient_email: userEmail,
+          subject: `Account Status Change - Consensus`,
+          status: 'failed',
+          metadata: {
+            new_status: newStatus,
+            previous_status: previousStatus,
+          },
+          sent_by: errorSentById,
+          error_message: error.message,
+        });
+    } catch (logError) {
+      console.error("Error logging failed email:", logError);
+    }
+
     return new Response(
       JSON.stringify({ 
         error: error.message,
