@@ -54,9 +54,11 @@ const getActivityColor = (type: string) => {
 export const LiveActivityFeed = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [activityCounts, setActivityCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchRecentActivities();
+    fetchActivityCounts();
   }, []);
 
   useEffect(() => {
@@ -74,6 +76,13 @@ export const LiveActivityFeed = () => {
           console.log('New activity in feed:', payload);
           
           const newActivity = payload.new as ActivityLog;
+          
+          // Update activity counts
+          setActivityCounts((current) => ({
+            ...current,
+            [newActivity.activity_type]: (current[newActivity.activity_type] || 0) + 1,
+            all: (current.all || 0) + 1
+          }));
           
           // Only add if it matches the current filter
           if (selectedFilter === 'all' || newActivity.activity_type === selectedFilter) {
@@ -112,6 +121,30 @@ export const LiveActivityFeed = () => {
     setActivities((data || []).slice(0, 5));
   };
 
+  const fetchActivityCounts = async () => {
+    // Get timestamp for 24 hours ago
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('activity_type')
+      .gte('created_at', twentyFourHoursAgo.toISOString());
+
+    if (error) {
+      console.error('Error fetching activity counts:', error);
+      return;
+    }
+
+    // Count activities by type
+    const counts: Record<string, number> = { all: data?.length || 0 };
+    data?.forEach((log) => {
+      counts[log.activity_type] = (counts[log.activity_type] || 0) + 1;
+    });
+
+    setActivityCounts(counts);
+  };
+
   // Refetch when filter changes
   useEffect(() => {
     fetchRecentActivities();
@@ -143,6 +176,7 @@ export const LiveActivityFeed = () => {
           {filterButtons.map((filter) => {
             const Icon = filter.icon;
             const isActive = selectedFilter === filter.value;
+            const count = activityCounts[filter.value] || 0;
             
             return (
               <button
@@ -150,7 +184,7 @@ export const LiveActivityFeed = () => {
                 onClick={() => setSelectedFilter(filter.value)}
                 className={`
                   px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                  flex items-center gap-1.5
+                  flex items-center gap-1.5 relative
                   ${isActive 
                     ? 'bg-[#0071E3] text-white shadow-sm' 
                     : 'bg-white text-[#86868B] hover:bg-[#F9FAFB] hover:text-[#111111] border border-[#E5E5EA]'
@@ -158,7 +192,20 @@ export const LiveActivityFeed = () => {
                 `}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {filter.label}
+                <span>{filter.label}</span>
+                {count > 0 && (
+                  <span 
+                    className={`
+                      px-1.5 py-0.5 rounded-full text-[10px] font-semibold min-w-[18px] text-center
+                      ${isActive 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-[#0071E3]/10 text-[#0071E3]'
+                      }
+                    `}
+                  >
+                    {count > 99 ? '99+' : count}
+                  </span>
+                )}
               </button>
             );
           })}
