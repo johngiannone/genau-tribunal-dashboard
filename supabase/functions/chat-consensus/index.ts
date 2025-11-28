@@ -386,7 +386,45 @@ serve(async (req) => {
 
     console.log("=== Request completed successfully ===")
 
-    // 10. Return results with dynamic drafts array
+    // 10. Log activity in background (don't block response)
+    const logActivity = async () => {
+      try {
+        const ipAddress = req.headers.get('x-forwarded-for') || 
+                         req.headers.get('x-real-ip') || 
+                         'unknown'
+        const userAgent = req.headers.get('user-agent') || null
+        
+        const { error: activityError } = await adminSupabase
+          .from('activity_logs')
+          .insert({
+            user_id: user.id,
+            activity_type: 'audit_completed',
+            description: `Completed audit: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            metadata: {
+              conversation_id: conversationId,
+              council_config: councilConfig ? 'custom' : 'default',
+              drafter_count: drafts.length,
+              had_file: !!fileUrl,
+              training_dataset_id: trainingDatasetId
+            }
+          })
+        
+        if (activityError) {
+          console.error('Failed to log activity:', activityError)
+        } else {
+          console.log('Activity logged successfully')
+        }
+      } catch (err) {
+        console.error('Activity logging error:', err)
+      }
+    }
+
+    // Run activity logging without blocking response
+    logActivity().catch(err => console.error('Background activity log error:', err))
+
+    // 11. Return results with dynamic drafts array
     return new Response(
       JSON.stringify({
         drafts: drafts.map(d => ({
