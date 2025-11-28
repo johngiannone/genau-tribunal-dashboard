@@ -18,8 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Activity, Search, Filter, X } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Loader2, Activity, Search, Filter, X, CalendarIcon } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 interface ActivityLog {
   id: string;
@@ -40,10 +48,11 @@ export const ActivityLogTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activityTypeFilter, setActivityTypeFilter] = useState<ActivityTypeFilter>("all");
   const [userIdFilter, setUserIdFilter] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     fetchActivityLogs();
-  }, [searchQuery, activityTypeFilter, userIdFilter]);
+  }, [searchQuery, activityTypeFilter, userIdFilter, dateRange]);
 
   const fetchActivityLogs = async () => {
     setLoading(true);
@@ -69,6 +78,18 @@ export const ActivityLogTable = () => {
         query = query.or(`description.ilike.%${searchQuery.trim()}%,ip_address.ilike.%${searchQuery.trim()}%`);
       }
 
+      // Apply date range filter
+      if (dateRange?.from) {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        query = query.gte('created_at', fromDate.toISOString());
+      }
+      if (dateRange?.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', toDate.toISOString());
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -84,9 +105,10 @@ export const ActivityLogTable = () => {
     setSearchQuery("");
     setActivityTypeFilter("all");
     setUserIdFilter("");
+    setDateRange(undefined);
   };
 
-  const hasActiveFilters = searchQuery || activityTypeFilter !== "all" || userIdFilter;
+  const hasActiveFilters = searchQuery || activityTypeFilter !== "all" || userIdFilter || dateRange;
 
   const getActivityBadge = (type: string) => {
     const badges: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
@@ -141,7 +163,7 @@ export const ActivityLogTable = () => {
           <h3 className="font-semibold text-[#111111]">Filters</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#86868B]">Search</label>
@@ -186,6 +208,47 @@ export const ActivityLogTable = () => {
               onChange={(e) => setUserIdFilter(e.target.value)}
               className="h-11 rounded-xl border-[#E5E5EA] focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20 font-mono text-sm"
             />
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#86868B]">Date Range</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-11 w-full justify-start text-left font-normal rounded-xl border-[#E5E5EA] hover:bg-[#F9FAFB]",
+                    !dateRange && "text-[#86868B]"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                        {format(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
