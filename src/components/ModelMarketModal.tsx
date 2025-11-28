@@ -16,7 +16,7 @@ interface Model {
   name: string;
   provider: string;
   role: string;
-  strengths: string[];
+  strengths: string;
   badge?: string;
 }
 
@@ -25,74 +25,102 @@ const AVAILABLE_MODELS: Model[] = [
     id: "openai/gpt-4o",
     name: "GPT-4o",
     provider: "OpenAI",
-    role: "All-Purpose Powerhouse",
-    strengths: ["Reasoning", "Analysis", "General Knowledge"],
-    badge: "Recommended",
+    role: "All-Purpose Generalist",
+    strengths: "Vision, reasoning, long context",
   },
   {
     id: "anthropic/claude-3.5-sonnet",
     name: "Claude 3.5 Sonnet",
     provider: "Anthropic",
-    role: "Detailed Analysis",
-    strengths: ["Long Context", "Thoughtful", "Precise"],
-    badge: "Popular",
+    role: "Deep Analysis Expert",
+    strengths: "Code understanding, nuanced writing",
+    badge: "PRO",
   },
   {
-    id: "meta-llama/llama-3-70b-instruct",
-    name: "Llama 3 70B",
+    id: "anthropic/claude-opus",
+    name: "Claude Opus",
+    provider: "Anthropic",
+    role: "Maximum Intelligence",
+    strengths: "Complex reasoning, research",
+    badge: "PRO",
+  },
+  {
+    id: "meta-llama/llama-3.3-70b",
+    name: "Llama 3.3 70B",
     provider: "Meta",
-    role: "Fast & Efficient",
-    strengths: ["Speed", "Cost-Effective", "Open Source"],
+    role: "Open-Source Powerhouse",
+    strengths: "Fast inference, cost-effective",
   },
   {
     id: "google/gemini-pro-1.5",
     name: "Gemini Pro 1.5",
     provider: "Google",
-    role: "Multimodal Expert",
-    strengths: ["Image Analysis", "Long Context", "Fast"],
+    role: "Multimodal Specialist",
+    strengths: "Vision, 2M context window",
+  },
+  {
+    id: "google/gemini-flash-1.5",
+    name: "Gemini Flash 1.5",
+    provider: "Google",
+    role: "Speed Demon",
+    strengths: "Ultra-fast responses, multimodal",
   },
   {
     id: "deepseek/deepseek-r1",
     name: "DeepSeek R1",
     provider: "DeepSeek",
-    role: "Synthesis Specialist",
-    strengths: ["Reasoning", "Analysis", "Synthesis"],
+    role: "Reasoning Engine",
+    strengths: "Chain-of-thought, technical tasks",
+  },
+  {
+    id: "deepseek/deepseek-v2",
+    name: "DeepSeek V2",
+    provider: "DeepSeek",
+    role: "Efficient Reasoning",
+    strengths: "Cost-effective, fast inference",
   },
   {
     id: "mistralai/mistral-large",
     name: "Mistral Large",
     provider: "Mistral AI",
-    role: "Creative Writing",
-    strengths: ["Creativity", "Nuance", "Multilingual"],
+    role: "European Flagship",
+    strengths: "Multilingual, instruction-following",
+    badge: "PRO",
   },
   {
-    id: "anthropic/claude-3-opus",
-    name: "Claude 3 Opus",
-    provider: "Anthropic",
-    role: "Premium Analysis",
-    strengths: ["Deep Thinking", "Complex Tasks", "Accuracy"],
-    badge: "Premium",
+    id: "qwen/qwen-2.5-coder-32b",
+    name: "Qwen 2.5 Coder",
+    provider: "Alibaba",
+    role: "Code Specialist",
+    strengths: "Programming, debugging",
   },
   {
-    id: "openai/gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    provider: "OpenAI",
-    role: "Fast GPT-4",
-    strengths: ["Speed", "Cost-Effective", "Reliable"],
+    id: "xai/grok-beta",
+    name: "Grok Beta",
+    provider: "xAI",
+    role: "Conversational AI",
+    strengths: "Real-time data, humor",
   },
   {
     id: "cohere/command-r-plus",
     name: "Command R+",
     provider: "Cohere",
-    role: "RAG Optimized",
-    strengths: ["Retrieval", "Citations", "Grounded"],
+    role: "Enterprise RAG",
+    strengths: "Retrieval, citations",
+  },
+  {
+    id: "databricks/dbrx-instruct",
+    name: "DBRX Instruct",
+    provider: "Databricks",
+    role: "Enterprise Workhorse",
+    strengths: "SQL, data analysis",
   },
   {
     id: "perplexity/llama-3-sonar-large",
     name: "Sonar Large",
     provider: "Perplexity",
-    role: "Research Focused",
-    strengths: ["Web Search", "Citations", "Up-to-date"],
+    role: "Search-Augmented",
+    strengths: "Web-grounded responses",
   },
 ];
 
@@ -155,14 +183,7 @@ export const ModelMarketModal = ({
 
                     <div>
                       <p className="text-sm text-primary font-medium">{model.role}</p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {model.strengths.map((strength) => (
-                        <Badge key={strength} variant="outline" className="text-xs">
-                          {strength}
-                        </Badge>
-                      ))}
+                      <p className="text-xs text-muted-foreground mt-1">{model.strengths}</p>
                     </div>
 
                     <Button

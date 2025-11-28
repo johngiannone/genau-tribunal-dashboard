@@ -16,19 +16,27 @@ interface CouncilConfig {
   slot_5: string;
 }
 
+const DEFAULT_COUNCIL_CONFIG: CouncilConfig = {
+  slot_1: "openai/gpt-4o",
+  slot_2: "anthropic/claude-3.5-sonnet",
+  slot_3: "qwen/qwen-2.5-coder-32b",
+  slot_4: "xai/grok-beta",
+  slot_5: "meta-llama/llama-3.3-70b",
+};
+
 const SLOT_NAMES = {
-  slot_1: "Primary Analyst",
-  slot_2: "Secondary Analyst",
-  slot_3: "Creative Thinker",
-  slot_4: "Technical Expert",
-  slot_5: "Synthesis Engine",
+  slot_1: "The Chairman",
+  slot_2: "The Critic",
+  slot_3: "The Architect",
+  slot_4: "The Reporter",
+  slot_5: "The Speedster",
 };
 
 const CouncilSettings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
-  const [councilConfig, setCouncilConfig] = useState<CouncilConfig | null>(null);
+  const [councilConfig, setCouncilConfig] = useState<CouncilConfig>(DEFAULT_COUNCIL_CONFIG);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -75,11 +83,15 @@ const CouncilSettings = () => {
         description: "Failed to load council configuration",
         variant: "destructive",
       });
+      setLoading(false);
       return;
     }
 
     if (data?.council_config) {
       setCouncilConfig(data.council_config as unknown as CouncilConfig);
+    } else {
+      // Keep default config if no saved config exists
+      setCouncilConfig(DEFAULT_COUNCIL_CONFIG);
     }
     setLoading(false);
   };
@@ -90,7 +102,7 @@ const CouncilSettings = () => {
   };
 
   const handleModelSelect = async (modelId: string) => {
-    if (!session?.user || !selectedSlot || !councilConfig) return;
+    if (!session?.user || !selectedSlot) return;
 
     const updatedConfig = {
       ...councilConfig,
@@ -99,7 +111,7 @@ const CouncilSettings = () => {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ council_config: updatedConfig })
+      .update({ council_config: updatedConfig as any })
       .eq('id', session.user.id);
 
     if (error) {
@@ -176,8 +188,8 @@ const CouncilSettings = () => {
           </div>
 
           {/* Council Slots Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {councilConfig && Object.entries(councilConfig).map(([slot, modelId]) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {Object.entries(councilConfig).map(([slot, modelId]) => (
               <Card
                 key={slot}
                 className="group relative p-6 cursor-pointer transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
@@ -225,7 +237,7 @@ const CouncilSettings = () => {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onModelSelect={handleModelSelect}
-        currentModel={selectedSlot ? councilConfig?.[selectedSlot as keyof CouncilConfig] : undefined}
+        currentModel={selectedSlot ? councilConfig[selectedSlot as keyof CouncilConfig] : undefined}
       />
     </div>
   );

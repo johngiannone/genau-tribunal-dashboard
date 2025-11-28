@@ -73,8 +73,22 @@ const Index = () => {
       .eq('id', session.user.id)
       .maybeSingle();
 
-    if (!error && data?.council_config) {
+    if (error) {
+      console.error("Error fetching council config:", error);
+      return;
+    }
+
+    if (data?.council_config) {
       setCouncilConfig(data.council_config);
+    } else {
+      // Use default config if none exists
+      setCouncilConfig({
+        slot_1: "openai/gpt-4o",
+        slot_2: "anthropic/claude-3.5-sonnet",
+        slot_3: "qwen/qwen-2.5-coder-32b",
+        slot_4: "xai/grok-beta",
+        slot_5: "meta-llama/llama-3.3-70b",
+      });
     }
   };
 
