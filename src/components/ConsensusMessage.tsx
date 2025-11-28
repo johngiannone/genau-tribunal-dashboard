@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ModelMarketModal } from "./ModelMarketModal";
+import { exportVerdictToPDF } from "@/lib/pdfExport";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -477,20 +478,45 @@ export const ConsensusMessage = ({
                 <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-xl p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-[#111111] font-serif">Final Synthesis</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (synthesisResponse) {
-                          navigator.clipboard.writeText(synthesisResponse);
-                          toast({ title: "Copied to clipboard" });
-                        }
-                      }}
-                      className="h-8"
-                    >
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (synthesisResponse) {
+                            navigator.clipboard.writeText(synthesisResponse);
+                            toast({ title: "Copied to clipboard" });
+                          }
+                        }}
+                        className="h-8"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (synthesisResponse) {
+                            exportVerdictToPDF({
+                              verdict: synthesisResponse,
+                              confidence: confidenceScore,
+                              userPrompt: userPrompt,
+                              drafts: [
+                                { agentName: agentNameA || modelAName, role: modelAName, content: modelAResponse || '' },
+                                { agentName: agentNameB || modelBName, role: modelBName, content: modelBResponse || '' }
+                              ],
+                              timestamp: new Date().toLocaleString()
+                            });
+                            toast({ title: "PDF report downloaded" });
+                          }
+                        }}
+                        className="h-8"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export PDF
+                      </Button>
+                    </div>
                   </div>
                   <div className="text-[#111111] leading-[1.7] prose prose-sm max-w-none">
                     <ReactMarkdown
