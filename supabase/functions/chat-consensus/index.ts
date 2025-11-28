@@ -255,9 +255,12 @@ serve(async (req) => {
 
     // Dynamically extract drafter and auditor slots from council config
     const defaultConfig = {
-      slot_1: { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3", role: "The Speedster" },
+      slot_1: { id: "openai/gpt-4o", name: "GPT-4o", role: "The Chairman" },
       slot_2: { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5", role: "The Critic" },
-      slot_5: { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Auditor" }
+      slot_3: { id: "qwen/qwen-2.5-coder-32b-instruct", name: "Qwen 2.5", role: "The Architect" },
+      slot_4: { id: "x-ai/grok-beta", name: "Grok 2", role: "The Reporter" },
+      slot_5: { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3", role: "The Speedster" },
+      slot_6: { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Auditor" }
     }
     
     const config = councilConfig || defaultConfig
