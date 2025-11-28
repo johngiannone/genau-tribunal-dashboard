@@ -28,7 +28,12 @@ const Index = () => {
   const [statusText, setStatusText] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [usage, setUsage] = useState<{ audit_count: number; is_premium: boolean } | null>(null);
+  const [usage, setUsage] = useState<{ 
+    audit_count: number; 
+    is_premium: boolean;
+    audits_this_month: number;
+    subscription_tier: string | null;
+  } | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasContext, setHasContext] = useState(false);
   const [councilConfig, setCouncilConfig] = useState<any>(null);
@@ -66,6 +71,18 @@ const Index = () => {
     }
   }, [session]);
 
+  // Refresh council config when window regains focus (after returning from settings)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (session?.user) {
+        fetchCouncilConfig();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [session]);
+
   const fetchCouncilConfig = async () => {
     if (!session?.user) return;
 
@@ -99,7 +116,7 @@ const Index = () => {
 
     const { data, error } = await supabase
       .from('user_usage')
-      .select('audit_count, is_premium')
+      .select('audit_count, is_premium, audits_this_month, subscription_tier')
       .eq('user_id', session.user.id)
       .single();
 
@@ -224,7 +241,13 @@ const Index = () => {
     }
 
     // Check usage limits before calling API
-    if (usage && !usage.is_premium && usage.audit_count >= 5) {
+    const monthlyLimit = usage.subscription_tier === 'pro' ? 200 
+      : usage.subscription_tier === 'max' ? 800
+      : usage.subscription_tier === 'team' ? 1500
+      : usage.subscription_tier === 'agency' ? 5000
+      : 3; // Free tier: 3 per day
+
+    if (usage && !usage.is_premium && (usage.audits_this_month || 0) >= monthlyLimit) {
       setShowUpgradeModal(true);
       return;
     }
@@ -409,14 +432,22 @@ const Index = () => {
                     Ask once. Get the consensus.
                   </h1>
                   <p className="text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed text-base font-mono">
-                    Running Llama 3, Claude 3.5, and DeepSeek R1 in parallel for precision auditing.
+                    Running {councilConfig?.slot_1?.name || 'Llama 3'}, {councilConfig?.slot_2?.name || 'Claude 3.5'}, and {councilConfig?.slot_3?.name || 'DeepSeek R1'} in parallel for precision auditing.
                   </p>
                   
                   {/* Usage indicator */}
                   {usage && !usage.is_premium && (
                     <div className="mb-6">
                       <p className="text-sm text-muted-foreground">
-                        {5 - usage.audit_count} free audits remaining today
+                        {(() => {
+                          const monthlyLimit = usage.subscription_tier === 'pro' ? 200 
+                            : usage.subscription_tier === 'max' ? 800
+                            : usage.subscription_tier === 'team' ? 1500
+                            : usage.subscription_tier === 'agency' ? 5000
+                            : 3; // Free tier: 3 per day
+                          const remaining = monthlyLimit - (usage.audits_this_month || 0);
+                          return `${remaining} free audits remaining this month`;
+                        })()}
                       </p>
                     </div>
                   )}
@@ -425,17 +456,17 @@ const Index = () => {
                   <div className="inline-flex items-center gap-4 bg-card/70 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50 text-xs font-mono">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                      <span className="text-foreground/80">LLAMA_3</span>
+                      <span className="text-foreground/80">{councilConfig?.slot_1?.name?.toUpperCase().replace(/\s+/g, '_') || 'LLAMA_3'}</span>
                     </div>
                     <div className="h-4 w-px bg-border/50" />
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.3s' }} />
-                      <span className="text-foreground/80">CLAUDE_3.5</span>
+                      <span className="text-foreground/80">{councilConfig?.slot_2?.name?.toUpperCase().replace(/\s+/g, '_') || 'CLAUDE_3.5'}</span>
                     </div>
                     <div className="h-4 w-px bg-border/50" />
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.6s' }} />
-                      <span className="text-foreground/80">DEEPSEEK_R1</span>
+                      <span className="text-foreground/80">{councilConfig?.slot_3?.name?.toUpperCase().replace(/\s+/g, '_') || 'DEEPSEEK_R1'}</span>
                     </div>
                   </div>
                 </div>
