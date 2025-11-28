@@ -74,34 +74,43 @@ export type Database = {
       analytics_events: {
         Row: {
           conversation_id: string | null
+          cost: number | null
           created_at: string
           id: string
+          input_tokens: number | null
           latency_ms: number
           model_id: string
           model_name: string
           model_role: string | null
+          output_tokens: number | null
           slot_position: number
           user_id: string
         }
         Insert: {
           conversation_id?: string | null
+          cost?: number | null
           created_at?: string
           id?: string
+          input_tokens?: number | null
           latency_ms: number
           model_id: string
           model_name: string
           model_role?: string | null
+          output_tokens?: number | null
           slot_position: number
           user_id: string
         }
         Update: {
           conversation_id?: string | null
+          cost?: number | null
           created_at?: string
           id?: string
+          input_tokens?: number | null
           latency_ms?: number
           model_id?: string
           model_name?: string
           model_role?: string | null
+          output_tokens?: number | null
           slot_position?: number
           user_id?: string
         }

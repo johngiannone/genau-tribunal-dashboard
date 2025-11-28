@@ -360,17 +360,29 @@ serve(async (req) => {
       })
       .eq('user_id', user.id)
 
-    // 8. Log analytics for all models
+    // 8. Log analytics for all models with cost tracking
     const analyticsEvents = [
-      ...drafts.map((draft, index) => ({
-        user_id: user.id,
-        conversation_id: conversationId || null,
-        model_id: draft.modelId,
-        model_name: draft.name,
-        model_role: draft.agent,
-        slot_position: parseInt(draft.slotKey.replace('slot_', '')),
-        latency_ms: draft.latency
-      })),
+      ...drafts.map((draft, index) => {
+        const modelPrice = priceMap.get(draft.modelId)
+        const inputTokens = 1000 // Estimate
+        const outputTokens = 1000 // Estimate
+        const cost = modelPrice 
+          ? (modelPrice.input_price * inputTokens + modelPrice.output_price * outputTokens)
+          : 0
+        
+        return {
+          user_id: user.id,
+          conversation_id: conversationId || null,
+          model_id: draft.modelId,
+          model_name: draft.name,
+          model_role: draft.agent,
+          slot_position: parseInt(draft.slotKey.replace('slot_', '')),
+          latency_ms: draft.latency,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost: cost
+        }
+      }),
       {
         user_id: user.id,
         conversation_id: conversationId || null,
@@ -378,7 +390,12 @@ serve(async (req) => {
         model_name: auditorSlot.name,
         model_role: auditorSlot.role,
         slot_position: parseInt(auditorSlot.slotKey.replace('slot_', '')),
-        latency_ms: verdictLatency
+        latency_ms: verdictLatency,
+        input_tokens: 3000, // Auditor processes more
+        output_tokens: 1500,
+        cost: auditorPrice 
+          ? (auditorPrice.input_price * 3000 + auditorPrice.output_price * 1500)
+          : 0
       }
     ]
 

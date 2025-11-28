@@ -28,6 +28,7 @@ import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
 import { PriceSyncPanel } from "@/components/PriceSyncPanel";
 import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { CostForecastPanel } from "@/components/CostForecastPanel";
+import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
@@ -137,6 +138,7 @@ const Admin = () => {
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
                 <TabsTrigger value="forecast">Forecast</TabsTrigger>
                 <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
+                <TabsTrigger value="reports">Cost Reports</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users">
@@ -303,6 +305,10 @@ const Admin = () => {
 
       <TabsContent value="alerts">
         <CostAlertsPanel />
+      </TabsContent>
+
+      <TabsContent value="reports">
+        <CostBreakdownPanel />
       </TabsContent>
     </Tabs>
           </div>
