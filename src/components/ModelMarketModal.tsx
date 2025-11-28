@@ -121,10 +121,10 @@ export const ModelMarketModal = ({
 
   const filteredModels = sortModels(filteredAndSearched, sortBy, favoriteModels);
 
-  // Group models into rows (2 per row)
+  // Group models into rows (3 per row for desktop)
   const rows = [];
-  for (let i = 0; i < filteredModels.length; i += 2) {
-    rows.push(filteredModels.slice(i, i + 2));
+  for (let i = 0; i < filteredModels.length; i += 3) {
+    rows.push(filteredModels.slice(i, i + 3));
   }
 
   const virtualizer = useVirtualizer({
@@ -319,7 +319,7 @@ export const ModelMarketModal = ({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
                       {rowModels.map((model) => (
                         <ModelCard
                           key={model.id}
@@ -380,92 +380,90 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
 
   return (
     <div
-      className={`relative p-4 rounded-lg border transition-all cursor-pointer ${
+      className={`group relative p-5 rounded-xl border transition-all duration-200 cursor-pointer bg-white ${
         isSelected
-          ? "border-primary bg-primary/5"
-          : "border-border/50 hover:border-primary/50 bg-card/50"
+          ? "border-blue-500 shadow-md"
+          : "border-gray-200 hover:border-blue-500 hover:shadow-md"
       }`}
       onClick={onClick}
     >
-      {/* Favorite Star Button */}
+      {/* Favorite Star Button - Top Left */}
       <button
         onClick={onToggleFavorite}
-        className="absolute top-3 left-3 z-10 p-1 rounded-full hover:bg-primary/10 transition-colors"
+        className="absolute top-4 left-4 z-10 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >
         <Star
-          className={`w-5 h-5 transition-all ${
+          className={`w-6 h-6 transition-all ${
             isFavorite
-              ? "fill-yellow-400 text-yellow-400"
-              : "text-muted-foreground hover:text-yellow-400"
+              ? "fill-[#FFD700] text-[#FFD700]"
+              : "text-gray-400 hover:text-[#FFD700]"
           }`}
         />
       </button>
 
+      {/* Selected Check - Top Right */}
       {isSelected && (
-        <div className="absolute top-3 right-3">
-          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-            <Check className="w-4 h-4 text-primary-foreground" />
+        <div className="absolute top-4 right-4">
+          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+            <Check className="w-4 h-4 text-white" />
           </div>
         </div>
       )}
 
-      {model.isFree && !isSelected && (
-        <div className="absolute top-3 right-3">
-          <Badge className="text-xs font-mono bg-green-500/20 text-green-400 border-green-500/30">
-            FREE
-          </Badge>
-        </div>
-      )}
-
-      {!model.isFree && !isSelected && (
-        <div className="absolute top-3 right-3">
-          <Badge className="text-xs font-mono bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+      {/* Price Badge - Bottom Right - Show on Hover */}
+      {!model.isFree && (
+        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <Badge className="text-xs font-mono bg-gray-100 text-gray-700 border-gray-300">
             {priceDisplay}
           </Badge>
         </div>
       )}
 
-      <div className="space-y-3">
+      {/* Free Badge - Always Visible in Bottom Right */}
+      {model.isFree && (
+        <div className="absolute bottom-4 right-4">
+          <Badge className="text-xs font-mono bg-green-100 text-green-700 border-green-300">
+            FREE
+          </Badge>
+        </div>
+      )}
+
+      <div className="space-y-3 pr-8">
+        {/* Provider Badge */}
         <div>
-          <h3 className="font-bold text-foreground">{model.name}</h3>
-          <p className="text-xs text-muted-foreground font-mono">
+          <Badge variant="outline" className="text-xs font-normal text-gray-600 border-gray-300 mb-2">
             {model.provider}
-          </p>
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-primary/80">
+        {/* Model Name - Larger and Bolder */}
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 leading-tight">{model.name}</h3>
+        </div>
+
+        {/* Context Length */}
+        <div className="flex items-center gap-2 text-xs text-gray-600">
           <span>{(model.contextLength / 1000).toFixed(0)}k context</span>
           {model.contextLength >= 100000 && (
-            <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
               Long Context
             </Badge>
           )}
         </div>
 
+        {/* Description - Limited to 2 Lines */}
         <div>
-          <p className="text-xs text-muted-foreground line-clamp-2">
+          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
             {model.description}
           </p>
         </div>
 
-        <div className="pt-2 border-t border-border/30">
-          <p className="text-xs font-mono">
-            {model.isFree ? (
-              <span className="text-green-400 font-bold">FREE</span>
-            ) : (
-              <>
-                <span className="text-muted-foreground">Price: </span>
-                <span className="text-primary font-semibold">{priceDisplay}</span>
-              </>
-            )}
-          </p>
-        </div>
-
+        {/* Select Button */}
         <Button
           size="sm"
           variant={isSelected ? "default" : "outline"}
-          className="w-full"
+          className="w-full mt-3"
           onClick={(e) => {
             e.stopPropagation();
             onClick();
