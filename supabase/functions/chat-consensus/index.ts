@@ -55,7 +55,7 @@ serve(async (req) => {
     // 2. Check if user is banned
     const { data: banCheck, error: banError } = await adminSupabase
       .from('user_usage')
-      .select('is_banned, banned_at, ban_reason')
+      .select('is_banned, banned_at, ban_reason, account_status')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -70,6 +70,35 @@ serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
+
+    // 2b. Check account status
+    const accountStatus = banCheck?.account_status || 'active'
+    
+    if (accountStatus === 'disabled') {
+      console.warn("Disabled account attempted access:", user.id)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Account disabled',
+          details: 'Your account has been permanently disabled. Please contact support if you believe this is an error.',
+          account_status: 'disabled'
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+    
+    if (accountStatus === 'inactive') {
+      console.warn("Inactive account attempted access:", user.id)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Account inactive',
+          details: 'Your account is currently inactive. Please contact support to reactivate your account.',
+          account_status: 'inactive'
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    console.log("Account status check passed:", accountStatus)
 
     // 3. Parse request early to get prompt for moderation check
     const { prompt, fileUrl, conversationId, councilConfig } = await req.json()
