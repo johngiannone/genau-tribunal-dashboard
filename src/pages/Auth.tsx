@@ -51,12 +51,44 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Check account status immediately after successful login
+      const { data: usageData, error: usageError } = await supabase
+        .from('user_usage')
+        .select('account_status')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (usageError) {
+        console.error('Error checking account status:', usageError);
+      } else if (usageData) {
+        // If account is disabled or inactive, sign out and show error
+        if (usageData.account_status === 'disabled') {
+          await supabase.auth.signOut();
+          toast({
+            title: "Account Disabled",
+            description: "Your account has been disabled. Please contact support.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        } else if (usageData.account_status === 'inactive') {
+          await supabase.auth.signOut();
+          toast({
+            title: "Account Inactive",
+            description: "Your account is inactive. Please contact support to reactivate.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
 
       // Store login timestamp for session duration tracking
       localStorage.setItem('session_start', new Date().toISOString());

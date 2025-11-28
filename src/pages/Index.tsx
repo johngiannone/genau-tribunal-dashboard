@@ -35,6 +35,7 @@ const Index = () => {
     is_premium: boolean;
     audits_this_month: number;
     subscription_tier: string | null;
+    account_status: 'active' | 'inactive' | 'disabled';
   } | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasContext, setHasContext] = useState(false);
@@ -122,12 +123,30 @@ const Index = () => {
 
     const { data, error } = await supabase
       .from('user_usage')
-      .select('audit_count, is_premium, audits_this_month, subscription_tier')
+      .select('audit_count, is_premium, audits_this_month, subscription_tier, account_status')
       .eq('user_id', session.user.id)
       .single();
 
     if (error) {
       console.error("Error fetching usage:", error);
+      return;
+    }
+
+    // Check account status and sign out if disabled or inactive
+    if (data && (data.account_status === 'disabled' || data.account_status === 'inactive')) {
+      await supabase.auth.signOut();
+      
+      const statusMessage = data.account_status === 'disabled'
+        ? 'Your account has been disabled. Please contact support.'
+        : 'Your account is inactive. Please contact support to reactivate.';
+      
+      toast({
+        title: `Account ${data.account_status === 'disabled' ? 'Disabled' : 'Inactive'}`,
+        description: statusMessage,
+        variant: "destructive",
+      });
+      
+      navigate("/auth");
       return;
     }
 
