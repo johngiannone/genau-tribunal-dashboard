@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, TrendingUp, Clock, Users, Activity, CalendarIcon } from "lucide-react";
+import { Loader2, TrendingUp, Clock, Users, Activity, CalendarIcon, Download } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -28,6 +28,9 @@ import {
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface ActivityTypeCount {
   activity_type: string;
@@ -65,6 +68,7 @@ const COLORS = {
 
 export const ActivityStatsDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [activityTypeCounts, setActivityTypeCounts] = useState<ActivityTypeCount[]>([]);
   const [hourlyActivity, setHourlyActivity] = useState<HourlyActivity[]>([]);
   const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
@@ -183,6 +187,160 @@ export const ActivityStatsDashboard = () => {
     return diffDays;
   };
 
+  const exportToPDF = async () => {
+    setExporting(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Activity Statistics Report', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      const dateRangeText = dateRange?.from && dateRange?.to
+        ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
+        : 'N/A';
+      pdf.text(`Period: ${dateRangeText}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 5;
+      pdf.text(`Generated: ${format(new Date(), 'PPpp')}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 15;
+
+      // Summary Statistics
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Summary', 20, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Total Activities: ${totalActivities}`, 20, yPosition);
+      yPosition += 6;
+      pdf.text(`Time Period: ${getDaysCount()} days`, 20, yPosition);
+      yPosition += 10;
+
+      // Activity Type Breakdown
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Activity Type Distribution', 20, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      activityTypeCounts.forEach((item) => {
+        const percentage = ((item.count / totalActivities) * 100).toFixed(1);
+        pdf.text(`• ${item.activity_type.replace('_', ' ')}: ${item.count} (${percentage}%)`, 25, yPosition);
+        yPosition += 5;
+      });
+      
+      yPosition += 10;
+
+      // Top Users
+      if (topUsers.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Most Active Users (Top 5)', 20, yPosition);
+        yPosition += 8;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        topUsers.slice(0, 5).forEach((user, index) => {
+          pdf.text(`${index + 1}. User ${user.user_id.slice(0, 8)}: ${user.count} activities`, 25, yPosition);
+          yPosition += 5;
+        });
+      }
+
+      yPosition += 10;
+
+      // Peak Hours Summary
+      const peakHour = hourlyActivity.reduce((max, curr) => curr.count > max.count ? curr : max, hourlyActivity[0]);
+      if (peakHour) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Peak Activity Hours', 20, yPosition);
+        yPosition += 8;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Peak Hour: ${peakHour.hour}:00 with ${peakHour.count} activities`, 25, yPosition);
+        yPosition += 5;
+        
+        // Top 3 peak hours
+        const top3Hours = [...hourlyActivity]
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+        
+        pdf.text('Top 3 Active Hours:', 25, yPosition);
+        yPosition += 5;
+        top3Hours.forEach((hour) => {
+          pdf.text(`• ${hour.hour}:00 - ${hour.count} activities`, 30, yPosition);
+          yPosition += 5;
+        });
+      }
+
+      // Add new page for charts
+      pdf.addPage();
+      yPosition = 20;
+
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Visual Analytics', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Capture charts as images
+      const chartElements = [
+        { id: 'pie-chart', title: 'Activity Types Distribution' },
+        { id: 'area-chart', title: 'Daily Activity Trends' },
+        { id: 'bar-chart', title: 'Peak Usage Hours' },
+      ];
+
+      for (const chart of chartElements) {
+        const element = document.getElementById(chart.id);
+        if (element && yPosition < pageHeight - 100) {
+          const canvas = await html2canvas(element, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          const imgWidth = pageWidth - 40;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          if (yPosition + imgHeight > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(chart.title, 20, yPosition);
+          yPosition += 8;
+          
+          pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, Math.min(imgHeight, 80));
+          yPosition += Math.min(imgHeight, 80) + 15;
+        }
+      }
+
+      // Save PDF
+      const fileName = `activity-stats-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.pdf`;
+      pdf.save(fileName);
+      
+      toast.success('Report exported successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to export report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -267,11 +425,30 @@ export const ActivityStatsDashboard = () => {
             <span className="text-lg font-bold text-[#111111]">{totalActivities}</span>
             <span className="text-xs text-[#86868B]">activities</span>
           </div>
+
+          {/* Export Button */}
+          <Button
+            onClick={exportToPDF}
+            disabled={exporting || totalActivities === 0}
+            className="h-9 bg-[#0071E3] hover:bg-[#0071E3]/90"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
       {/* Activity Types Distribution - Pie Chart */}
-      <Card className="border-[#E5E5EA]">
+      <Card className="border-[#E5E5EA]" id="pie-chart">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-[#111111]">
             Activity Types Distribution
@@ -307,7 +484,7 @@ export const ActivityStatsDashboard = () => {
       </Card>
 
       {/* Daily Activity Trends - Stacked Area Chart */}
-      <Card className="border-[#E5E5EA]">
+      <Card className="border-[#E5E5EA]" id="area-chart">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-[#111111]">
             Daily Activity Trends
@@ -385,7 +562,7 @@ export const ActivityStatsDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Peak Usage Hours - Bar Chart */}
-        <Card className="border-[#E5E5EA]">
+        <Card className="border-[#E5E5EA]" id="bar-chart">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-[#111111] flex items-center gap-2">
               <Clock className="w-5 h-5 text-[#0071E3]" />
