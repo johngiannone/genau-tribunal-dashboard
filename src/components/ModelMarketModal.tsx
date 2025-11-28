@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -22,22 +23,15 @@ export const ModelMarketModal = ({
   currentModel,
 }: ModelMarketModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [models, setModels] = useState<Model[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
 
-  useEffect(() => {
-    if (open) {
-      loadModels();
-    }
-  }, [open]);
-
-  const loadModels = async () => {
-    setLoading(true);
-    const fetchedModels = await fetchOpenRouterModels();
-    setModels(fetchedModels);
-    setLoading(false);
-  };
+  // Fetch models using TanStack Query
+  const { data: models = [], isLoading } = useQuery({
+    queryKey: ['openrouter-models'],
+    queryFn: fetchOpenRouterModels,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: open, // Only fetch when modal is open
+  });
 
   const filteredByCategory = filterModelsByCategory(models, activeCategory);
   
@@ -86,7 +80,7 @@ export const ModelMarketModal = ({
         </div>
 
         <ScrollArea className="h-[500px] pr-4">
-          {loading ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center h-[400px]">
               <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground font-mono text-sm">Loading models from OpenRouter...</p>
@@ -137,20 +131,26 @@ export const ModelMarketModal = ({
                   {!model.isFree && !isSelected && (
                     <div className="absolute top-3 right-3">
                       <Badge className="text-xs font-mono bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                        $$$
+                        {'$'.repeat(model.priceTier)}
                       </Badge>
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                    <div className="space-y-3">
                     <div>
                       <h3 className="font-bold text-foreground">{model.name}</h3>
                       <p className="text-xs text-muted-foreground font-mono">
                         {model.provider}
                       </p>
-                      <p className="text-xs text-primary/60 font-mono mt-1">
-                        {model.id}
-                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs font-mono text-primary/80">
+                      <span>{(model.contextLength / 1000).toFixed(0)}k context</span>
+                      {model.contextLength >= 100000 && (
+                        <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                          Long Context
+                        </Badge>
+                      )}
                     </div>
 
                     <div>
@@ -158,13 +158,6 @@ export const ModelMarketModal = ({
                         {model.description}
                       </p>
                     </div>
-
-                    {!model.isFree && (
-                      <div className="text-xs font-mono text-muted-foreground flex gap-3">
-                        <span>Prompt: ${model.pricing.prompt}/M</span>
-                        <span>Completion: ${model.pricing.completion}/M</span>
-                      </div>
-                    )}
 
                     <Button
                       size="sm"
