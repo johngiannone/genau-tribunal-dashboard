@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Input } from "./ui/input";
-import { Check, Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import { Check, Search, Loader2 } from "lucide-react";
+import { fetchOpenRouterModels, filterModelsByCategory, Model } from "@/lib/openrouter";
 
 interface ModelMarketModalProps {
   open: boolean;
@@ -13,142 +15,6 @@ interface ModelMarketModalProps {
   currentModel?: string;
 }
 
-interface Model {
-  id: string;
-  name: string;
-  provider: string;
-  character: string;
-  role: string;
-  strengths: string;
-  badge?: string;
-}
-
-const AVAILABLE_MODELS: Model[] = [
-  {
-    id: "openai/gpt-4o",
-    name: "GPT-4o",
-    provider: "OpenAI",
-    character: "The Chairman",
-    role: "All-Purpose Leadership",
-    strengths: "Vision, reasoning, long context",
-  },
-  {
-    id: "anthropic/claude-3.5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-    character: "The Critic",
-    role: "Deep Analysis Expert",
-    strengths: "Code understanding, nuanced critique",
-  },
-  {
-    id: "deepseek/deepseek-r1",
-    name: "DeepSeek R1",
-    provider: "DeepSeek",
-    character: "The Auditor",
-    role: "Reasoning Engine",
-    strengths: "Chain-of-thought, technical auditing",
-  },
-  {
-    id: "meta-llama/llama-3.3-70b",
-    name: "Llama 3.3 70B",
-    provider: "Meta",
-    character: "The Speedster",
-    role: "Fast Execution",
-    strengths: "Rapid inference, cost-effective",
-  },
-  {
-    id: "qwen/qwen-2.5-coder-32b",
-    name: "Qwen 2.5 Coder",
-    provider: "Alibaba",
-    character: "The Architect",
-    role: "Code Specialist",
-    strengths: "Programming, system design",
-  },
-  {
-    id: "xai/grok-beta",
-    name: "Grok Beta",
-    provider: "xAI",
-    character: "The Reporter",
-    role: "Real-Time Intelligence",
-    strengths: "Current events, conversational wit",
-  },
-  {
-    id: "mistralai/mistral-large-2",
-    name: "Mistral Large 2",
-    provider: "Mistral AI",
-    character: "The Philosopher",
-    role: "Deep Thinking",
-    strengths: "Multilingual, philosophical reasoning",
-    badge: "PRO",
-  },
-  {
-    id: "google/gemini-pro-1.5",
-    name: "Gemini Pro 1.5",
-    provider: "Google",
-    character: "The Librarian",
-    role: "Multimodal Specialist",
-    strengths: "Vision, 2M context, document analysis",
-  },
-  {
-    id: "cohere/command-r-plus",
-    name: "Command R+",
-    provider: "Cohere",
-    character: "The Researcher",
-    role: "Enterprise RAG",
-    strengths: "Retrieval, citations, grounded research",
-  },
-  {
-    id: "liquid/lfm-40b",
-    name: "Liquid LFM 40B",
-    provider: "Liquid AI",
-    character: "The Fluid Thinker",
-    role: "Adaptive Reasoning",
-    strengths: "Dynamic context, efficient inference",
-  },
-  {
-    id: "anthropic/claude-3-opus",
-    name: "Claude 3 Opus",
-    provider: "Anthropic",
-    character: "The Professor",
-    role: "Maximum Intelligence",
-    strengths: "Complex reasoning, academic depth",
-    badge: "PRO",
-  },
-  // Additional high-quality models
-  {
-    id: "google/gemini-flash-1.5",
-    name: "Gemini Flash 1.5",
-    provider: "Google",
-    character: "The Scout",
-    role: "Speed Demon",
-    strengths: "Ultra-fast responses, multimodal",
-  },
-  {
-    id: "deepseek/deepseek-v2",
-    name: "DeepSeek V2",
-    provider: "DeepSeek",
-    character: "The Analyst",
-    role: "Efficient Reasoning",
-    strengths: "Cost-effective, fast inference",
-  },
-  {
-    id: "openai/gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    provider: "OpenAI",
-    character: "The Optimizer",
-    role: "Fast GPT-4",
-    strengths: "Speed, reliability, balanced performance",
-  },
-  {
-    id: "perplexity/llama-3-sonar-large",
-    name: "Sonar Large",
-    provider: "Perplexity",
-    character: "The Detective",
-    role: "Search-Augmented",
-    strengths: "Web-grounded, real-time citations",
-  },
-];
-
 export const ModelMarketModal = ({
   open,
   onOpenChange,
@@ -156,34 +22,63 @@ export const ModelMarketModal = ({
   currentModel,
 }: ModelMarketModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [models, setModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("all");
 
-  const filteredModels = AVAILABLE_MODELS.filter((model) => {
+  useEffect(() => {
+    if (open) {
+      loadModels();
+    }
+  }, [open]);
+
+  const loadModels = async () => {
+    setLoading(true);
+    const fetchedModels = await fetchOpenRouterModels();
+    setModels(fetchedModels);
+    setLoading(false);
+  };
+
+  const filteredByCategory = filterModelsByCategory(models, activeCategory);
+  
+  const filteredModels = filteredByCategory.filter((model) => {
     const search = searchTerm.toLowerCase();
     return (
       model.name.toLowerCase().includes(search) ||
       model.provider.toLowerCase().includes(search) ||
-      model.character.toLowerCase().includes(search) ||
-      model.role.toLowerCase().includes(search)
+      model.id.toLowerCase().includes(search) ||
+      model.description.toLowerCase().includes(search)
     );
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] bg-card/95 backdrop-blur-xl border-primary/30">
+      <DialogContent className="max-w-5xl max-h-[85vh] bg-card/95 backdrop-blur-xl border-primary/30">
         <DialogHeader>
           <DialogTitle className="text-2xl font-mono font-bold gradient-text">
             Model Market
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Choose an AI model for this council slot. Each model brings unique strengths to the analysis.
+            Choose from {models.length}+ AI models. Each model brings unique strengths to the analysis.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Category Tabs */}
+        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 bg-card/50">
+            <TabsTrigger value="all" className="text-xs">All Models</TabsTrigger>
+            <TabsTrigger value="free" className="text-xs">Free</TabsTrigger>
+            <TabsTrigger value="top-tier" className="text-xs">Top Tier</TabsTrigger>
+            <TabsTrigger value="coding" className="text-xs">Coding</TabsTrigger>
+            <TabsTrigger value="roleplay" className="text-xs">Roleplay</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search models by name, provider, or character..."
+            placeholder="Search models by name, provider, or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 bg-card/50 border-border/50"
@@ -191,7 +86,12 @@ export const ModelMarketModal = ({
         </div>
 
         <ScrollArea className="h-[500px] pr-4">
-          {filteredModels.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-[400px]">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground font-mono text-sm">Loading models from OpenRouter...</p>
+            </div>
+          ) : filteredModels.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[400px] text-center">
               <p className="text-muted-foreground font-mono">No models found matching "{searchTerm}"</p>
               <Button
@@ -226,10 +126,18 @@ export const ModelMarketModal = ({
                     </div>
                   )}
 
-                  {model.badge && !isSelected && (
+                  {model.isFree && (
                     <div className="absolute top-3 right-3">
-                      <Badge variant="secondary" className="text-xs font-mono">
-                        {model.badge}
+                      <Badge className="text-xs font-mono bg-green-500/20 text-green-400 border-green-500/30">
+                        FREE
+                      </Badge>
+                    </div>
+                  )}
+
+                  {!model.isFree && !isSelected && (
+                    <div className="absolute top-3 right-3">
+                      <Badge className="text-xs font-mono bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                        $$$
                       </Badge>
                     </div>
                   )}
@@ -240,15 +148,23 @@ export const ModelMarketModal = ({
                       <p className="text-xs text-muted-foreground font-mono">
                         {model.provider}
                       </p>
-                      <p className="text-xs text-primary/80 font-medium mt-1">
-                        {model.character}
+                      <p className="text-xs text-primary/60 font-mono mt-1">
+                        {model.id}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium text-foreground/90">{model.role}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{model.strengths}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {model.description}
+                      </p>
                     </div>
+
+                    {!model.isFree && (
+                      <div className="text-xs font-mono text-muted-foreground flex gap-3">
+                        <span>Prompt: ${model.pricing.prompt}/M</span>
+                        <span>Completion: ${model.pricing.completion}/M</span>
+                      </div>
+                    )}
 
                     <Button
                       size="sm"
