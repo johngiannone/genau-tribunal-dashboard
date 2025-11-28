@@ -85,6 +85,27 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          council_config: Json | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          council_config?: Json | null
+          created_at?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          council_config?: Json | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_usage: {
         Row: {
           audit_count: number

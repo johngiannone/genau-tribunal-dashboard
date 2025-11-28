@@ -29,6 +29,7 @@ const Index = () => {
   const [usage, setUsage] = useState<{ audit_count: number; is_premium: boolean } | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasContext, setHasContext] = useState(false);
+  const [councilConfig, setCouncilConfig] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -59,8 +60,23 @@ const Index = () => {
   useEffect(() => {
     if (session?.user) {
       fetchUsage();
+      fetchCouncilConfig();
     }
   }, [session]);
+
+  const fetchCouncilConfig = async () => {
+    if (!session?.user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('council_config')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (!error && data?.council_config) {
+      setCouncilConfig(data.council_config);
+    }
+  };
 
   const fetchUsage = async () => {
     if (!session?.user) return;
@@ -205,8 +221,9 @@ const Index = () => {
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
         body: { 
           prompt: userPrompt,
-          file_url: fileUrl,
-          conversationId: conversationId
+          fileUrl: fileUrl || null,
+          conversationId: conversationId,
+          councilConfig: councilConfig || null
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
@@ -380,6 +397,8 @@ const Index = () => {
                     synthesisResponse={message.synthesisResponse}
                     confidenceScore={message.confidenceScore}
                     isLoading={message.isLoading}
+                    modelAName={councilConfig?.slot_1 || "Model A"}
+                    modelBName={councilConfig?.slot_2 || "Model B"}
                   />
                 ))}
               </div>

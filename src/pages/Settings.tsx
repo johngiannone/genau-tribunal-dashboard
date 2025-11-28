@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Key, CreditCard, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -186,6 +186,28 @@ const Settings = () => {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Council Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings2 className="w-5 h-5" />
+              AI Council Configuration
+            </CardTitle>
+            <CardDescription>
+              Customize the AI models used in your consensus engine
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/settings/council")}
+            >
+              Configure Council
+            </Button>
           </CardContent>
         </Card>
 

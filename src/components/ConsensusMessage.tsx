@@ -13,6 +13,8 @@ interface ConsensusMessageProps {
   synthesisResponse?: string;
   confidenceScore?: number;
   isLoading?: boolean;
+  modelAName?: string;
+  modelBName?: string;
 }
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
@@ -205,7 +207,14 @@ export const ConsensusMessage = ({
   synthesisResponse,
   confidenceScore = 99,
   isLoading = false,
+  modelAName = "Model A",
+  modelBName = "Model B",
 }: ConsensusMessageProps) => {
+  const getModelDisplayName = (modelId: string) => {
+    if (modelId === "Model A" || modelId === "Model B") return modelId;
+    return modelId.split('/')[1]?.replace(/-/g, ' ').toUpperCase() || modelId;
+  };
+
   const verdictSections = synthesisResponse ? parseVerdictSections(synthesisResponse) : [];
 
   return (
@@ -227,15 +236,15 @@ export const ConsensusMessage = ({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DraftBox
-            title="MODEL_A"
-            subtitle="Llama 3"
+            title={getModelDisplayName(modelAName)}
+            subtitle={modelAName}
             content={modelAResponse}
             isLoading={isLoading}
             animationDelay="0s"
           />
           <DraftBox
-            title="MODEL_B"
-            subtitle="Claude 3.5"
+            title={getModelDisplayName(modelBName)}
+            subtitle={modelBName}
             content={modelBResponse}
             isLoading={isLoading}
             animationDelay="0.2s"
