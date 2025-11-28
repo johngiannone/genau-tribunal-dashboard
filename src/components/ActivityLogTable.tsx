@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Loader2, Activity, Search, Filter, X, CalendarIcon, Download, FileJson, FileText } from "lucide-react";
+import { Loader2, Activity, Search, Filter, X, CalendarIcon, Download, FileJson, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -50,10 +50,20 @@ export const ActivityLogTable = () => {
   const [activityTypeFilter, setActivityTypeFilter] = useState<ActivityTypeFilter>("all");
   const [userIdFilter, setUserIdFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   useEffect(() => {
+    setCurrentPage(1); // Reset to first page when filters change
     fetchActivityLogs();
-  }, [searchQuery, activityTypeFilter, userIdFilter, dateRange]);
+  }, [searchQuery, activityTypeFilter, userIdFilter, dateRange, pageSize]);
+
+  useEffect(() => {
+    fetchActivityLogs(); // Fetch when page changes
+  }, [currentPage]);
 
   // Set up realtime subscription for new activity logs
   useEffect(() => {
@@ -69,14 +79,16 @@ export const ActivityLogTable = () => {
         (payload) => {
           console.log('New activity log received:', payload);
           
-          // Add the new log to the beginning of the list
-          setLogs((currentLogs) => [payload.new as ActivityLog, ...currentLogs]);
-          
           // Show toast notification for new activity
           toast.info('New Activity', {
             description: (payload.new as ActivityLog).description,
             duration: 3000,
           });
+
+          // Refetch to update count and maintain pagination
+          if (currentPage === 1) {
+            fetchActivityLogs();
+          }
         }
       )
       .subscribe();
@@ -84,30 +96,39 @@ export const ActivityLogTable = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentPage]);
 
   const fetchActivityLogs = async () => {
     setLoading(true);
     try {
+      // Build base query for data
       let query = supabase
         .from('activity_logs')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
+
+      // Build count query with same filters
+      let countQuery = supabase
+        .from('activity_logs')
+        .select('*', { count: 'exact', head: true });
 
       // Apply activity type filter
       if (activityTypeFilter && activityTypeFilter !== "all") {
         query = query.eq('activity_type', activityTypeFilter);
+        countQuery = countQuery.eq('activity_type', activityTypeFilter);
       }
 
       // Apply user ID filter
       if (userIdFilter.trim()) {
         query = query.ilike('user_id', `${userIdFilter.trim()}%`);
+        countQuery = countQuery.ilike('user_id', `${userIdFilter.trim()}%`);
       }
 
       // Apply search query (description or IP address)
       if (searchQuery.trim()) {
-        query = query.or(`description.ilike.%${searchQuery.trim()}%,ip_address.ilike.%${searchQuery.trim()}%`);
+        const searchFilter = `description.ilike.%${searchQuery.trim()}%,ip_address.ilike.%${searchQuery.trim()}%`;
+        query = query.or(searchFilter);
+        countQuery = countQuery.or(searchFilter);
       }
 
       // Apply date range filter
@@ -115,17 +136,31 @@ export const ActivityLogTable = () => {
         const fromDate = new Date(dateRange.from);
         fromDate.setHours(0, 0, 0, 0);
         query = query.gte('created_at', fromDate.toISOString());
+        countQuery = countQuery.gte('created_at', fromDate.toISOString());
       }
       if (dateRange?.to) {
         const toDate = new Date(dateRange.to);
         toDate.setHours(23, 59, 59, 999);
         query = query.lte('created_at', toDate.toISOString());
+        countQuery = countQuery.lte('created_at', toDate.toISOString());
       }
 
-      const { data, error } = await query;
+      // Apply pagination
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      // Execute queries
+      const [{ data, error }, { count, error: countError }] = await Promise.all([
+        query,
+        countQuery
+      ]);
 
       if (error) throw error;
+      if (countError) throw countError;
+
       setLogs(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
     } finally {
@@ -138,6 +173,7 @@ export const ActivityLogTable = () => {
     setActivityTypeFilter("all");
     setUserIdFilter("");
     setDateRange(undefined);
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = searchQuery || activityTypeFilter !== "all" || userIdFilter || dateRange;
@@ -242,7 +278,7 @@ export const ActivityLogTable = () => {
           <Activity className="w-6 h-6 text-[#0071E3]" />
           <h2 className="text-2xl font-bold text-[#111111]">Activity Log</h2>
           <Badge variant="secondary" className="font-mono text-xs">
-            {logs.length} records
+            {totalCount} total
           </Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -418,6 +454,63 @@ export const ActivityLogTable = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalCount > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-[#E5E5EA]">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-[#86868B]">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} records
+            </span>
+            
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[#86868B]">Rows per page:</span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-20 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Page Navigation */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[#86868B] mr-2">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="h-8"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="h-8"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
