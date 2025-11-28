@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw, Download } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw, Download, Mail } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ModelMarketModal } from "./ModelMarketModal";
 import { exportVerdictToPDF } from "@/lib/pdfExport";
+import { EmailShareModal } from "./EmailShareModal";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -237,6 +238,7 @@ export const ConsensusMessage = ({
   const [isSharing, setIsSharing] = useState(false);
   const [showModelMarket, setShowModelMarket] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<'slot_1' | 'slot_2' | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const { toast } = useToast();
 
   const getModelDisplayName = (modelId: string) => {
@@ -516,6 +518,15 @@ export const ConsensusMessage = ({
                         <Download className="w-4 h-4 mr-2" />
                         Export PDF
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowEmailModal(true)}
+                        className="h-8"
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        Email
+                      </Button>
                     </div>
                   </div>
                   <div className="text-[#111111] leading-[1.7] prose prose-sm max-w-none">
@@ -592,6 +603,21 @@ export const ConsensusMessage = ({
           currentModel={selectedSlot === 'slot_1' ? currentModelAId : currentModelBId}
         />
       )}
+      
+      {/* Email Share Modal */}
+      <EmailShareModal
+        open={showEmailModal}
+        onOpenChange={setShowEmailModal}
+        userPrompt={userPrompt}
+        verdict={synthesisResponse || ""}
+        confidence={confidenceScore}
+        modelAResponse={modelAResponse}
+        modelBResponse={modelBResponse}
+        agentNameA={agentNameA}
+        agentNameB={agentNameB}
+        modelAName={modelAName}
+        modelBName={modelBName}
+      />
     </>
   );
 };

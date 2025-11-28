@@ -15,7 +15,7 @@ export const exportVerdictToPDF = ({
   userPrompt,
   drafts,
   timestamp
-}: ExportVerdictOptions) => {
+}: ExportVerdictOptions, returnBase64 = false) => {
   const doc = new jsPDF();
   
   // Branding Header
@@ -126,7 +126,11 @@ export const exportVerdictToPDF = ({
     );
   }
   
-  // Download
+  // Return base64 or download
+  if (returnBase64) {
+    return doc.output('datauristring').split(',')[1];
+  }
+  
   const filename = `consensus-report-${new Date().getTime()}.pdf`;
   doc.save(filename);
 };
