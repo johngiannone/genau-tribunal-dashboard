@@ -44,6 +44,42 @@ export const ModelMarketModal = ({
     retry: 2, // Retry failed requests twice
   });
 
+  // Fetch live prices from database
+  const { data: dbPrices } = useQuery({
+    queryKey: ['ai-model-prices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ai_models')
+        .select('*');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: open,
+    retry: 1,
+  });
+
+  // Merge live prices with model data
+  const modelsWithLivePrices = models.map(model => {
+    const dbPrice = dbPrices?.find(p => p.id === model.id);
+    if (dbPrice) {
+      // Update with live pricing from database
+      const avgCost = (parseFloat(String(dbPrice.input_price)) + parseFloat(String(dbPrice.output_price))) / 2 * 1000000;
+      return {
+        ...model,
+        pricing: {
+          prompt: String(dbPrice.input_price),
+          completion: String(dbPrice.output_price),
+        },
+        avgCostPer1M: avgCost,
+        isFree: avgCost === 0,
+        priceTier: avgCost === 0 ? 0 : avgCost < 1 ? 1 : avgCost < 5 ? 2 : avgCost < 10 ? 3 : 4,
+      };
+    }
+    return model;
+  });
+
   // Fetch user's favorite models from Supabase
   useEffect(() => {
     if (!open) return;
@@ -70,8 +106,8 @@ export const ModelMarketModal = ({
   }, [open]);
 
   const filteredByCategory = activeCategory === "favorites" 
-    ? models.filter(m => favoriteModels.includes(m.id))
-    : filterModelsByCategory(models, activeCategory);
+    ? modelsWithLivePrices.filter(m => favoriteModels.includes(m.id))
+    : filterModelsByCategory(modelsWithLivePrices, activeCategory);
   
   const filteredAndSearched = filteredByCategory.filter((model) => {
     const search = searchTerm.toLowerCase();
@@ -145,7 +181,7 @@ export const ModelMarketModal = ({
     if (error) {
       // Revert on error
       setFavoriteModels(favoriteModels);
-      toast({
+            toast({
         title: "Failed to update favorites",
         description: error.message,
         variant: "destructive",
@@ -153,7 +189,7 @@ export const ModelMarketModal = ({
     } else {
       toast({
         title: isFavorite ? "Removed from favorites" : "Added to favorites",
-        description: `${models.find(m => m.id === modelId)?.name || "Model"} ${isFavorite ? "removed from" : "added to"} your favorites.`,
+        description: `${modelsWithLivePrices.find(m => m.id === modelId)?.name || "Model"} ${isFavorite ? "removed from" : "added to"} your favorites.`,
       });
     }
   };
@@ -171,7 +207,7 @@ export const ModelMarketModal = ({
             ) : error ? (
               "Failed to load models from OpenRouter"
             ) : (
-              `Choose from ${models.length} AI models. Each model brings unique strengths to the analysis.`
+              `Choose from ${modelsWithLivePrices.length} AI models. Each model brings unique strengths to the analysis.`
             )}
           </DialogDescription>
         </DialogHeader>
@@ -251,7 +287,14 @@ export const ModelMarketModal = ({
             </Button>
           </div>
         ) : (
-          <div
+          <>
+            {dbPrices && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                <Check className="w-4 h-4" />
+                <span className="font-mono">Live pricing synced from database</span>
+              </div>
+            )}
+            <div
             ref={parentRef}
             className="h-[500px] overflow-auto pr-4"
           >
@@ -293,6 +336,7 @@ export const ModelMarketModal = ({
               })}
             </div>
           </div>
+          </>
         )}
 
         <AlertDialog open={showExpensiveWarning} onOpenChange={setShowExpensiveWarning}>
