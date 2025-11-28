@@ -117,9 +117,13 @@ serve(async (req) => {
     }
 
     // Get models from council config or use defaults
-    const modelA = councilConfig?.slot_1 || "meta-llama/llama-3-70b-instruct"
-    const modelB = councilConfig?.slot_2 || "anthropic/claude-3.5-sonnet"
-    const synthModel = councilConfig?.slot_5 || "deepseek/deepseek-r1"
+    const slot1 = councilConfig?.slot_1 || { id: "meta-llama/llama-3-70b-instruct", name: "Llama 3", role: "The Speedster" }
+    const slot2 = councilConfig?.slot_2 || { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5", role: "The Critic" }
+    const slot5 = councilConfig?.slot_5 || { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Synthesizer" }
+    
+    const modelA = typeof slot1 === 'string' ? slot1 : slot1.id
+    const modelB = typeof slot2 === 'string' ? slot2 : slot2.id
+    const synthModel = typeof slot5 === 'string' ? slot5 : slot5.id
     
     console.log("Using models:", { modelA, modelB, synthModel })
 
@@ -181,8 +185,12 @@ serve(async (req) => {
       }
     }
 
-    // 5. THE COUNCIL (Parallel Processing)
+    // 5. THE COUNCIL (Parallel Processing) - Track timing
     console.log("Fetching drafts from models...")
+    
+    const startTimeA = Date.now()
+    const startTimeB = Date.now()
+    
     const [draftA, draftB] = await Promise.all([
       fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -194,7 +202,7 @@ serve(async (req) => {
           model: modelA,
           messages: [{ role: "user", content: prompt + context }]
         })
-      }).then(r => r.json()),
+      }).then(r => r.json()).then(data => ({ data, latency: Date.now() - startTimeA })),
       
       fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -206,12 +214,13 @@ serve(async (req) => {
           model: modelB,
           messages: [{ role: "user", content: prompt + context }]
         })
-      }).then(r => r.json())
+      }).then(r => r.json()).then(data => ({ data, latency: Date.now() - startTimeB }))
     ])
 
     console.log("Drafts received, generating synthesis...")
 
-    // 6. THE VERDICT (DeepSeek or custom synthesis model)
+    // 6. THE VERDICT (DeepSeek or custom synthesis model) - Track timing
+    const startTimeVerdict = Date.now()
     const verdictReq = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -225,7 +234,7 @@ serve(async (req) => {
           content: "You are an Auditor. Compare Draft A and Draft B. Identify errors. Write a final, corrected verdict."
         }, {
           role: "user",
-          content: `User Query: ${prompt}\n${context}\n\nDraft A: ${draftA.choices[0].message.content}\n\nDraft B: ${draftB.choices[0].message.content}`
+          content: `User Query: ${prompt}\n${context}\n\nDraft A: ${draftA.data.choices[0].message.content}\n\nDraft B: ${draftB.data.choices[0].message.content}`
         }]
       })
     })
@@ -236,6 +245,7 @@ serve(async (req) => {
     }
 
     const verdictData = await verdictReq.json()
+    const verdictLatency = Date.now() - startTimeVerdict
     console.log("Synthesis complete")
 
     // 7. Update usage count
@@ -244,13 +254,54 @@ serve(async (req) => {
       .update({ audit_count: userUsage.audit_count + 1 })
       .eq('user_id', user.id)
 
+    // 8. Log analytics events
+    const analyticsEvents = [
+      {
+        user_id: user.id,
+        conversation_id: conversationId || null,
+        model_id: modelA,
+        model_name: typeof slot1 === 'object' ? slot1.name : modelA,
+        model_role: typeof slot1 === 'object' ? slot1.role : null,
+        slot_position: 1,
+        latency_ms: draftA.latency
+      },
+      {
+        user_id: user.id,
+        conversation_id: conversationId || null,
+        model_id: modelB,
+        model_name: typeof slot2 === 'object' ? slot2.name : modelB,
+        model_role: typeof slot2 === 'object' ? slot2.role : null,
+        slot_position: 2,
+        latency_ms: draftB.latency
+      },
+      {
+        user_id: user.id,
+        conversation_id: conversationId || null,
+        model_id: synthModel,
+        model_name: typeof slot5 === 'object' ? slot5.name : synthModel,
+        model_role: typeof slot5 === 'object' ? slot5.role : null,
+        slot_position: 5,
+        latency_ms: verdictLatency
+      }
+    ]
+
+    const { error: analyticsError } = await adminSupabase
+      .from('analytics_events')
+      .insert(analyticsEvents)
+    
+    if (analyticsError) {
+      console.error("Failed to log analytics:", analyticsError)
+    } else {
+      console.log("Analytics events logged successfully")
+    }
+
     console.log("=== Request completed successfully ===")
 
-    // 8. Return results
+    // 9. Return results
     return new Response(
       JSON.stringify({
-        draftA: draftA.choices[0].message.content,
-        draftB: draftB.choices[0].message.content,
+        draftA: draftA.data.choices[0].message.content,
+        draftB: draftB.data.choices[0].message.content,
         verdict: verdictData.choices[0].message.content,
         librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, 5 - userUsage.audit_count - 1)

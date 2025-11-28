@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BarChart2, TrendingUp, Zap, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,37 +12,104 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock data for council members
-const councilMembers = [
-  { name: "The Chairman", model: "GPT-4o", avgLatency: 850, consensusRate: 92, queriesHandled: 487, satisfaction: 4.8, status: "online" },
-  { name: "The Critic", model: "Claude 3.5", avgLatency: 720, consensusRate: 89, queriesHandled: 445, satisfaction: 4.6, status: "online" },
-  { name: "The Architect", model: "Qwen 2.5", avgLatency: 650, consensusRate: 85, queriesHandled: 412, satisfaction: 4.4, status: "online" },
-  { name: "The Reporter", model: "Grok 2", avgLatency: 580, consensusRate: 88, queriesHandled: 398, satisfaction: 4.5, status: "online" },
-  { name: "The Speedster", model: "Llama 3", avgLatency: 410, consensusRate: 84, queriesHandled: 498, satisfaction: 4.7, status: "online" },
-];
+interface AnalyticsEvent {
+  model_id: string;
+  model_name: string;
+  model_role: string | null;
+  latency_ms: number;
+  created_at: string;
+}
 
-const responseTimeData = councilMembers.map(m => ({
-  name: m.model,
-  latency: m.avgLatency
-}));
-
-const accuracyData = [
-  { name: "GPT-4o", value: 30, fill: "hsl(var(--chart-1))" },
-  { name: "Claude 3.5", value: 25, fill: "hsl(var(--chart-2))" },
-  { name: "Qwen 2.5", value: 18, fill: "hsl(var(--chart-3))" },
-  { name: "Grok 2", value: 15, fill: "hsl(var(--chart-4))" },
-  { name: "Llama 3", value: 12, fill: "hsl(var(--chart-5))" },
-];
+interface ModelStats {
+  name: string;
+  model: string;
+  avgLatency: number;
+  queriesHandled: number;
+  status: string;
+}
 
 const Analytics = () => {
-  const totalAudits = councilMembers.reduce((sum, m) => sum + m.queriesHandled, 0);
-  const avgConsensusRate = Math.round(
-    councilMembers.reduce((sum, m) => sum + m.consensusRate, 0) / councilMembers.length
+  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('analytics_events')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching analytics:", error);
+    } else {
+      setEvents(data || []);
+    }
+    setLoading(false);
+  };
+
+  // Aggregate data by model
+  const modelStats: ModelStats[] = Object.values(
+    events.reduce((acc, event) => {
+      const key = event.model_id;
+      if (!acc[key]) {
+        acc[key] = {
+          name: event.model_role || event.model_name,
+          model: event.model_name,
+          avgLatency: 0,
+          queriesHandled: 0,
+          totalLatency: 0,
+          status: "online"
+        };
+      }
+      acc[key].queriesHandled++;
+      acc[key].totalLatency += event.latency_ms;
+      acc[key].avgLatency = Math.round(acc[key].totalLatency / acc[key].queriesHandled);
+      return acc;
+    }, {} as Record<string, any>)
   );
-  const fastestAgent = councilMembers.reduce((fastest, current) =>
-    current.avgLatency < fastest.avgLatency ? current : fastest
-  );
+
+  const totalAudits = Math.floor(events.length / 3); // Each audit uses 3 models
+  const fastestAgent = modelStats.length > 0 
+    ? modelStats.reduce((fastest, current) => 
+        current.avgLatency < fastest.avgLatency ? current : fastest
+      )
+    : null;
+
+  const responseTimeData = modelStats.map(m => ({
+    name: m.model,
+    latency: m.avgLatency
+  }));
+
+  const accuracyData = modelStats.map((m, idx) => ({
+    name: m.model,
+    value: m.queriesHandled,
+    fill: `hsl(var(--chart-${(idx % 5) + 1}))`
+  }));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,20 +134,19 @@ const Analytics = () => {
             <CardContent>
               <div className="text-3xl font-bold text-primary font-mono">{totalAudits.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                <TrendingUp className="inline h-3 w-3 mr-1" />
-                +12% from last period
+                Total consensus audits completed
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-border bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">Consensus Rate</CardTitle>
+              <CardTitle className="text-sm font-medium text-card-foreground">Models Active</CardTitle>
               <BarChart2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary font-mono">{avgConsensusRate}%</div>
-              <p className="text-xs text-muted-foreground mt-1">Average across all agents</p>
+              <div className="text-3xl font-bold text-primary font-mono">{modelStats.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Unique models used</p>
             </CardContent>
           </Card>
 
@@ -89,8 +156,14 @@ const Analytics = () => {
               <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary font-mono">{fastestAgent.model}</div>
-              <p className="text-xs text-muted-foreground mt-1">{fastestAgent.avgLatency}ms average</p>
+              {fastestAgent ? (
+                <>
+                  <div className="text-3xl font-bold text-primary font-mono">{fastestAgent.model}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{fastestAgent.avgLatency}ms average</p>
+                </>
+              ) : (
+                <div className="text-sm text-muted-foreground">No data yet</div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -177,11 +250,11 @@ const Analytics = () => {
                           return (
                             <div className="rounded-lg border bg-background p-2 shadow-sm">
                               <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
                                   {payload[0].name}
                                 </span>
                                 <span className="font-bold text-muted-foreground">
-                                  {payload[0].value}%
+                                  {payload[0].value} queries
                                 </span>
                               </div>
                             </div>
@@ -210,31 +283,35 @@ const Analytics = () => {
                   <TableHead className="font-mono">Agent</TableHead>
                   <TableHead className="font-mono">Model</TableHead>
                   <TableHead className="font-mono text-right">Avg Latency</TableHead>
-                  <TableHead className="font-mono text-right">Consensus Rate</TableHead>
                   <TableHead className="font-mono text-right">Queries</TableHead>
-                  <TableHead className="font-mono text-right">Satisfaction</TableHead>
                   <TableHead className="font-mono">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {councilMembers.map((member) => (
-                  <TableRow key={member.name}>
-                    <TableCell className="font-medium font-mono">{member.name}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{member.model}</TableCell>
-                    <TableCell className="text-right font-mono">{member.avgLatency}ms</TableCell>
-                    <TableCell className="text-right font-mono">{member.consensusRate}%</TableCell>
-                    <TableCell className="text-right font-mono">{member.queriesHandled}</TableCell>
-                    <TableCell className="text-right font-mono">⭐ {member.satisfaction}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="bg-primary/10 text-primary border-primary/30 font-mono"
-                      >
-                        Online
-                      </Badge>
+                {modelStats.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No analytics data yet. Complete some audits to see performance metrics.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  modelStats.map((member) => (
+                    <TableRow key={member.model}>
+                      <TableCell className="font-medium font-mono">{member.name}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">{member.model}</TableCell>
+                      <TableCell className="text-right font-mono">{member.avgLatency}ms</TableCell>
+                      <TableCell className="text-right font-mono">{member.queriesHandled}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/30 font-mono"
+                        >
+                          {member.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

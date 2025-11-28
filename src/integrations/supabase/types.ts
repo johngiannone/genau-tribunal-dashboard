@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          latency_ms: number
+          model_id: string
+          model_name: string
+          model_role: string | null
+          slot_position: number
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          latency_ms: number
+          model_id: string
+          model_name: string
+          model_role?: string | null
+          slot_position: number
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          latency_ms?: number
+          model_id?: string
+          model_name?: string
+          model_role?: string | null
+          slot_position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           context: string | null
