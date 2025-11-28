@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const Landing = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -375,6 +376,87 @@ const Landing = () => {
             </div>
           </motion.div>
         </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="max-w-4xl mx-auto px-6 py-32">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-xl text-[#86868B] max-w-2xl mx-auto">
+            Everything you need to know about Consensus
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <Accordion type="single" collapsible className="w-full space-y-4">
+            <AccordionItem value="item-1" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                Which AI models are included?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                By default, your council includes GPT-4o (The Chairman), Claude 3.5 Sonnet (The Critic), Qwen 2.5 Coder (The Architect), Grok 2 (The Reporter), and Llama 3.3 (The Speedster). You can customize this lineup by selecting from 330+ models including Gemini, Mistral, DeepSeek, and more.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                How accurate is the consensus?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                Our multi-model consensus approach achieves 99% average confidence scores. By running multiple AI systems in parallel and having an auditor review their responses, we eliminate single-model hallucinations and biases. The synthesis only presents findings where models agree, ensuring high reliability.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                Can I customize my council?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                Yes! Navigate to Settings → Council to customize all five council slots. Choose from 330+ models based on your needs—whether you prioritize speed, creativity, coding ability, or cost efficiency. You can even swap models mid-conversation.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                What's the difference between Free and Pro plans?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                Free Observer accounts get 3 audits per month to try the system. Pro Professional ($29/mo) unlocks 200 audits and 50 file uploads monthly. Max Power User ($99/mo) includes 800 audits, unlimited files, and 2M token context windows for large document analysis.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                Can I upload documents for analysis?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                Absolutely. Upload PDFs, images, or documents directly in the chat interface. The Librarian (Gemini) will analyze your file and create context that persists across the entire conversation. All council members will reference this context when answering your questions.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
+              <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
+                How fast are the responses?
+              </AccordionTrigger>
+              <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
+                Most audits complete in under 2 seconds. Because all models run in parallel rather than sequentially, you get the benefit of multiple AI perspectives without the wait. Response times vary based on which models you've selected—faster models like Llama deliver near-instant results.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </motion.div>
       </section>
 
       {/* Features Section */}
