@@ -24,6 +24,8 @@ import {
 import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
+import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
   user_id: string;
@@ -120,7 +122,16 @@ const Admin = () => {
               </h1>
             </div>
 
-        <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
+            {/* Tabs for different sections */}
+            <Tabs defaultValue="users" className="space-y-6">
+              <TabsList className="bg-[#F9FAFB] border border-[#E5E5EA]">
+                <TabsTrigger value="users">User Management</TabsTrigger>
+                <TabsTrigger value="logs">Activity Logs</TabsTrigger>
+                <TabsTrigger value="stats">Statistics</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="users">
+                <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F9FAFB]">
@@ -219,9 +230,16 @@ const Admin = () => {
             </TableBody>
           </Table>
         </div>
+      </TabsContent>
 
-            {/* Activity Log Section */}
-            <ActivityLogTable />
+      <TabsContent value="logs">
+        <ActivityLogTable />
+      </TabsContent>
+
+      <TabsContent value="stats">
+        <ActivityStatsDashboard />
+      </TabsContent>
+    </Tabs>
           </div>
         </div>
 
