@@ -1,13 +1,43 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Landing = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const { scrollY } = useScroll();
+  
+  // Fetch real shared audit results
+  const { data: sharedAudits = [] } = useQuery({
+    queryKey: ['landing-examples'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('public_shares')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 60 * 1000, // Cache for 1 minute
+  });
+  
+  // Auto-rotate through examples every 6 seconds
+  useEffect(() => {
+    if (sharedAudits.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentExampleIndex((prev) => (prev + 1) % sharedAudits.length);
+      }, 6000);
+      return () => clearInterval(interval);
+    }
+  }, [sharedAudits.length]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -16,6 +46,8 @@ const Landing = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+  
+  const currentExample = sharedAudits[currentExampleIndex];
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,123 +130,216 @@ const Landing = () => {
           transition={{ duration: 0.7 }}
           className="relative"
         >
-          {/* Floating Demo Container */}
-          <div className="relative bg-white border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden">
-            {/* Demo Header */}
-            <div className="bg-gradient-to-r from-background to-secondary/20 px-8 py-6 border-b border-border">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#FF605C]" />
-                  <div className="w-3 h-3 rounded-full bg-[#FFBD44]" />
-                  <div className="w-3 h-3 rounded-full bg-[#00CA4E]" />
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground font-mono">
-                consensus.ai/audit/example
-              </div>
-            </div>
-
-            {/* User Prompt */}
-            <div className="px-8 py-6 bg-secondary/10">
-              <div className="inline-block bg-primary/10 px-4 py-2 rounded-full">
-                <p className="text-sm font-medium text-foreground">
-                  "What are the key benefits of renewable energy?"
-                </p>
-              </div>
-            </div>
-
-            {/* Model Outputs Grid */}
-            <div className="grid md:grid-cols-2 gap-6 p-8 bg-background">
-              {/* Model A Output */}
-              <motion.div
-                className="border border-border rounded-2xl p-6 bg-card relative overflow-hidden"
-                animate={{ 
-                  boxShadow: ["0 0 0 0 rgba(59, 130, 246, 0)", "0 0 20px 2px rgba(59, 130, 246, 0.1)", "0 0 0 0 rgba(59, 130, 246, 0)"]
-                }}
-                transition={{ 
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatDelay: 1 
-                }}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Brain className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">GPT-4o</p>
-                    <p className="text-xs text-muted-foreground">The Chairman</p>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="h-2 bg-secondary rounded w-full" />
-                  <div className="h-2 bg-secondary rounded w-5/6" />
-                  <div className="h-2 bg-secondary rounded w-4/6" />
-                </div>
-              </motion.div>
-
-              {/* Model B Output */}
-              <motion.div
-                className="border border-border rounded-2xl p-6 bg-card relative overflow-hidden"
-                animate={{ 
-                  boxShadow: ["0 0 0 0 rgba(139, 92, 246, 0)", "0 0 20px 2px rgba(139, 92, 246, 0.1)", "0 0 0 0 rgba(139, 92, 246, 0)"]
-                }}
-                transition={{ 
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatDelay: 1,
-                  delay: 0.3 
-                }}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                    <Cpu className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Claude 3.5</p>
-                    <p className="text-xs text-muted-foreground">The Critic</p>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="h-2 bg-secondary rounded w-full" />
-                  <div className="h-2 bg-secondary rounded w-4/6" />
-                  <div className="h-2 bg-secondary rounded w-5/6" />
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Synthesis Output */}
-            <div className="px-8 pb-8">
-              <motion.div
-                className="border-2 border-primary/20 rounded-2xl p-6 bg-gradient-to-br from-primary/5 to-primary/10"
-                initial={{ scale: 0.95, opacity: 0 }}
-                whileInView={{ scale: 1, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center justify-between mb-4">
+          {currentExample ? (
+            /* Real Audit Demo - Click to View Full Result */
+            <div 
+              className="relative bg-white border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-[1.01]"
+              onClick={() => navigate(`/share/${currentExample.share_slug}`)}
+            >
+              {/* Demo Header */}
+              <div className="bg-gradient-to-r from-background to-secondary/20 px-8 py-6 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-primary" />
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#FF605C]" />
+                      <div className="w-3 h-3 rounded-full bg-[#FFBD44]" />
+                      <div className="w-3 h-3 rounded-full bg-[#00CA4E]" />
+                    </div>
+                  </div>
+                  {sharedAudits.length > 1 && (
+                    <div className="flex gap-1">
+                      {sharedAudits.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`h-1.5 rounded-full transition-all ${
+                            idx === currentExampleIndex
+                              ? "w-6 bg-primary"
+                              : "w-1.5 bg-border"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground font-mono">
+                  Live Example • Click to view full analysis
+                </div>
+              </div>
+
+              {/* User Prompt */}
+              <div className="px-8 py-6 bg-secondary/10">
+                <div className="inline-block bg-primary/10 px-4 py-2 rounded-full">
+                  <p className="text-sm font-medium text-foreground line-clamp-2">
+                    "{currentExample.user_prompt}"
+                  </p>
+                </div>
+              </div>
+
+              {/* Model Outputs Grid */}
+              <div className="grid md:grid-cols-2 gap-6 p-8 bg-background">
+                {/* Model A Output */}
+                <motion.div
+                  key={`model-a-${currentExampleIndex}`}
+                  className="border border-border rounded-2xl p-6 bg-card relative overflow-hidden"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Brain className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">The Synthesis</p>
-                      <p className="text-xs text-muted-foreground">Final Answer</p>
+                      <p className="text-sm font-semibold text-foreground">{currentExample.model_a_name}</p>
+                      <p className="text-xs text-muted-foreground">Drafter A</p>
                     </div>
                   </div>
-                  <div className="px-3 py-1 bg-success/10 rounded-full">
-                    <span className="text-xs font-semibold text-success">99% Confidence</span>
+                  <p className="text-sm text-muted-foreground line-clamp-4">
+                    {currentExample.model_a_response}
+                  </p>
+                </motion.div>
+
+                {/* Model B Output */}
+                <motion.div
+                  key={`model-b-${currentExampleIndex}`}
+                  className="border border-border rounded-2xl p-6 bg-card relative overflow-hidden"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      <Cpu className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{currentExample.model_b_name}</p>
+                      <p className="text-xs text-muted-foreground">Drafter B</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-4">
+                    {currentExample.model_b_response}
+                  </p>
+                </motion.div>
+              </div>
+
+              {/* Synthesis Output */}
+              <div className="px-8 pb-8">
+                <motion.div
+                  key={`synthesis-${currentExampleIndex}`}
+                  className="border-2 border-primary/20 rounded-2xl p-6 bg-gradient-to-br from-primary/5 to-primary/10"
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Eye className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">The Synthesis</p>
+                        <p className="text-xs text-muted-foreground">Final Answer</p>
+                      </div>
+                    </div>
+                    {currentExample.confidence && (
+                      <div className="px-3 py-1 bg-success/10 rounded-full">
+                        <span className="text-xs font-semibold text-success">
+                          {Math.round(currentExample.confidence)}% Confidence
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed line-clamp-4">
+                    {currentExample.synthesis}
+                  </p>
+                </motion.div>
+              </div>
+            </div>
+          ) : (
+            /* Fallback Static Demo */
+            <div className="relative bg-white border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-background to-secondary/20 px-8 py-6 border-b border-border">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#FF605C]" />
+                    <div className="w-3 h-3 rounded-full bg-[#FFBD44]" />
+                    <div className="w-3 h-3 rounded-full bg-[#00CA4E]" />
                   </div>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="h-2 bg-primary/20 rounded w-full" />
-                  <div className="h-2 bg-primary/20 rounded w-11/12" />
-                  <div className="h-2 bg-primary/20 rounded w-4/5" />
-                  <div className="h-2 bg-primary/20 rounded w-3/4" />
+                <div className="text-sm text-muted-foreground font-mono">
+                  consensus.ai/demo
                 </div>
-              </motion.div>
+              </div>
+
+              <div className="px-8 py-6 bg-secondary/10">
+                <div className="inline-block bg-primary/10 px-4 py-2 rounded-full">
+                  <p className="text-sm font-medium text-foreground">
+                    "What are the key benefits of renewable energy?"
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6 p-8 bg-background">
+                <div className="border border-border rounded-2xl p-6 bg-card">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Brain className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">GPT-4o</p>
+                      <p className="text-xs text-muted-foreground">The Chairman</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="h-2 bg-secondary rounded w-full" />
+                    <div className="h-2 bg-secondary rounded w-5/6" />
+                    <div className="h-2 bg-secondary rounded w-4/6" />
+                  </div>
+                </div>
+
+                <div className="border border-border rounded-2xl p-6 bg-card">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      <Cpu className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Claude 3.5</p>
+                      <p className="text-xs text-muted-foreground">The Critic</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="h-2 bg-secondary rounded w-full" />
+                    <div className="h-2 bg-secondary rounded w-4/6" />
+                    <div className="h-2 bg-secondary rounded w-5/6" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-8 pb-8">
+                <div className="border-2 border-primary/20 rounded-2xl p-6 bg-gradient-to-br from-primary/5 to-primary/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Eye className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">The Synthesis</p>
+                        <p className="text-xs text-muted-foreground">Final Answer</p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 bg-success/10 rounded-full">
+                      <span className="text-xs font-semibold text-success">99% Confidence</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="h-2 bg-primary/20 rounded w-full" />
+                    <div className="h-2 bg-primary/20 rounded w-11/12" />
+                    <div className="h-2 bg-primary/20 rounded w-4/5" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
       </section>
 
