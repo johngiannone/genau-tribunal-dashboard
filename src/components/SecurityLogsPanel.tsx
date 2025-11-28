@@ -27,6 +27,52 @@ export const SecurityLogsPanel = () => {
   useEffect(() => {
     fetchSecurityLogs();
     fetchBannedUsers();
+    
+    // Listen for new activity logs with ban notifications
+    const channel = supabase
+      .channel('ban-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_logs',
+          filter: 'activity_type=eq.admin_change'
+        },
+        async (payload) => {
+          const metadata = payload.new.metadata as any;
+          
+          // Check if this is an automated ban that needs email notification
+          if (metadata?.automated && metadata?.send_email && payload.new.description?.includes('auto-banned')) {
+            console.log("Sending ban notification email for user:", payload.new.user_id);
+            
+            // Send ban notification via edge function
+            const { error } = await supabase.functions.invoke('send-ban-notification', {
+              body: {
+                userId: payload.new.user_id,
+                banReason: metadata.ban_reason,
+                violationCount: metadata.violation_count,
+                violationCategories: metadata.violation_categories
+              }
+            });
+            
+            if (error) {
+              console.error("Failed to send ban notification:", error);
+            } else {
+              console.log("Ban notification email sent successfully");
+              toast.success("Ban notification email sent to user");
+            }
+            
+            // Refresh banned users list
+            fetchBannedUsers();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchSecurityLogs = async () => {
@@ -90,6 +136,18 @@ export const SecurityLogsPanel = () => {
       console.error(error);
       return;
     }
+
+    // Log unban activity
+    await supabase
+      .from("activity_logs")
+      .insert({
+        user_id: userId,
+        activity_type: "admin_change",
+        description: "User unbanned by administrator",
+        metadata: {
+          manual_unban: true
+        }
+      });
 
     toast.success("User unbanned successfully");
     fetchBannedUsers();
