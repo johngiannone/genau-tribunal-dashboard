@@ -156,28 +156,37 @@ export type Database = {
       user_usage: {
         Row: {
           audit_count: number
+          audits_this_month: number | null
           created_at: string | null
+          files_this_month: number | null
           id: string
           is_premium: boolean
           last_reset_at: string | null
+          subscription_tier: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           audit_count?: number
+          audits_this_month?: number | null
           created_at?: string | null
+          files_this_month?: number | null
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           audit_count?: number
+          audits_this_month?: number | null
           created_at?: string | null
+          files_this_month?: number | null
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string | null
           user_id?: string
         }

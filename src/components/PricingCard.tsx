@@ -1,6 +1,12 @@
 import { Button } from "./ui/button";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PricingCardProps {
   name: string;
@@ -64,7 +70,21 @@ export const PricingCard = ({
           {features.map((feature, index) => (
             <li key={index} className="flex items-start gap-2 text-sm">
               <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <span className="text-muted-foreground">{feature}</span>
+              <span className="text-muted-foreground flex items-center gap-1">
+                {feature}
+                {feature.toLowerCase().includes('unlimited') && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Fair Use Policy applies</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </span>
             </li>
           ))}
         </ul>
