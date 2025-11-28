@@ -40,6 +40,7 @@ import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
+import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -269,6 +270,7 @@ const Admin = () => {
                 <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
                 <TabsTrigger value="reports">Cost Reports</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
+                <TabsTrigger value="emails">Email History</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users">
@@ -491,6 +493,10 @@ const Admin = () => {
 
       <TabsContent value="security">
         <SecurityLogsPanel />
+      </TabsContent>
+
+      <TabsContent value="emails">
+        <EmailLogsPanel />
       </TabsContent>
     </Tabs>
           </div>
