@@ -21,7 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Shield, Loader2, ArrowLeft, Ban } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Shield, Loader2, ArrowLeft, Ban, Mail } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
@@ -54,6 +64,16 @@ const Admin = () => {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusChangeDialog, setStatusChangeDialog] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userEmail: string;
+    newStatus: 'active' | 'inactive' | 'disabled';
+    previousStatus: 'active' | 'inactive' | 'disabled';
+  } | null>(null);
+  const [statusChangeReason, setStatusChangeReason] = useState("");
+  const [statusChangeMessage, setStatusChangeMessage] = useState("");
+  const [emailUser, setEmailUser] = useState<{ userId: string; email: string } | null>(null);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -109,6 +129,8 @@ const Admin = () => {
               new_status: updates.account_status,
               changed_by: currentAdmin?.id,
               changed_by_email: currentAdmin?.email,
+              reason: statusChangeReason || undefined,
+              custom_message: statusChangeMessage || undefined,
             }
           });
       }
@@ -118,6 +140,88 @@ const Admin = () => {
     } catch (error) {
       console.error('Error updating user:', error);
       toast.error("Failed to update user");
+    }
+  };
+
+  const handleStatusChange = (userId: string, newStatus: 'active' | 'inactive' | 'disabled') => {
+    const user = users.find(u => u.user_id === userId);
+    if (!user) return;
+
+    // Get user email from user_id (we'll need to fetch this from auth.users via admin query)
+    // For now, we'll use a placeholder
+    const userEmail = `${userId.slice(0, 8)}@user.email`; // This should be fetched properly
+
+    setStatusChangeDialog({
+      isOpen: true,
+      userId,
+      userEmail,
+      newStatus,
+      previousStatus: user.account_status,
+    });
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusChangeDialog) return;
+
+    const { userId, userEmail, newStatus, previousStatus } = statusChangeDialog;
+
+    try {
+      // Update the user status
+      await updateUser(userId, { account_status: newStatus });
+
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke('send-account-status-email', {
+        body: {
+          userId,
+          userEmail,
+          newStatus,
+          previousStatus,
+          reason: statusChangeReason || undefined,
+          customMessage: statusChangeMessage || undefined,
+        }
+      });
+
+      if (emailError) {
+        console.error('Error sending status change email:', emailError);
+        toast.error("Status updated but email notification failed");
+      } else {
+        toast.success("Status updated and notification sent");
+      }
+
+      // Reset dialog state
+      setStatusChangeDialog(null);
+      setStatusChangeReason("");
+      setStatusChangeMessage("");
+    } catch (error) {
+      console.error('Error in status change flow:', error);
+      toast.error("Failed to update status");
+    }
+  };
+
+  const sendStatusEmail = async (userId: string, userEmail: string) => {
+    const user = users.find(u => u.user_id === userId);
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('send-account-status-email', {
+        body: {
+          userId,
+          userEmail,
+          newStatus: user.account_status,
+          previousStatus: user.account_status,
+          reason: "Manual status notification",
+          customMessage: statusChangeMessage || undefined,
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success("Email notification sent successfully");
+      setEmailUser(null);
+      setStatusChangeMessage("");
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast.error("Failed to send email notification");
     }
   };
 
@@ -192,27 +296,38 @@ const Admin = () => {
                     {user.user_id.slice(0, 8)}...
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={user.account_status}
-                      onValueChange={(value) => 
-                        updateUser(user.user_id, { account_status: value as 'active' | 'inactive' | 'disabled' })
-                      }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        <SelectItem value="active">
-                          <span className="text-green-600 font-medium">Active</span>
-                        </SelectItem>
-                        <SelectItem value="inactive">
-                          <span className="text-yellow-600 font-medium">Inactive</span>
-                        </SelectItem>
-                        <SelectItem value="disabled">
-                          <span className="text-red-600 font-medium">Disabled</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={user.account_status}
+                        onValueChange={(value) => 
+                          handleStatusChange(user.user_id, value as 'active' | 'inactive' | 'disabled')
+                        }
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white z-50">
+                          <SelectItem value="active">
+                            <span className="text-green-600 font-medium">Active</span>
+                          </SelectItem>
+                          <SelectItem value="inactive">
+                            <span className="text-yellow-600 font-medium">Inactive</span>
+                          </SelectItem>
+                          <SelectItem value="disabled">
+                            <span className="text-red-600 font-medium">Disabled</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setEmailUser({ userId: user.user_id, email: `${user.user_id.slice(0, 8)}@user.email` })}
+                        className="h-8 w-8"
+                        title="Send status notification email"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.is_banned ? (
@@ -386,6 +501,117 @@ const Admin = () => {
           <LiveActivityFeed />
         </aside>
       </div>
+
+      {/* Status Change Dialog */}
+      <Dialog open={statusChangeDialog?.isOpen || false} onOpenChange={(open) => {
+        if (!open) {
+          setStatusChangeDialog(null);
+          setStatusChangeReason("");
+          setStatusChangeMessage("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Change Account Status</DialogTitle>
+            <DialogDescription>
+              Send a notification email to the user explaining the status change.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Status Change</Label>
+              <div className="text-sm text-[#86868B]">
+                {statusChangeDialog?.previousStatus} → <strong>{statusChangeDialog?.newStatus}</strong>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason (Optional)</Label>
+              <Input
+                id="reason"
+                placeholder="e.g., Policy violation, Account verification required"
+                value={statusChangeReason}
+                onChange={(e) => setStatusChangeReason(e.target.value)}
+                className="border-[#E5E5EA]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Custom Message (Optional)</Label>
+              <Textarea
+                id="message"
+                placeholder="Add any additional information for the user..."
+                value={statusChangeMessage}
+                onChange={(e) => setStatusChangeMessage(e.target.value)}
+                rows={4}
+                className="border-[#E5E5EA] resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStatusChangeDialog(null);
+                setStatusChangeReason("");
+                setStatusChangeMessage("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmStatusChange} className="gap-2">
+              <Mail className="h-4 w-4" />
+              Update & Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Email Dialog */}
+      <Dialog open={emailUser !== null} onOpenChange={(open) => {
+        if (!open) {
+          setEmailUser(null);
+          setStatusChangeMessage("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Send Status Notification Email</DialogTitle>
+            <DialogDescription>
+              Send a notification email about the current account status.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-message">Custom Message (Optional)</Label>
+              <Textarea
+                id="email-message"
+                placeholder="Add any additional information for the user..."
+                value={statusChangeMessage}
+                onChange={(e) => setStatusChangeMessage(e.target.value)}
+                rows={4}
+                className="border-[#E5E5EA] resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEmailUser(null);
+                setStatusChangeMessage("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => emailUser && sendStatusEmail(emailUser.userId, emailUser.email)}
+              className="gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
