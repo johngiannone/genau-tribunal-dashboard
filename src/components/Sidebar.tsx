@@ -157,13 +157,13 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
         </AlertDialogContent>
       </AlertDialog>
 
-      <aside className="w-72 h-screen bg-sidebar border-r border-border flex flex-col">
+      <aside className="w-72 h-screen bg-[#F9FAFB] border-r border-[#E5E5EA] flex flex-col">
         {/* Header with Logo */}
-        <div className="p-8 border-b border-border">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Genau
+        <div className="p-8 border-b border-[#E5E5EA]">
+          <h1 className="text-3xl font-bold text-[#111111] tracking-tight">
+            Consensus
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">AI Consensus Platform</p>
+          <p className="text-sm text-[#86868B] mt-1">AI Council Platform</p>
         </div>
 
         {/* New Session Button */}
@@ -171,7 +171,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           <Button 
             variant="default"
             onClick={onNewSession}
-            className="w-full font-semibold"
+            className="w-full h-11 rounded-full font-semibold shadow-sm hover:shadow-md transition-all"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Audit
@@ -181,19 +181,19 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
         {/* Session History */}
         <ScrollArea className="flex-1 px-6 pt-6">
           <div className="space-y-1">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-3">
+            <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide mb-3 px-3">
               Recent Sessions
             </h3>
             {conversations.length === 0 ? (
-              <p className="text-sm text-muted-foreground px-3 py-4">No sessions yet</p>
+              <p className="text-sm text-[#86868B] px-3 py-4">No sessions yet</p>
             ) : (
               conversations.map((conversation) => (
                 <div
                   key={conversation.id}
                   className={`w-full rounded-xl transition-all group relative ${
                     currentConversationId === conversation.id 
-                      ? 'bg-secondary shadow-sm' 
-                      : 'hover:bg-secondary/50'
+                      ? 'bg-white shadow-sm border border-[#E5E5EA]' 
+                      : 'hover:bg-white/50'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 px-3 py-3">
@@ -201,12 +201,12 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
                       onClick={() => onLoadConversation(conversation.id)}
                       className="flex items-center gap-3 flex-1 min-w-0"
                     >
-                      <Cpu className="w-4 h-4 text-primary flex-shrink-0" />
+                      <Cpu className="w-4 h-4 text-[#0071E3] flex-shrink-0" />
                       <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm text-foreground truncate font-medium">
+                        <p className="text-sm text-[#111111] truncate font-medium">
                           {conversation.title}
                         </p>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-[#86868B]">
                           {formatTime(conversation.updated_at)}
                         </span>
                       </div>
@@ -226,11 +226,11 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
         </ScrollArea>
 
         {/* Settings at Bottom */}
-        <div className="p-6 border-t border-border space-y-3">
+        <div className="p-6 border-t border-[#E5E5EA] space-y-3">
           {session?.user && (
-            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-secondary">
-              <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm text-foreground truncate flex-1">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white border border-[#E5E5EA]">
+              <User className="w-4 h-4 text-[#86868B] flex-shrink-0" />
+              <span className="text-sm text-[#111111] truncate flex-1">
                 {session.user.email}
               </span>
             </div>
@@ -239,7 +239,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             {isAdmin && (
               <button 
                 onClick={() => navigate("/admin")}
-                className="p-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground"
+                className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
                 title="Admin Panel"
               >
                 <Shield className="w-5 h-5 mx-auto" />
@@ -247,28 +247,28 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             )}
             <button 
               onClick={() => navigate("/vault")}
-              className="p-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground"
+              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Data Vault"
             >
               <Database className="w-5 h-5 mx-auto" />
             </button>
             <button 
               onClick={() => navigate("/analytics")}
-              className="p-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground"
+              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Performance"
             >
               <BarChart2 className="w-5 h-5 mx-auto" />
             </button>
             <button 
               onClick={() => navigate("/settings")}
-              className="p-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground"
+              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Settings"
             >
               <Settings className="w-5 h-5 mx-auto" />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground"
+              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Logout"
             >
               <LogOut className="w-5 h-5 mx-auto" />
