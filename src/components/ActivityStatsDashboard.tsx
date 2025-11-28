@@ -85,6 +85,127 @@ export const ActivityStatsDashboard = () => {
     }
   }, [dateRange]);
 
+  // Set up realtime subscription for new activities
+  useEffect(() => {
+    const channel = supabase
+      .channel('stats-activity-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_logs'
+        },
+        (payload) => {
+          console.log('New activity received in stats dashboard:', payload);
+          
+          const newActivity = payload.new as any;
+          
+          // Check if the new activity is within the current date range
+          if (dateRange?.from && dateRange?.to) {
+            const activityDate = new Date(newActivity.created_at);
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to);
+            
+            if (activityDate >= fromDate && activityDate <= toDate) {
+              // Update statistics incrementally
+              setTotalActivities(prev => prev + 1);
+              
+              // Update activity type counts
+              setActivityTypeCounts(prev => {
+                const existing = prev.find(item => item.activity_type === newActivity.activity_type);
+                if (existing) {
+                  return prev.map(item => 
+                    item.activity_type === newActivity.activity_type
+                      ? { ...item, count: item.count + 1 }
+                      : item
+                  );
+                } else {
+                  return [...prev, { activity_type: newActivity.activity_type, count: 1 }];
+                }
+              });
+              
+              // Update hourly activity
+              const hour = new Date(newActivity.created_at).getHours();
+              setHourlyActivity(prev => 
+                prev.map(item => 
+                  item.hour === hour 
+                    ? { ...item, count: item.count + 1 }
+                    : item
+                )
+              );
+              
+              // Update daily activity
+              const date = format(new Date(newActivity.created_at), 'MMM dd');
+              setDailyActivity(prev => {
+                const existing = prev.find(item => item.date === date);
+                if (existing) {
+                  return prev.map(item => {
+                    if (item.date === date) {
+                      const updated = { ...item };
+                      const activityType = newActivity.activity_type as keyof Omit<DailyActivity, 'date'>;
+                      if (activityType in updated) {
+                        updated[activityType] = (updated[activityType] as number) + 1;
+                      }
+                      return updated;
+                    }
+                    return item;
+                  });
+                } else {
+                  const newEntry: DailyActivity = {
+                    date,
+                    login: 0,
+                    logout: 0,
+                    audit_completed: 0,
+                    file_upload: 0,
+                    profile_update: 0,
+                    admin_change: 0,
+                  };
+                  const activityType = newActivity.activity_type as keyof Omit<DailyActivity, 'date'>;
+                  if (activityType in newEntry) {
+                    newEntry[activityType] = 1;
+                  }
+                  return [...prev, newEntry].sort((a, b) => 
+                    new Date(a.date).getTime() - new Date(b.date).getTime()
+                  );
+                }
+              });
+              
+              // Update top users
+              setTopUsers(prev => {
+                const existing = prev.find(user => user.user_id === newActivity.user_id);
+                if (existing) {
+                  return prev
+                    .map(user => 
+                      user.user_id === newActivity.user_id
+                        ? { ...user, count: user.count + 1 }
+                        : user
+                    )
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 10);
+                } else {
+                  return [...prev, { user_id: newActivity.user_id, count: 1 }]
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 10);
+                }
+              });
+              
+              // Show toast notification
+              toast.info('Dashboard Updated', {
+                description: 'New activity recorded',
+                duration: 2000,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dateRange]);
+
   const fetchStatistics = async () => {
     if (!dateRange?.from || !dateRange?.to) return;
 
@@ -360,6 +481,10 @@ export const ActivityStatsDashboard = () => {
             {dateRange?.from && dateRange?.to
               ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`
               : "Select date range"}
+          </Badge>
+          <Badge variant="outline" className="font-mono text-xs border-green-500 text-green-700 bg-green-50">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse" />
+            Live Updates
           </Badge>
         </div>
         
