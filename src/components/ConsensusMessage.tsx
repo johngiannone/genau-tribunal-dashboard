@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -313,7 +314,7 @@ export const ConsensusMessage = ({
             Model Outputs
           </h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-500 ${synthesisResponse && !isLoading ? 'opacity-40' : 'opacity-100'}`}>
           <DraftBox
             title={getModelDisplayName(modelAName)}
             subtitle={modelAName}
@@ -331,156 +332,201 @@ export const ConsensusMessage = ({
         </div>
       </div>
 
-      {/* The Synthesis - Final Output Console */}
+      {/* The Synthesis - Report Card */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-3">
-          <Eye className="w-4 h-4 text-primary" />
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
-            Synthesis
-          </h3>
-        </div>
-        <div className="bg-card border border-synthesis-border rounded overflow-hidden">
-          {/* Header with Confidence Bar */}
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-3 border-b border-synthesis-border/50">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                <span className="text-foreground font-semibold font-mono text-xs">FINAL_OUTPUT</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground font-mono">DeepSeek R1</span>
-              </div>
-            </div>
-            {!isLoading && synthesisResponse && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-muted-foreground">Confidence Score</span>
-                  <span className="text-primary font-bold">{confidenceScore}%</span>
-                </div>
-                <Progress value={confidenceScore} className="h-1.5" />
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="p-5">
-            {isLoading && !synthesisResponse ? (
+        <div className="bg-card border border-synthesis-border rounded-lg overflow-hidden">
+          {isLoading && !synthesisResponse ? (
+            <div className="p-8">
               <div className="space-y-3">
                 <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.2s' }} />
                 <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.3s' }} />
                 <div className="h-2 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: '0.4s' }} />
                 <div className="h-2 bg-muted/20 rounded w-4/5 animate-shimmer" style={{ animationDelay: '0.5s' }} />
               </div>
-            ) : (
-              <div className="space-y-4">
-                {verdictSections.map((section, idx) => (
-                  <div key={idx}>
-                    {section.type === 'verdict' && (
-                      <div className="mb-4">
-                        <h2 className="text-2xl font-bold text-primary mb-3 font-sans">
-                          {section.title}
-                        </h2>
-                        <div className="text-foreground leading-[1.6] text-sm prose prose-invert max-w-none verdict-content">
-                          <ReactMarkdown
-                            components={{
-                              code: CodeBlock,
-                              p: ({ children }) => <p className="mb-3">{children}</p>,
-                              ul: ({ children }) => <ul className="ml-5 mb-3 list-disc space-y-1">{children}</ul>,
-                              ol: ({ children }) => <ol className="ml-5 mb-3 list-decimal space-y-1">{children}</ol>,
-                              strong: ({ children }) => <strong className="font-bold text-primary">{children}</strong>,
-                            }}
+            </div>
+          ) : synthesisResponse ? (
+            <>
+              {/* Verdict Header */}
+              <div className="bg-gradient-to-r from-gold/10 to-gold/5 px-8 py-6 border-b border-gold/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h2 className="text-4xl font-bold text-gold mb-2 font-sans">
+                      The Council's Verdict
+                    </h2>
+                    <p className="text-muted-foreground text-sm font-mono">Final synthesis from {modelAName.split('/')[1]?.toUpperCase()}, {modelBName.split('/')[1]?.toUpperCase()}, and DeepSeek R1</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="relative w-24 h-24">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { value: confidenceScore },
+                              { value: 100 - confidenceScore }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={30}
+                            outerRadius={40}
+                            startAngle={90}
+                            endAngle={-270}
+                            dataKey="value"
                           >
-                            {section.content}
-                          </ReactMarkdown>
+                            <Cell fill="hsl(var(--gold))" />
+                            <Cell fill="hsl(var(--muted))" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-gold">{confidenceScore}%</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground font-mono">Confidence</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Structured Findings Grid */}
+              <div className="p-8 space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-4 font-mono uppercase tracking-wide">Findings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {/* Consensus/Conflict Card */}
+                    {modelAResponse && modelBResponse && (
+                      <div className={`border rounded-lg p-4 ${
+                        modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100)
+                          ? 'border-consensus-green/50 bg-consensus-green/5'
+                          : 'border-conflict-yellow/50 bg-conflict-yellow/5'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          {modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100) ? (
+                            <>
+                              <CheckCircle className="w-5 h-5 text-consensus-green flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-bold text-consensus-green mb-1">Consensus Reached</h4>
+                                <p className="text-sm text-foreground/80">All models aligned on core recommendations</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="w-5 h-5 text-conflict-yellow flex-shrink-0 mt-0.5" />
+                              <div>
+                                <h4 className="font-bold text-conflict-yellow mb-1">Conflict Detected</h4>
+                                <p className="text-sm text-foreground/80">Models presented differing perspectives</p>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
-                    {section.type === 'alert' && (
-                      <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-4 mb-4">
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <h3 className="font-bold text-destructive mb-2 text-sm">
-                              {section.title}
-                            </h3>
-                            <div className="text-foreground/90 leading-[1.6] text-sm prose prose-invert max-w-none">
-                              <ReactMarkdown
-                                components={{
-                                  code: CodeBlock,
-                                  p: ({ children }) => <p className="mb-3">{children}</p>,
-                                  ul: ({ children }) => <ul className="ml-5 mb-3 list-disc space-y-1">{children}</ul>,
-                                  ol: ({ children }) => <ol className="ml-5 mb-3 list-decimal space-y-1">{children}</ol>,
-                                  strong: ({ children }) => <strong className="font-bold text-primary">{children}</strong>,
-                                }}
-                              >
-                                {section.content}
-                              </ReactMarkdown>
+
+                    {/* Critique Card */}
+                    <div className="border border-primary/30 bg-primary/5 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Eye className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold text-primary mb-1">Analysis Complete</h4>
+                          <p className="text-sm text-foreground/80">Synthesis incorporates all viewpoints</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Key Critiques */}
+                  {verdictSections.some(s => s.type === 'alert') && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wide font-mono">Key Critiques</h4>
+                      {verdictSections
+                        .filter(s => s.type === 'alert')
+                        .map((section, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <X className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm text-foreground/90 leading-relaxed">{section.content.trim()}</p>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    )}
-                    {section.type === 'text' && (
-                      <div className="text-foreground leading-[1.6] text-sm prose prose-invert max-w-none">
-                        <ReactMarkdown
-                          components={{
-                            code: CodeBlock,
-                            p: ({ children }) => <p className="mb-3">{children}</p>,
-                            ul: ({ children }) => <ul className="ml-5 mb-3 list-disc space-y-1">{children}</ul>,
-                            ol: ({ children }) => <ol className="ml-5 mb-3 list-decimal space-y-1">{children}</ol>,
-                            strong: ({ children }) => <strong className="font-bold text-primary">{children}</strong>,
-                          }}
-                        >
-                          {section.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
 
-          {/* Feedback Buttons */}
-          {!isLoading && synthesisResponse && (
-            <div className="border-t border-border px-5 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                {messageId && onRatingChange && (
-                  <>
-                    <span className="text-xs text-muted-foreground font-mono mr-2">Rate this verdict:</span>
+                {/* The Final Answer - Gold Box */}
+                <div className="border-2 border-gold/40 bg-gold/5 rounded-lg overflow-hidden">
+                  <div className="bg-gold/10 px-4 py-2 border-b border-gold/30 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gold uppercase tracking-wide font-mono">The Final Answer</h3>
                     <Button
                       size="sm"
-                      variant={currentRating === 1 ? "default" : "outline"}
-                      onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
-                      className="gap-2"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-gold hover:text-gold hover:bg-gold/10"
+                      onClick={() => {
+                        navigator.clipboard.writeText(synthesisResponse);
+                        toast({ title: "Copied to clipboard" });
+                      }}
                     >
-                      <ThumbsUp className="h-4 w-4" />
-                      Good
+                      <Copy className="h-3 w-3" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant={currentRating === -1 ? "destructive" : "outline"}
-                      onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
-                      className="gap-2"
-                    >
-                      <ThumbsDown className="h-4 w-4" />
-                      Bad
-                    </Button>
-                  </>
-                )}
+                  </div>
+                  <div className="p-6">
+                    <div className="text-foreground leading-[1.8] prose prose-invert max-w-none font-serif text-base">
+                      <ReactMarkdown
+                        components={{
+                          code: CodeBlock,
+                          p: ({ children }) => <p className="mb-4 font-serif">{children}</p>,
+                          ul: ({ children }) => <ul className="ml-6 mb-4 list-disc space-y-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="ml-6 mb-4 list-decimal space-y-2">{children}</ol>,
+                          strong: ({ children }) => <strong className="font-bold text-gold">{children}</strong>,
+                          h1: ({ children }) => <h1 className="text-2xl font-bold text-gold mb-4 font-serif">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-xl font-bold text-gold mb-3 font-serif">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-lg font-bold text-gold mb-2 font-serif">{children}</h3>,
+                        }}
+                      >
+                        {synthesisResponse}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleShare}
-                disabled={isSharing}
-                className="gap-2"
-              >
-                <Share2 className="h-4 w-4" />
-                {isSharing ? "Generating..." : "Share"}
-              </Button>
-            </div>
-          )}
+
+              {/* Feedback Buttons */}
+              <div className="border-t border-border px-8 py-4 flex items-center justify-between gap-3 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  {messageId && onRatingChange && (
+                    <>
+                      <span className="text-xs text-muted-foreground font-mono mr-2">Rate this verdict:</span>
+                      <Button
+                        size="sm"
+                        variant={currentRating === 1 ? "default" : "outline"}
+                        onClick={() => onRatingChange(messageId, currentRating === 1 ? 0 : 1)}
+                        className="gap-2"
+                      >
+                        <ThumbsUp className="h-4 w-4" />
+                        Good
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={currentRating === -1 ? "destructive" : "outline"}
+                        onClick={() => onRatingChange(messageId, currentRating === -1 ? 0 : -1)}
+                        className="gap-2"
+                      >
+                        <ThumbsDown className="h-4 w-4" />
+                        Bad
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleShare}
+                  disabled={isSharing}
+                  className="gap-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  {isSharing ? "Generating..." : "Share"}
+                </Button>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

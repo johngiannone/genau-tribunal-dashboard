@@ -68,10 +68,21 @@ export default {
           bg: "hsl(var(--confidence-bg))",
           fg: "hsl(var(--confidence-fg))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
+        consensus: {
+          green: "hsl(var(--consensus-green))",
+        },
+        conflict: {
+          yellow: "hsl(var(--conflict-yellow))",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        serif: ["Merriweather", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -58,6 +58,12 @@ All colors MUST be HSL.
     --confidence-bg: 189 94% 43%;
     --confidence-fg: 240 10% 4%;
 
+    /* Report Card Colors */
+    --gold: 45 93% 58%;
+    --gold-foreground: 240 10% 4%;
+    --consensus-green: 142 76% 36%;
+    --conflict-yellow: 38 92% 50%;
+
     --radius: 0.375rem;
 
     /* Sidebar - Slightly darker */
