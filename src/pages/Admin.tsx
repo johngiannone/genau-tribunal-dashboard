@@ -27,6 +27,7 @@ import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
 import { PriceSyncPanel } from "@/components/PriceSyncPanel";
 import { CostAlertsPanel } from "@/components/CostAlertsPanel";
+import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
@@ -38,6 +39,7 @@ interface UserData {
   subscription_tier: string | null;
   daily_cost_threshold: number | null;
   per_audit_cost_threshold: number | null;
+  monthly_budget_limit: number | null;
 }
 
 const Admin = () => {
@@ -133,6 +135,7 @@ const Admin = () => {
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
+                <TabsTrigger value="forecast">Forecast</TabsTrigger>
                 <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
               </TabsList>
 
@@ -144,11 +147,11 @@ const Admin = () => {
                 <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Total Audits</TableHead>
                 <TableHead className="font-semibold text-[#111111]">This Month</TableHead>
-                <TableHead className="font-semibold text-[#111111]">Files/Month</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Premium</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Tier</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Daily $</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Audit $</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Budget $</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,24 +176,6 @@ const Admin = () => {
                       }}
                       onBlur={() => updateUser(user.user_id, { 
                         audits_this_month: user.audits_this_month 
-                      })}
-                      className="w-20"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={user.files_this_month || 0}
-                      onChange={(e) => {
-                        const newValue = parseInt(e.target.value) || 0;
-                        setUsers(users.map(u => 
-                          u.user_id === user.user_id 
-                            ? { ...u, files_this_month: newValue }
-                            : u
-                        ));
-                      }}
-                      onBlur={() => updateUser(user.user_id, { 
-                        files_this_month: user.files_this_month 
                       })}
                       className="w-20"
                     />
@@ -263,6 +248,26 @@ const Admin = () => {
                     />
                   </TableCell>
                   <TableCell>
+                    <Input
+                      type="number"
+                      step="1"
+                      placeholder="0.00"
+                      value={user.monthly_budget_limit || ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value ? parseFloat(e.target.value) : null;
+                        setUsers(users.map(u => 
+                          u.user_id === user.user_id 
+                            ? { ...u, monthly_budget_limit: newValue }
+                            : u
+                        ));
+                      }}
+                      onBlur={() => updateUser(user.user_id, { 
+                        monthly_budget_limit: user.monthly_budget_limit 
+                      })}
+                      className="w-24"
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Button
                       size="sm"
                       variant="outline"
@@ -290,6 +295,10 @@ const Admin = () => {
 
       <TabsContent value="pricing">
         <PriceSyncPanel />
+      </TabsContent>
+
+      <TabsContent value="forecast">
+        <CostForecastPanel />
       </TabsContent>
 
       <TabsContent value="alerts">

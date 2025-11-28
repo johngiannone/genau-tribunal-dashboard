@@ -358,6 +358,7 @@ export type Database = {
           id: string
           is_premium: boolean
           last_reset_at: string | null
+          monthly_budget_limit: number | null
           per_audit_cost_threshold: number | null
           subscription_tier: string | null
           updated_at: string | null
@@ -372,6 +373,7 @@ export type Database = {
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          monthly_budget_limit?: number | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           id?: string
           is_premium?: boolean
           last_reset_at?: string | null
+          monthly_budget_limit?: number | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
@@ -395,7 +398,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      monthly_cost_summary: {
+        Row: {
+          audit_count: number | null
+          avg_cost_per_audit: number | null
+          first_audit: string | null
+          last_audit: string | null
+          month: string | null
+          total_cost: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -414,7 +428,7 @@ export type Database = {
         | "admin_change"
         | "profile_update"
         | "file_upload"
-      alert_type: "daily_threshold" | "audit_threshold"
+      alert_type: "daily_threshold" | "audit_threshold" | "budget_forecast"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -551,7 +565,7 @@ export const Constants = {
         "profile_update",
         "file_upload",
       ],
-      alert_type: ["daily_threshold", "audit_threshold"],
+      alert_type: ["daily_threshold", "audit_threshold", "budget_forecast"],
       app_role: ["admin", "user"],
     },
   },
