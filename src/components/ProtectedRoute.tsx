@@ -45,21 +45,53 @@ export const ProtectedRoute = ({
   };
 
   useEffect(() => {
-    if (loading) return;
+    const checkAccessAndStatus = async () => {
+      if (loading) return;
 
-    if (requireAdmin && !isAdmin) {
-      logUnauthorizedAccess(location.pathname, 'Admin role required');
-      toast.error("Unauthorized access - Admin only");
-      navigate("/app");
-      return;
-    }
+      // Check account suspension status
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: usageData } = await supabase
+          .from('user_usage')
+          .select('account_status, suspended_until')
+          .eq('user_id', user.id)
+          .single();
 
-    if (requireBilling && !canAccessBilling) {
-      logUnauthorizedAccess(location.pathname, 'Team/Agency tier required');
-      toast.error("Unauthorized access - Team/Agency tier required");
-      navigate("/app");
-      return;
-    }
+        if (usageData?.account_status === 'inactive' && usageData?.suspended_until) {
+          const suspendedUntil = new Date(usageData.suspended_until);
+          if (suspendedUntil > new Date()) {
+            const minutes = Math.ceil((suspendedUntil.getTime() - Date.now()) / 60000);
+            toast.error(`Account suspended due to repeated unauthorized access. Try again in ${minutes} minutes.`);
+            await supabase.auth.signOut();
+            navigate("/auth");
+            return;
+          }
+        }
+
+        if (usageData?.account_status === 'disabled') {
+          toast.error("Account disabled. Please contact support.");
+          await supabase.auth.signOut();
+          navigate("/auth");
+          return;
+        }
+      }
+
+      if (requireAdmin && !isAdmin) {
+        logUnauthorizedAccess(location.pathname, 'Admin role required');
+        toast.error("Unauthorized access - Admin only");
+        navigate("/app");
+        return;
+      }
+
+      if (requireBilling && !canAccessBilling) {
+        logUnauthorizedAccess(location.pathname, 'Team/Agency tier required');
+        toast.error("Unauthorized access - Team/Agency tier required");
+        navigate("/app");
+        return;
+      }
+    };
+
+    checkAccessAndStatus();
   }, [loading, isAdmin, canAccessBilling, tier, requireAdmin, requireBilling, navigate, location.pathname]);
 
   if (loading) {
