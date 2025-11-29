@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Database, Download, Trash2, Calendar, ArrowLeft } from "lucide-react";
+import { Database, Download, Trash2, Calendar, ArrowLeft, TrendingUp, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface TrainingData {
   id: string;
@@ -28,6 +30,16 @@ interface TrainingData {
   created_at: string;
 }
 
+interface ModelComboStats {
+  combination: string;
+  draftA: string;
+  draftB: string;
+  count: number;
+  avgRating: number;
+  goodCount: number;
+  badCount: number;
+}
+
 export default function Vault() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,6 +47,7 @@ export default function Vault() {
   const [trainingData, setTrainingData] = useState<TrainingData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -157,7 +170,62 @@ export default function Vault() {
     return <Badge variant="secondary">Unrated</Badge>;
   };
 
+  const getModelShortName = (modelId: string) => {
+    if (!modelId) return "Unknown";
+    const parts = modelId.split("/");
+    return parts[parts.length - 1].replace(/-/g, " ").substring(0, 20);
+  };
+
+  const calculateModelCombinations = (): ModelComboStats[] => {
+    const comboMap = new Map<string, { count: number; ratings: number[]; draftA: string; draftB: string }>();
+
+    trainingData.forEach((item) => {
+      const key = `${item.draft_a_model}|${item.draft_b_model}`;
+      if (!comboMap.has(key)) {
+        comboMap.set(key, { count: 0, ratings: [], draftA: item.draft_a_model, draftB: item.draft_b_model });
+      }
+      const combo = comboMap.get(key)!;
+      combo.count++;
+      combo.ratings.push(item.human_rating);
+    });
+
+    return Array.from(comboMap.entries())
+      .map(([key, data]) => {
+        const avgRating = data.ratings.length > 0 
+          ? data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length 
+          : 0;
+        return {
+          combination: `${getModelShortName(data.draftA)} + ${getModelShortName(data.draftB)}`,
+          draftA: data.draftA,
+          draftB: data.draftB,
+          count: data.count,
+          avgRating: Math.round(avgRating * 100) / 100,
+          goodCount: data.ratings.filter(r => r === 1).length,
+          badCount: data.ratings.filter(r => r === -1).length,
+        };
+      })
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 5);
+  };
+
+  const getRatingDistribution = () => {
+    const good = trainingData.filter(d => d.human_rating === 1).length;
+    const bad = trainingData.filter(d => d.human_rating === -1).length;
+    const unrated = trainingData.filter(d => d.human_rating === 0).length;
+
+    return [
+      { name: "Good", value: good, color: "#0071E3" },
+      { name: "Bad", value: bad, color: "#FF3B30" },
+      { name: "Unrated", value: unrated, color: "#8E8E93" },
+    ].filter(item => item.value > 0);
+  };
+
+  const COLORS = ["#0071E3", "#FF3B30", "#8E8E93"];
+
   if (!session) return null;
+
+  const modelCombinations = calculateModelCombinations();
+  const ratingDistribution = getRatingDistribution();
 
   return (
     <div className="flex h-screen bg-background">
@@ -185,18 +253,28 @@ export default function Vault() {
                 </div>
               </div>
             </div>
-            <Button
-              onClick={exportToJsonL}
-              disabled={trainingData.length === 0 || isExporting}
-              className="gap-2 bg-primary hover:bg-primary/90"
-            >
-              <Download className="h-4 w-4" />
-              {isExporting ? "Exporting..." : "Export for Fine-Tuning"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showAnalytics ? "secondary" : "outline"}
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+              </Button>
+              <Button
+                onClick={exportToJsonL}
+                disabled={trainingData.length === 0 || isExporting}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? "Exporting..." : "Export for Fine-Tuning"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Table */}
+        {/* Content */}
         <div className="flex-1 overflow-auto px-8 py-6">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
@@ -212,49 +290,179 @@ export default function Vault() {
               </p>
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Prompt</TableHead>
-                    <TableHead className="w-[20%]">Models</TableHead>
-                    <TableHead className="w-[15%]">Rating</TableHead>
-                    <TableHead className="w-[20%]">Date</TableHead>
-                    <TableHead className="w-[5%]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {trainingData.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">
-                        {item.prompt.length > 100
-                          ? item.prompt.substring(0, 100) + "..."
-                          : item.prompt}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {item.draft_a_model?.split("/")[1] || item.draft_a_model || "Unknown"}
-                      </TableCell>
-                      <TableCell>{getRatingBadge(item.human_rating)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(item.created_at)}
+            <div className="space-y-6">
+              {/* Analytics Section */}
+              {showAnalytics && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* Top Model Combinations */}
+                  <Card className="bg-white border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-[#111111]">
+                        <Award className="w-5 h-5 text-[#0071E3]" />
+                        Top Model Combinations
+                      </CardTitle>
+                      <CardDescription className="text-[#86868B]">
+                        Highest-rated model pairs based on user feedback
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {modelCombinations.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={modelCombinations} layout="horizontal">
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5EA" />
+                            <XAxis type="number" domain={[-1, 1]} stroke="#86868B" />
+                            <YAxis dataKey="combination" type="category" width={150} stroke="#86868B" style={{ fontSize: '12px' }} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E5EA', borderRadius: '8px' }}
+                              formatter={(value: any) => [`${value} avg rating`, 'Rating']}
+                            />
+                            <Bar dataKey="avgRating" fill="#0071E3" radius={[0, 8, 8, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="text-center text-[#86868B] py-12">
+                          No rated combinations yet
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteEntry(item.id)}
-                          className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Rating Distribution */}
+                  <Card className="bg-white border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-[#111111]">
+                        <TrendingUp className="w-5 h-5 text-[#0071E3]" />
+                        Rating Distribution
+                      </CardTitle>
+                      <CardDescription className="text-[#86868B]">
+                        Overall verdict quality feedback
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {ratingDistribution.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={ratingDistribution}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {ratingDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E5EA', borderRadius: '8px' }} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="text-center text-[#86868B] py-12">
+                          No ratings yet
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Model Combination Details Table */}
+                  <Card className="bg-white border-gray-200 lg:col-span-2">
+                    <CardHeader>
+                      <CardTitle className="text-[#111111]">Model Combination Performance</CardTitle>
+                      <CardDescription className="text-[#86868B]">
+                        Detailed breakdown of each model pair's performance
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {modelCombinations.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-200">
+                                <th className="text-left py-3 px-4 font-semibold text-[#111111]">Model Combination</th>
+                                <th className="text-center py-3 px-4 font-semibold text-[#111111]">Audits</th>
+                                <th className="text-center py-3 px-4 font-semibold text-[#111111]">Avg Rating</th>
+                                <th className="text-center py-3 px-4 font-semibold text-[#111111]">👍 Good</th>
+                                <th className="text-center py-3 px-4 font-semibold text-[#111111]">👎 Bad</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {modelCombinations.map((combo, idx) => (
+                                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                  <td className="py-3 px-4 font-mono text-xs text-[#111111]">{combo.combination}</td>
+                                  <td className="text-center py-3 px-4 text-[#86868B]">{combo.count}</td>
+                                  <td className="text-center py-3 px-4">
+                                    <Badge 
+                                      className={combo.avgRating > 0 ? "bg-[#0071E3]" : combo.avgRating < 0 ? "bg-[#FF3B30]" : "bg-[#8E8E93]"}
+                                    >
+                                      {combo.avgRating.toFixed(2)}
+                                    </Badge>
+                                  </td>
+                                  <td className="text-center py-3 px-4 text-[#0071E3] font-semibold">{combo.goodCount}</td>
+                                  <td className="text-center py-3 px-4 text-[#FF3B30] font-semibold">{combo.badCount}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center text-[#86868B] py-12">
+                          No model combinations found
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Training Data Table */}
+              <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40%]">Prompt</TableHead>
+                      <TableHead className="w-[20%]">Models</TableHead>
+                      <TableHead className="w-[15%]">Rating</TableHead>
+                      <TableHead className="w-[20%]">Date</TableHead>
+                      <TableHead className="w-[5%]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {trainingData.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-xs">
+                          {item.prompt.length > 100
+                            ? item.prompt.substring(0, 100) + "..."
+                            : item.prompt}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {item.draft_a_model?.split("/")[1] || item.draft_a_model || "Unknown"}
+                        </TableCell>
+                        <TableCell>{getRatingBadge(item.human_rating)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(item.created_at)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteEntry(item.id)}
+                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </div>
