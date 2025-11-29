@@ -640,6 +640,22 @@ serve(async (req) => {
         console.error('Auto-recharge trigger failed:', err);
         // Don't block the audit if auto-recharge fails
       });
+    } else if (newBalance < organizationBilling.auto_recharge_threshold) {
+      // Send low balance alert if auto-recharge is NOT enabled
+      console.log(`Balance below threshold but auto-recharge disabled, sending alert email`);
+      
+      adminSupabase.functions.invoke('send-billing-notification', {
+        body: {
+          userId: user.id,
+          type: 'low_balance',
+          data: {
+            currentBalance: newBalance,
+            threshold: organizationBilling.auto_recharge_threshold
+          }
+        }
+      }).catch(err => {
+        console.error('Low balance email failed:', err);
+      });
     }
 
     // 8. Log analytics for all models with cost tracking
