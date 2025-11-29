@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.send-billing-notification]
 verify_jwt = false
+
+[functions.check-ip-block]
+verify_jwt = false
