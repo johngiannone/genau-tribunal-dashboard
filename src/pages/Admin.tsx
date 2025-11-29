@@ -54,6 +54,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface UserData {
   user_id: string;
+  email: string | null;
   audit_count: number;
   audits_this_month: number;
   files_this_month: number;
@@ -91,11 +92,21 @@ const Admin = () => {
     try {
       const { data, error } = await supabase
         .from('user_usage')
-        .select('*')
+        .select(`
+          *,
+          profiles!inner(email)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      
+      // Flatten the data structure to include email at the top level
+      const usersWithEmail = (data || []).map((row: any) => ({
+        ...row,
+        email: row.profiles?.email || null
+      }));
+      
+      setUsers(usersWithEmail);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error("Failed to load users");
@@ -146,14 +157,10 @@ const Admin = () => {
     const user = users.find(u => u.user_id === userId);
     if (!user) return;
 
-    // Get user email from user_id (we'll need to fetch this from auth.users via admin query)
-    // For now, we'll use a placeholder
-    const userEmail = `${userId.slice(0, 8)}@user.email`; // This should be fetched properly
-
     setStatusChangeDialog({
       isOpen: true,
       userId,
-      userEmail,
+      userEmail: user.email || 'Unknown',
       newStatus,
       previousStatus: user.account_status,
     });
@@ -283,6 +290,7 @@ const Admin = () => {
             <TableHeader>
               <TableRow className="bg-[#F9FAFB]">
                 <TableHead className="font-semibold text-[#111111]">User ID</TableHead>
+                <TableHead className="font-semibold text-[#111111]">Email</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Account Status</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Ban Status</TableHead>
                 <TableHead className="font-semibold text-[#111111]">Total Audits</TableHead>
@@ -300,6 +308,9 @@ const Admin = () => {
                 <TableRow key={user.user_id} className={user.is_banned ? "bg-red-50" : ""}>
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {user.user_id.slice(0, 8)}...
+                  </TableCell>
+                  <TableCell className="text-sm text-[#111111]">
+                    {user.email || 'No email'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -327,7 +338,7 @@ const Admin = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => setEmailUser({ userId: user.user_id, email: `${user.user_id.slice(0, 8)}@user.email` })}
+                        onClick={() => setEmailUser({ userId: user.user_id, email: user.email || 'Unknown' })}
                         className="h-8 w-8"
                         title="Send status notification email"
                       >
