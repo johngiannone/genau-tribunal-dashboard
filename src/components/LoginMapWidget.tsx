@@ -12,6 +12,17 @@ interface LoginLocation {
   ip: string;
   timestamp: string;
   isAnomalous?: boolean;
+  anomalyScore?: {
+    overall: number;
+    factors: {
+      timeAnomaly: number;
+      deviceAnomaly: number;
+      locationAnomaly: number;
+      ipAnomaly: number;
+      velocityAnomaly: number;
+    };
+    reasons: string[];
+  };
 }
 
 interface LoginMapWidgetProps {
@@ -78,15 +89,29 @@ export function LoginMapWidget({ locations }: LoginMapWidgetProps) {
 
               // Create popup with login details
               const statusBadge = location.isAnomalous 
-                ? '<span style="background: #fed7aa; color: #9a3412; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">⚠️ UNUSUAL</span>'
+                ? '<span style="background: #fed7aa; color: #9a3412; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">⚠️ UNUSUAL BEHAVIOR</span>'
                 : '<span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">✓ NORMAL</span>';
               
+              const anomalyDetails = location.anomalyScore ? `
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                  <div style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #374151;">
+                    Anomaly Score: ${location.anomalyScore.overall}%
+                  </div>
+                  ${location.anomalyScore.reasons.length > 0 ? `
+                    <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">
+                      ${location.anomalyScore.reasons.map(r => `<div style="margin-bottom: 2px;">• ${r}</div>`).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : '';
+              
               const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-                <div style="padding: 8px; min-width: 150px;">
+                <div style="padding: 8px; min-width: 180px; max-width: 220px;">
                   <div style="margin-bottom: 6px;">${statusBadge}</div>
                   <div style="font-weight: bold; margin-bottom: 4px;">${location.city}, ${location.country}</div>
                   <div style="font-size: 12px; color: #666; margin-bottom: 2px;">IP: ${location.ip}</div>
                   <div style="font-size: 11px; color: #999;">${new Date(location.timestamp).toLocaleString()}</div>
+                  ${anomalyDetails}
                 </div>
               `);
 
