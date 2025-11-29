@@ -178,7 +178,50 @@ serve(async (req) => {
       // Continue without moderation in case of API errors (fail open)
     }
 
-    // 5. Check usage limits
+    // 5. CHECK CREDIT BALANCE - Get billing info early
+    console.log("Fetching organization credit balance...")
+    const { data: billingData, error: billingError } = await adminSupabase
+      .from('organization_billing')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // Create billing record if it doesn't exist
+    let organizationBilling = billingData
+    if (!organizationBilling) {
+      console.log("Creating billing record for new user")
+      const { data: newBilling, error: createBillingError } = await adminSupabase
+        .from('organization_billing')
+        .insert({ user_id: user.id, credit_balance: 0.00 })
+        .select()
+        .single()
+      
+      if (createBillingError) {
+        console.error("Failed to create billing record:", createBillingError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to initialize billing' }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
+      }
+      organizationBilling = newBilling
+    }
+
+    // Initial balance check - reject if zero or negative
+    if (organizationBilling.credit_balance <= 0) {
+      console.warn("Zero or negative credit balance:", organizationBilling.credit_balance)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Insufficient credits',
+          details: `Your credit balance is $${organizationBilling.credit_balance.toFixed(2)}. Please add credits to continue.`,
+          current_balance: organizationBilling.credit_balance
+        }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
+    console.log(`Current credit balance: $${organizationBilling.credit_balance}`)
+
+    // 6. Check usage limits
     const { data: usage, error: usageError } = await supabase
       .from('user_usage')
       .select('*')
@@ -329,6 +372,21 @@ serve(async (req) => {
     }
     
     console.log(`Estimated cost for this audit: $${estimatedCost.toFixed(6)}`)
+
+    // Check if balance is sufficient for estimated cost
+    if (organizationBilling.credit_balance < estimatedCost) {
+      console.warn("Insufficient credits for audit:", organizationBilling.credit_balance, "needed:", estimatedCost)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Insufficient credits',
+          details: `Your credit balance ($${organizationBilling.credit_balance.toFixed(2)}) is insufficient for this audit (estimated: $${estimatedCost.toFixed(4)}). Please add credits to continue.`,
+          current_balance: organizationBilling.credit_balance,
+          estimated_cost: estimatedCost
+        }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+
 
     let context = ""
     let librarianAnalysis = ""
@@ -535,7 +593,9 @@ serve(async (req) => {
     const verdictLatency = Date.now() - startTimeVerdict
     console.log("Synthesis complete")
 
-    // 7. Update usage count
+    // 7. Update usage count and deduct credits
+    const newBalance = organizationBilling.credit_balance - estimatedCost
+    
     await supabase
       .from('user_usage')
       .update({ 
@@ -543,6 +603,31 @@ serve(async (req) => {
         audits_this_month: (userUsage.audits_this_month || 0) + 1
       })
       .eq('user_id', user.id)
+
+    // Deduct credits from organization billing
+    await adminSupabase
+      .from('organization_billing')
+      .update({ credit_balance: newBalance })
+      .eq('user_id', user.id)
+
+    // Log billing transaction
+    await adminSupabase
+      .from('billing_transactions')
+      .insert({
+        user_id: user.id,
+        amount: -estimatedCost,
+        transaction_type: 'credit_deducted',
+        description: `Audit: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`,
+        balance_after: newBalance,
+        model_used: auditorSlot.name,
+        metadata: {
+          conversation_id: conversationId,
+          models_used: [...drafterSlots.map(d => d.name), auditorSlot.name],
+          estimated_cost: estimatedCost
+        }
+      })
+
+    console.log(`Credits deducted: $${estimatedCost.toFixed(6)}, New balance: $${newBalance.toFixed(6)}`)
 
     // 8. Log analytics for all models with cost tracking
     const analyticsEvents = [
