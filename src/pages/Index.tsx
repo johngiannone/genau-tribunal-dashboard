@@ -6,6 +6,7 @@ import { ChatInput } from "@/components/ChatInput";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ModelRecommendationModal } from "@/components/ModelRecommendationModal";
 import { ABTestingNotificationBanner } from "@/components/ABTestingNotificationBanner";
+import CostCalculator from "@/components/CostCalculator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -773,8 +774,13 @@ const Index = () => {
           </div>
         </ScrollArea>
 
-        {/* Input Area */}
-        <ChatInput onSend={handleSendMessage} disabled={isProcessing} />
+        {/* Input Area with Cost Calculator */}
+        <div className="space-y-2">
+          <div className="flex justify-end px-4">
+            <CostCalculator />
+          </div>
+          <ChatInput onSend={handleSendMessage} disabled={isProcessing} />
+        </div>
       </div>
 
       {/* A/B Testing Notification Banner */}
