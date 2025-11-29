@@ -40,6 +40,7 @@ import { BillingTransactionsPanel } from "@/components/BillingTransactionsPanel"
 import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
+import { RevenueForecastChart } from "@/components/RevenueForecastChart";
 import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
 import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -472,6 +473,8 @@ const Admin = () => {
       <TabsContent value="billing">
         <div className="space-y-6">
           <CostAlertsPanel />
+          
+          <RevenueForecastChart />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CostBreakdownPanel />
