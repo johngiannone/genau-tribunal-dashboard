@@ -509,8 +509,10 @@ export type Database = {
           council_source: string | null
           created_at: string
           draft_a_model: string | null
+          draft_a_rating: number | null
           draft_a_response: string | null
           draft_b_model: string | null
+          draft_b_rating: number | null
           draft_b_response: string | null
           human_rating: number | null
           id: string
@@ -519,14 +521,17 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verdict_model: string | null
+          verdict_rating: number | null
           verdict_response: string | null
         }
         Insert: {
           council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
+          draft_a_rating?: number | null
           draft_a_response?: string | null
           draft_b_model?: string | null
+          draft_b_rating?: number | null
           draft_b_response?: string | null
           human_rating?: number | null
           id?: string
@@ -535,14 +540,17 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verdict_model?: string | null
+          verdict_rating?: number | null
           verdict_response?: string | null
         }
         Update: {
           council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
+          draft_a_rating?: number | null
           draft_a_response?: string | null
           draft_b_model?: string | null
+          draft_b_rating?: number | null
           draft_b_response?: string | null
           human_rating?: number | null
           id?: string
@@ -551,6 +559,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verdict_model?: string | null
+          verdict_rating?: number | null
           verdict_response?: string | null
         }
         Relationships: []

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw, Download, Mail } from "lucide-react";
+import { Cpu, Eye, CheckCircle, Copy, Check, ChevronDown, ChevronUp, AlertCircle, ThumbsUp, ThumbsDown, Share2, X, RefreshCw, Download, Mail, Zap, Send } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Progress } from "./ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -27,10 +29,19 @@ interface ConsensusMessageProps {
   agentNameB?: string;
   messageId?: string;
   onRatingChange?: (messageId: string, rating: number) => void;
+  onDraftRating?: (messageId: string, draft: 'a' | 'b', rating: number) => void;
+  onRefineVerdict?: (originalVerdict: string, feedback: string) => void;
   currentRating?: number;
+  draftARating?: number;
+  draftBRating?: number;
   onModelSwap?: (slot: 'slot_1' | 'slot_2', modelId: string, modelName: string) => void;
   currentModelAId?: string;
   currentModelBId?: string;
+  computeStats?: {
+    totalTokens: number;
+    estimatedCost: number;
+    modelCount: number;
+  };
 }
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
@@ -84,9 +95,11 @@ interface DraftBoxProps {
   agentName?: string;
   onChangeModel?: () => void;
   isDimmed?: boolean;
+  onRate?: (rating: number) => void;
+  currentRating?: number;
 }
 
-const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", agentName, onChangeModel, isDimmed }: DraftBoxProps) => {
+const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", agentName, onChangeModel, isDimmed, onRate, currentRating = 0 }: DraftBoxProps) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const needsExpansion = content && content.length > 800;
@@ -112,6 +125,26 @@ const DraftBox = ({ title, subtitle, content, isLoading, animationDelay = "0s", 
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {onRate && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onRate(currentRating === 1 ? 0 : 1)}
+                className={`h-8 w-8 ${currentRating === 1 ? 'text-green-600 bg-green-50' : ''}`}
+              >
+                <ThumbsUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onRate(currentRating === -1 ? 0 : -1)}
+                className={`h-8 w-8 ${currentRating === -1 ? 'text-red-600 bg-red-50' : ''}`}
+              >
+                <ThumbsDown className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           {onChangeModel && (
             <Button
               variant="ghost"
@@ -232,16 +265,23 @@ export const ConsensusMessage = ({
   agentNameB,
   messageId,
   onRatingChange,
+  onDraftRating,
+  onRefineVerdict,
   currentRating = 0,
+  draftARating = 0,
+  draftBRating = 0,
   onModelSwap,
   currentModelAId,
   currentModelBId,
+  computeStats,
 }: ConsensusMessageProps) => {
   const [isSharing, setIsSharing] = useState(false);
   const [showModelMarket, setShowModelMarket] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<'slot_1' | 'slot_2' | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [refineFeedback, setRefineFeedback] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
   const { toast } = useToast();
   const { isPro } = useIsPro();
 
@@ -363,6 +403,8 @@ export const ConsensusMessage = ({
               agentName={agentNameA}
               onChangeModel={onModelSwap ? () => handleChangeModelClick('slot_1') : undefined}
               isDimmed={synthesisResponse && !isLoading}
+              onRate={messageId && onDraftRating ? (rating) => onDraftRating(messageId, 'a', rating) : undefined}
+              currentRating={draftARating}
             />
             <DraftBox
               title={getModelDisplayName(modelBName)}
@@ -373,6 +415,8 @@ export const ConsensusMessage = ({
               agentName={agentNameB}
               onChangeModel={onModelSwap ? () => handleChangeModelClick('slot_2') : undefined}
               isDimmed={synthesisResponse && !isLoading}
+              onRate={messageId && onDraftRating ? (rating) => onDraftRating(messageId, 'b', rating) : undefined}
+              currentRating={draftBRating}
             />
           </div>
         </div>
@@ -555,6 +599,60 @@ export const ConsensusMessage = ({
                       {synthesisResponse}
                     </ReactMarkdown>
                   </div>
+                  
+                  {/* Cost Transparency Footer */}
+                  {computeStats && (
+                    <div className="mt-6 pt-4 border-t border-amber-200 flex items-center gap-2 text-xs text-[#86868B]">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 cursor-help">
+                              <Zap className="w-3 h-3 text-amber-600" />
+                              <span>Compute: {computeStats.totalTokens.toLocaleString()} Tokens (~${computeStats.estimatedCost.toFixed(4)})</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Cost of running {computeStats.modelCount} models in parallel</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  )}
+                  
+                  {/* Refine Workflow */}
+                  {onRefineVerdict && (
+                    <div className="mt-6 pt-4 border-t border-amber-200">
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (refineFeedback.trim() && synthesisResponse) {
+                            setIsRefining(true);
+                            onRefineVerdict(synthesisResponse, refineFeedback);
+                            setRefineFeedback("");
+                            setTimeout(() => setIsRefining(false), 2000);
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Input
+                          value={refineFeedback}
+                          onChange={(e) => setRefineFeedback(e.target.value)}
+                          placeholder="Refine this verdict... (e.g., 'Make it shorter')"
+                          disabled={isRefining}
+                          className="flex-1 text-sm"
+                        />
+                        <Button 
+                          type="submit" 
+                          size="sm" 
+                          disabled={!refineFeedback.trim() || isRefining}
+                          className="gap-2"
+                        >
+                          <Send className="w-3 h-3" />
+                          {isRefining ? "Refining..." : "Refine"}
+                        </Button>
+                      </form>
+                    </div>
+                  )}
                 </div>
               </div>
 

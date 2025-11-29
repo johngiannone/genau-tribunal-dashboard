@@ -24,8 +24,15 @@ interface Message {
   isLoading?: boolean;
   trainingDatasetId?: string;
   humanRating?: number;
+  draftARating?: number;
+  draftBRating?: number;
   agentNameA?: string;
   agentNameB?: string;
+  computeStats?: {
+    totalTokens: number;
+    estimatedCost: number;
+    modelCount: number;
+  };
 }
 
 const Index = () => {
@@ -313,18 +320,17 @@ const Index = () => {
     try {
       const { error } = await supabase
         .from('training_dataset')
-        .update({ human_rating: rating })
+        .update({ verdict_rating: rating })
         .eq('id', trainingDatasetId);
 
       if (error) {
-        console.error('Error updating rating:', error);
+        console.error('Error updating verdict rating:', error);
         toast({
           title: "Failed to save rating",
           description: error.message,
           variant: "destructive",
         });
       } else {
-        // Update local message state
         setMessages(prev => 
           prev.map(msg => 
             msg.trainingDatasetId === trainingDatasetId 
@@ -340,6 +346,94 @@ const Index = () => {
       console.error('Rating update error:', err);
       toast({
         title: "Failed to save rating",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDraftRating = async (trainingDatasetId: string, draft: 'a' | 'b', rating: number) => {
+    try {
+      const column = draft === 'a' ? 'draft_a_rating' : 'draft_b_rating';
+      const { error } = await supabase
+        .from('training_dataset')
+        .update({ [column]: rating })
+        .eq('id', trainingDatasetId);
+
+      if (error) {
+        console.error('Error updating draft rating:', error);
+        toast({
+          title: "Failed to save rating",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.trainingDatasetId === trainingDatasetId 
+              ? { ...msg, [draft === 'a' ? 'draftARating' : 'draftBRating']: rating }
+              : msg
+          )
+        );
+        toast({
+          title: rating === 1 ? "Marked as helpful" : rating === -1 ? "Marked as not helpful" : "Rating cleared",
+        });
+      }
+    } catch (err) {
+      console.error('Draft rating error:', err);
+      toast({
+        title: "Failed to save rating",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleRefineVerdict = async (originalVerdict: string, feedback: string) => {
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
+        throw new Error("Not authenticated");
+      }
+
+      // Get the auditor model from current council config (last slot)
+      const auditorModel = councilConfig?.slot_6?.id || 'deepseek/deepseek-r1';
+
+      const { data, error } = await supabase.functions.invoke('refine-verdict', {
+        body: { 
+          originalVerdict,
+          userFeedback: feedback,
+          auditorModel
+        },
+        headers: {
+          Authorization: `Bearer ${currentSession.access_token}`
+        }
+      });
+
+      if (error || !data?.refinedVerdict) {
+        throw new Error(error?.message || 'Failed to refine verdict');
+      }
+
+      // Update the last message's synthesis with the refined verdict
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0) {
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            synthesisResponse: data.refinedVerdict
+          };
+        }
+        return updated;
+      });
+
+      toast({
+        title: "Verdict refined",
+        description: "The synthesis has been updated based on your feedback",
+      });
+    } catch (error) {
+      console.error('Refine error:', error);
+      toast({
+        title: "Failed to refine verdict",
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
     }
@@ -375,7 +469,7 @@ const Index = () => {
     }
   };
 
-  const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
+  const handleSendMessage = async (userPrompt: string, fileUrl?: string, emailWhenReady?: boolean) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -407,10 +501,10 @@ const Index = () => {
     }
 
     // If recommendations disabled or no recommendation, proceed normally
-    await executeAudit(userPrompt, fileUrl, null);
+    await executeAudit(userPrompt, fileUrl, null, emailWhenReady);
   };
 
-  const executeAudit = async (userPrompt: string, fileUrl?: string, temporaryCouncil?: any) => {
+  const executeAudit = async (userPrompt: string, fileUrl?: string, temporaryCouncil?: any, emailWhenReady?: boolean) => {
 
     // Create conversation if this is the first message
     let conversationId = currentConversationId;
@@ -460,7 +554,8 @@ const Index = () => {
           fileUrl: fileUrl || null,
           conversationId: conversationId,
           councilConfig: temporaryCouncil || councilConfig || null,
-          councilSource: councilSource
+          councilSource: councilSource,
+          notifyByEmail: emailWhenReady || false
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
@@ -534,9 +629,12 @@ const Index = () => {
         isLoading: false,
         trainingDatasetId: data.trainingDatasetId,
         humanRating: 0,
+        draftARating: 0,
+        draftBRating: 0,
         agentNameA: data.agentNameA,
         agentNameB: data.agentNameB,
-        drafts: data.drafts || [] // Store the dynamic drafts array
+        drafts: data.drafts || [],
+        computeStats: data.computeStats
       };
 
       setMessages((prev) =>
@@ -763,10 +861,15 @@ const Index = () => {
                     agentNameB={message.agentNameB || councilConfig?.slot_2?.role}
                     messageId={message.trainingDatasetId}
                     onRatingChange={handleRatingChange}
+                    onDraftRating={handleDraftRating}
+                    onRefineVerdict={handleRefineVerdict}
                     currentRating={message.humanRating}
+                    draftARating={message.draftARating}
+                    draftBRating={message.draftBRating}
                     onModelSwap={updateCouncilSlot}
                     currentModelAId={councilConfig?.slot_1?.id || councilConfig?.slot_1}
                     currentModelBId={councilConfig?.slot_2?.id || councilConfig?.slot_2}
+                    computeStats={message.computeStats}
                   />
                 ))}
               </div>

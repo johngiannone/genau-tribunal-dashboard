@@ -1,12 +1,14 @@
 import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ChatInputProps {
-  onSend: (message: string, fileUrl?: string) => void;
+  onSend: (message: string, fileUrl?: string, emailWhenReady?: boolean) => void;
   disabled?: boolean;
 }
 
@@ -15,6 +17,7 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [emailWhenReady, setEmailWhenReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -139,12 +142,13 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       }
     }
 
-    // Send message
-    onSend(message.trim(), fileUrl);
+    // Send message with email flag
+    onSend(message.trim(), fileUrl, emailWhenReady);
     setMessage("");
     handleRemoveFile();
     setIsUploading(false);
     setUploadStatus("");
+    setEmailWhenReady(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -157,17 +161,30 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 pb-12 pointer-events-none z-50">
       <div className="max-w-2xl mx-auto px-6 pointer-events-auto">
-        {/* File Attachment Badge */}
+        {/* File Attachment Badge and Email Toggle */}
         {selectedFile && (
-          <div className="mb-4 inline-flex items-center gap-2 bg-secondary text-foreground px-4 py-2.5 rounded-full text-sm shadow-md border border-border">
-            <Paperclip className="h-4 w-4 text-primary" />
-            <span className="font-medium">{selectedFile.name}</span>
-            <button
-              onClick={handleRemoveFile}
-              className="ml-2 hover:bg-muted rounded-full p-1 transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div className="mb-4 flex items-center gap-4">
+            <div className="inline-flex items-center gap-2 bg-secondary text-foreground px-4 py-2.5 rounded-full text-sm shadow-md border border-border">
+              <Paperclip className="h-4 w-4 text-primary" />
+              <span className="font-medium">{selectedFile.name}</span>
+              <button
+                onClick={handleRemoveFile}
+                className="ml-2 hover:bg-muted rounded-full p-1 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 bg-secondary/50 px-3 py-2 rounded-full border border-border">
+              <Switch 
+                id="email-notify" 
+                checked={emailWhenReady} 
+                onCheckedChange={setEmailWhenReady}
+                className="data-[state=checked]:bg-primary"
+              />
+              <Label htmlFor="email-notify" className="text-xs cursor-pointer">
+                Email me when ready
+              </Label>
+            </div>
           </div>
         )}
         
