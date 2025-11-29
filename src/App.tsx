@@ -15,6 +15,7 @@ import Pricing from "./pages/Pricing";
 import Analytics from "./pages/Analytics";
 import Vault from "./pages/Vault";
 import Admin from "./pages/Admin";
+import AdminUserDetail from "./pages/AdminUserDetail";
 import Intelligence from "./pages/Intelligence";
 import Share from "./pages/Share";
 import Billing from "./pages/Billing";
@@ -45,6 +46,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute requireAdmin>
                 <Admin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/user/:userId" 
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminUserDetail />
               </ProtectedRoute>
             } 
           />
