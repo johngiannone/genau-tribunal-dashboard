@@ -101,7 +101,7 @@ serve(async (req) => {
     console.log("Account status check passed:", accountStatus)
 
     // 3. Parse request early to get prompt for moderation check
-    const { prompt, fileUrl, conversationId, councilConfig } = await req.json()
+    const { prompt, fileUrl, conversationId, councilConfig, councilSource } = await req.json()
     
     if (!prompt) {
       return new Response(
@@ -710,7 +710,7 @@ serve(async (req) => {
     // Run threshold checks in background
     checkCostThresholds().catch(err => console.error("Background threshold check error:", err))
 
-    // 9. Save to training dataset
+    // 9. Save to training dataset with council source for A/B testing
     let trainingDatasetId = null
     try {
       const { data: trainingData, error: trainingError } = await adminSupabase
@@ -724,7 +724,8 @@ serve(async (req) => {
           draft_b_response: drafts[1]?.response || '',
           verdict_model: auditorSlot.id,
           verdict_response: verdictData.choices[0].message.content,
-          model_config: councilConfig
+          model_config: councilConfig,
+          council_source: councilSource || 'default'
         })
         .select()
         .maybeSingle()
