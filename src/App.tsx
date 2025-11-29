@@ -13,6 +13,7 @@ import Analytics from "./pages/Analytics";
 import Vault from "./pages/Vault";
 import Admin from "./pages/Admin";
 import Share from "./pages/Share";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/vault" element={<Vault />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/settings/billing" element={<Billing />} />
           <Route path="/share/:slug" element={<Share />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

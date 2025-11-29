@@ -124,6 +124,42 @@ export type Database = {
           },
         ]
       }
+      billing_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          model_used: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brand_documents: {
         Row: {
           created_at: string | null
@@ -302,6 +338,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      organization_billing: {
+        Row: {
+          auto_recharge_amount: number | null
+          auto_recharge_enabled: boolean | null
+          auto_recharge_threshold: number | null
+          created_at: string
+          credit_balance: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_recharge_amount?: number | null
+          auto_recharge_enabled?: boolean | null
+          auto_recharge_threshold?: number | null
+          created_at?: string
+          credit_balance?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_recharge_amount?: number | null
+          auto_recharge_enabled?: boolean | null
+          auto_recharge_threshold?: number | null
+          created_at?: string
+          credit_balance?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
