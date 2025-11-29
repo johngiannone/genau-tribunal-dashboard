@@ -90,22 +90,34 @@ const Admin = () => {
 
   const fetchUsers = async () => {
     try {
+      // First fetch all user usage rows
       const { data, error } = await supabase
         .from('user_usage')
-        .select(`
-          *,
-          profiles(email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Flatten the data structure to include email at the top level
-      const usersWithEmail = (data || []).map((row: any) => ({
+
+      const usageRows = data || [];
+      const userIds = usageRows.map((row: any) => row.user_id);
+
+      // Then fetch emails for those users from profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      const emailByUserId = new Map<string, string | null>(
+        (profilesData || []).map((profile: any) => [profile.id, profile.email]),
+      );
+
+      const usersWithEmail = usageRows.map((row: any) => ({
         ...row,
-        email: row.profiles?.email || null
+        email: emailByUserId.get(row.user_id) || null,
       }));
-      
+
       setUsers(usersWithEmail);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -114,7 +126,6 @@ const Admin = () => {
       setLoading(false);
     }
   };
-
   const updateUser = async (userId: string, updates: Partial<UserData>) => {
     try {
       const { error } = await supabase
