@@ -19,16 +19,25 @@ interface UserBanStatus {
   violation_count: number;
 }
 
+interface UserSuspensionStatus {
+  user_id: string;
+  account_status: 'active' | 'inactive' | 'disabled';
+  suspended_until: string | null;
+  violation_count: number;
+}
+
 export const SecurityLogsPanel = () => {
   const [logs, setLogs] = useState<SecurityLog[]>([]);
   const [bannedUsers, setBannedUsers] = useState<UserBanStatus[]>([]);
+  const [suspendedUsers, setSuspendedUsers] = useState<UserSuspensionStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSecurityLogs();
     fetchBannedUsers();
+    fetchSuspendedUsers();
     
-    // Listen for new activity logs with ban notifications
+    // Listen for new activity logs with ban/suspension notifications
     const channel = supabase
       .channel('ban-notifications')
       .on(
@@ -65,6 +74,13 @@ export const SecurityLogsPanel = () => {
             
             // Refresh banned users list
             fetchBannedUsers();
+          }
+          
+          // Check if this is an automated suspension
+          if (metadata?.reason === 'brute_force_prevention') {
+            console.log("User suspended for brute force attempts:", payload.new.user_id);
+            toast.info("User automatically suspended for repeated unauthorized access");
+            fetchSuspendedUsers();
           }
         }
       )
@@ -151,6 +167,70 @@ export const SecurityLogsPanel = () => {
 
     toast.success("User unbanned successfully");
     fetchBannedUsers();
+  };
+
+  const fetchSuspendedUsers = async () => {
+    const { data, error } = await supabase
+      .from("user_usage")
+      .select("user_id, account_status, suspended_until")
+      .eq("account_status", "inactive")
+      .not("suspended_until", "is", null)
+      .order("suspended_until", { ascending: true });
+
+    if (error) {
+      console.error("Failed to fetch suspended users:", error);
+      return;
+    }
+
+    // Get unauthorized access attempt counts for each suspended user
+    const usersWithCounts = await Promise.all(
+      (data || []).map(async (user) => {
+        const { count } = await supabase
+          .from("activity_logs")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.user_id)
+          .eq("activity_type", "unauthorized_access")
+          .gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString()); // Last 10 minutes
+
+        return {
+          ...user,
+          violation_count: count || 0,
+        };
+      })
+    );
+
+    setSuspendedUsers(usersWithCounts);
+  };
+
+  const unsuspendUser = async (userId: string) => {
+    const { error } = await supabase
+      .from("user_usage")
+      .update({
+        account_status: "active",
+        suspended_until: null,
+      })
+      .eq("user_id", userId);
+
+    if (error) {
+      toast.error("Failed to unsuspend user");
+      console.error(error);
+      return;
+    }
+
+    // Log unsuspend activity
+    await supabase
+      .from("activity_logs")
+      .insert({
+        user_id: userId,
+        activity_type: "admin_change",
+        description: "User suspension manually lifted by administrator",
+        metadata: {
+          manual_unsuspend: true
+        }
+      });
+
+    toast.success("User suspension has been lifted");
+    fetchSuspendedUsers();
   };
 
   const getCategoryBadgeColor = (category: string) => {
@@ -241,6 +321,81 @@ export const SecurityLogsPanel = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Suspended Users Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            Temporarily Suspended Users
+          </CardTitle>
+          <CardDescription>
+            Users temporarily suspended for repeated unauthorized access attempts. {suspendedUsers.length} currently suspended.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {suspendedUsers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Check className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-50" />
+              <p>No suspended users</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User ID</TableHead>
+                    <TableHead>Suspended Until</TableHead>
+                    <TableHead>Failed Attempts</TableHead>
+                    <TableHead>Time Remaining</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suspendedUsers.map((user) => {
+                    const timeRemaining = user.suspended_until 
+                      ? Math.ceil((new Date(user.suspended_until).getTime() - Date.now()) / 60000)
+                      : 0;
+                    const isExpired = timeRemaining <= 0;
+
+                    return (
+                      <TableRow key={user.user_id}>
+                        <TableCell className="font-mono text-xs">
+                          {user.user_id.substring(0, 12)}...
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {user.suspended_until
+                            ? formatDistanceToNow(new Date(user.suspended_until), { addSuffix: true })
+                            : "Unknown"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{user.violation_count} attempts</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isExpired ? (
+                            <Badge variant="outline" className="bg-green-50">Expired</Badge>
+                          ) : (
+                            <Badge variant="default">{timeRemaining} min</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => unsuspendUser(user.user_id)}
+                          >
+                            Lift Suspension
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

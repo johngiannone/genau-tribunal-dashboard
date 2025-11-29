@@ -47,6 +47,7 @@ const Index = () => {
     audits_this_month: number;
     subscription_tier: string | null;
     account_status: 'active' | 'inactive' | 'disabled';
+    suspended_until?: string | null;
   } | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasContext, setHasContext] = useState(false);
@@ -144,7 +145,7 @@ const Index = () => {
 
     const { data, error } = await supabase
       .from('user_usage')
-      .select('audit_count, is_premium, audits_this_month, subscription_tier, account_status')
+      .select('audit_count, is_premium, audits_this_month, subscription_tier, account_status, suspended_until')
       .eq('user_id', session.user.id)
       .single();
 
@@ -153,17 +154,31 @@ const Index = () => {
       return;
     }
 
-    // Check account status and sign out if disabled or inactive
-    if (data && (data.account_status === 'disabled' || data.account_status === 'inactive')) {
+    // Check if account is temporarily suspended
+    if (data && data.account_status === 'inactive' && data.suspended_until) {
+      const suspendedUntil = new Date(data.suspended_until);
+      if (suspendedUntil > new Date()) {
+        const minutes = Math.ceil((suspendedUntil.getTime() - Date.now()) / 60000);
+        await supabase.auth.signOut();
+        
+        toast({
+          title: "Account Suspended",
+          description: `Your account is temporarily suspended due to repeated unauthorized access attempts. Try again in ${minutes} minutes.`,
+          variant: "destructive",
+        });
+        
+        navigate("/auth");
+        return;
+      }
+    }
+
+    // Check account status and sign out if disabled
+    if (data && data.account_status === 'disabled') {
       await supabase.auth.signOut();
       
-      const statusMessage = data.account_status === 'disabled'
-        ? 'Your account has been disabled. Please contact support.'
-        : 'Your account is inactive. Please contact support to reactivate.';
-      
       toast({
-        title: `Account ${data.account_status === 'disabled' ? 'Disabled' : 'Inactive'}`,
-        description: statusMessage,
+        title: "Account Disabled",
+        description: "Your account has been disabled. Please contact support.",
         variant: "destructive",
       });
       

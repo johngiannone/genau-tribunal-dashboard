@@ -602,6 +602,7 @@ export type Database = {
           monthly_budget_limit: number | null
           per_audit_cost_threshold: number | null
           subscription_tier: string | null
+          suspended_until: string | null
           updated_at: string | null
           user_id: string
         }
@@ -621,6 +622,7 @@ export type Database = {
           monthly_budget_limit?: number | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
+          suspended_until?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -640,6 +642,7 @@ export type Database = {
           monthly_budget_limit?: number | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
+          suspended_until?: string | null
           updated_at?: string | null
           user_id?: string
         }
