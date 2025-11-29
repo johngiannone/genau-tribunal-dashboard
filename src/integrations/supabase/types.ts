@@ -526,6 +526,7 @@ export type Database = {
         Row: {
           council_config: Json | null
           created_at: string
+          email: string | null
           enable_model_recommendations: boolean | null
           favorite_models: Json | null
           id: string
@@ -534,6 +535,7 @@ export type Database = {
         Insert: {
           council_config?: Json | null
           created_at?: string
+          email?: string | null
           enable_model_recommendations?: boolean | null
           favorite_models?: Json | null
           id: string
@@ -542,6 +544,7 @@ export type Database = {
         Update: {
           council_config?: Json | null
           created_at?: string
+          email?: string | null
           enable_model_recommendations?: boolean | null
           favorite_models?: Json | null
           id?: string
