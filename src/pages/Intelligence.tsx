@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Brain, TrendingUp, AlertTriangle, Activity } from "lucide-react";
+import { ArrowLeft, Brain, TrendingUp, AlertTriangle, Activity, Clock } from "lucide-react";
 import { FingerprintCollisionReport } from "@/components/intelligence/FingerprintCollisionReport";
 import { TimezoneMismatchDetection } from "@/components/intelligence/TimezoneMismatchDetection";
 import { BotLikelihoodScoring } from "@/components/intelligence/BotLikelihoodScoring";
 import { BehavioralBiometricsPanel } from "@/components/intelligence/BehavioralBiometricsPanel";
 import { FeatureUsageHeatmap } from "@/components/intelligence/FeatureUsageHeatmap";
+import { ForensicTimeline } from "@/components/intelligence/ForensicTimeline";
 
 interface IntelligenceMetrics {
   totalUsers: number;
@@ -233,8 +234,12 @@ export default function Intelligence() {
         </div>
 
         {/* Intelligence Reports */}
-        <Tabs defaultValue="collisions" className="space-y-6">
+        <Tabs defaultValue="timeline" className="space-y-6">
           <TabsList className="bg-[#F5F5F7] border border-[#E5E5EA]">
+            <TabsTrigger value="timeline" className="data-[state=active]:bg-white">
+              <Clock className="h-4 w-4 mr-2" />
+              Forensic Timeline
+            </TabsTrigger>
             <TabsTrigger value="collisions" className="data-[state=active]:bg-white">
               <AlertTriangle className="h-4 w-4 mr-2" />
               Collision Reports
@@ -252,6 +257,10 @@ export default function Intelligence() {
               Feature Usage
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="timeline" className="space-y-6">
+            <ForensicTimeline />
+          </TabsContent>
 
           <TabsContent value="collisions" className="space-y-6">
             <FingerprintCollisionReport onRefresh={fetchIntelligenceMetrics} />
