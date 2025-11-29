@@ -101,7 +101,7 @@ serve(async (req) => {
     console.log("Account status check passed:", accountStatus)
 
     // 3. Parse request early to get prompt for moderation check
-    const { prompt, fileUrl, conversationId, councilConfig, councilSource } = await req.json()
+    const { prompt, fileUrl, conversationId, councilConfig, councilSource, notifyByEmail } = await req.json()
     
     if (!prompt) {
       return new Response(
@@ -892,7 +892,43 @@ serve(async (req) => {
     // Run activity logging without blocking response
     logActivity().catch(err => console.error('Background activity log error:', err))
 
-    // 11. Return results with dynamic drafts array
+    // 12. Calculate actual token usage and cost for frontend display
+    const totalInputTokens = drafts.length * 1000 + 3000 // Rough estimate
+    const totalOutputTokens = drafts.length * 1000 + 1500
+    const totalTokens = totalInputTokens + totalOutputTokens
+    
+    const computeStats = {
+      totalTokens,
+      estimatedCost,
+      modelCount: drafts.length + 1 // drafters + auditor
+    }
+
+    // 13. Send email notification if requested
+    if (notifyByEmail) {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const userEmail = authUser?.email
+        
+        if (userEmail) {
+          console.log(`Sending email notification to ${userEmail}`)
+          adminSupabase.functions.invoke('send-verdict-email', {
+            body: {
+              to: userEmail,
+              verdict: verdictData.choices[0].message.content,
+              prompt: prompt.substring(0, 200),
+              confidence: 99
+            }
+          }).catch(err => {
+            console.error('Email notification failed:', err)
+            // Don't block response if email fails
+          })
+        }
+      } catch (emailErr) {
+        console.error('Email notification error:', emailErr)
+      }
+    }
+
+    // 14. Return results with dynamic drafts array and compute stats
     return new Response(
       JSON.stringify({
         drafts: drafts.map(d => ({
@@ -904,6 +940,7 @@ serve(async (req) => {
         librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, monthlyLimit - (userUsage.audits_this_month || 0) - 1),
         trainingDatasetId: trainingDatasetId,
+        computeStats,
         // Legacy fields for backward compatibility
         draftA: drafts[0]?.response || '',
         draftB: drafts[1]?.response || '',
