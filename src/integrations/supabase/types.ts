@@ -612,6 +612,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_fingerprints: {
+        Row: {
+          canvas_hash: string | null
+          collected_at: string | null
+          cpu_cores: number | null
+          device_memory: number | null
+          fingerprint_hash: string
+          id: string
+          metadata: Json | null
+          platform: string | null
+          screen_resolution: string | null
+          session_id: string | null
+          timezone_offset: number | null
+          user_agent: string | null
+          user_id: string | null
+          webgl_renderer: string | null
+        }
+        Insert: {
+          canvas_hash?: string | null
+          collected_at?: string | null
+          cpu_cores?: number | null
+          device_memory?: number | null
+          fingerprint_hash: string
+          id?: string
+          metadata?: Json | null
+          platform?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
+          timezone_offset?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+          webgl_renderer?: string | null
+        }
+        Update: {
+          canvas_hash?: string | null
+          collected_at?: string | null
+          cpu_cores?: number | null
+          device_memory?: number | null
+          fingerprint_hash?: string
+          id?: string
+          metadata?: Json | null
+          platform?: string | null
+          screen_resolution?: string | null
+          session_id?: string | null
+          timezone_offset?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+          webgl_renderer?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

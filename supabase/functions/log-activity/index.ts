@@ -42,8 +42,21 @@ Deno.serve(async (req) => {
                      'unknown'
     
     const userAgent = req.headers.get('user-agent') || null
+    
+    // Capture additional headers for Phase 1: Enhanced Header Collection
+    const referer = req.headers.get('referer') || null
+    const origin = req.headers.get('origin') || null
+    const acceptLanguage = req.headers.get('accept-language') || null
+    
+    // Enrich metadata with additional headers
+    const enrichedMetadata = {
+      ...metadata,
+      referer,
+      origin,
+      acceptLanguage,
+    }
 
-    // Insert activity log
+    // Insert activity log with enriched metadata
     const { error: insertError } = await supabaseClient
       .from('activity_logs')
       .insert({
@@ -52,7 +65,7 @@ Deno.serve(async (req) => {
         description,
         ip_address: ipAddress,
         user_agent: userAgent,
-        metadata: metadata || {}
+        metadata: enrichedMetadata
       })
 
     if (insertError) {
