@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Shield, Loader2, ArrowLeft, Ban, Mail } from "lucide-react";
+import { Shield, Loader2, ArrowLeft, Ban, Mail, Brain } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
@@ -236,19 +236,28 @@ const Admin = () => {
         {/* Main Content Area */}
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/app")}
+                  className="text-[#86868B] hover:text-[#0071E3]"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <Shield className="w-8 h-8 text-[#0071E3]" />
+                <h1 className="text-4xl font-bold text-[#111111]">
+                  Admin Panel
+                </h1>
+              </div>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/app")}
-                className="text-[#86868B] hover:text-[#0071E3]"
+                onClick={() => navigate("/admin/intelligence")}
+                className="bg-[#0071E3] hover:bg-[#0077ED] text-white"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <Brain className="w-4 h-4 mr-2" />
+                Intelligence Dashboard
               </Button>
-              <Shield className="w-8 h-8 text-[#0071E3]" />
-              <h1 className="text-4xl font-bold text-[#111111]">
-                Admin Panel
-              </h1>
             </div>
 
             {/* Tabs for different sections */}
