@@ -36,6 +36,7 @@ import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
 import { PriceSyncPanel } from "@/components/PriceSyncPanel";
+import { BillingTransactionsPanel } from "@/components/BillingTransactionsPanel";
 import { CostAlertsPanel } from "@/components/CostAlertsPanel";
 import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
@@ -478,6 +479,8 @@ const Admin = () => {
           </div>
           
           <PriceSyncPanel />
+          
+          <BillingTransactionsPanel />
         </div>
       </TabsContent>
 
