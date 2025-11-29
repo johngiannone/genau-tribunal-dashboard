@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink } from "lucide-react";
 
 interface SharedAudit {
   user_prompt: string;
@@ -32,6 +31,31 @@ const Share = () => {
 
     fetchSharedAudit();
   }, [slug]);
+
+  // Update meta tags for social sharing
+  useEffect(() => {
+    if (audit) {
+      const ogTitle = `Genau Audit: ${audit.user_prompt.substring(0, 50)}${audit.user_prompt.length > 50 ? '...' : ''}`;
+      const ogDescription = `Verdict: ${audit.synthesis.substring(0, 150)}${audit.synthesis.length > 150 ? '...' : ''} | ${audit.confidence}% Confidence`;
+      
+      document.title = ogTitle;
+      
+      const updateMetaTag = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', property);
+          document.head.appendChild(meta);
+        }
+        meta.content = content;
+      };
+      
+      updateMetaTag('og:title', ogTitle);
+      updateMetaTag('og:description', ogDescription);
+      updateMetaTag('twitter:title', ogTitle);
+      updateMetaTag('twitter:description', ogDescription);
+    }
+  }, [audit]);
 
   const fetchSharedAudit = async () => {
     if (!slug) return;
@@ -70,10 +94,10 @@ const Share = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground font-mono text-sm">Loading shared audit...</p>
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#86868B] font-mono text-sm">Loading shared audit...</p>
         </div>
       </div>
     );
@@ -81,14 +105,13 @@ const Share = () => {
 
   if (notFound || !audit) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <h1 className="text-4xl font-bold text-foreground mb-4">404</h1>
-          <p className="text-muted-foreground mb-6">
+          <h1 className="text-4xl font-bold text-[#111111] mb-4">404</h1>
+          <p className="text-[#86868B] mb-6">
             This shared audit doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate("/auth")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button onClick={() => navigate("/auth")} className="bg-[#0071E3] hover:bg-[#0077ED] text-white">
             Go to Home
           </Button>
         </div>
@@ -97,44 +120,37 @@ const Share = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-white">
+      {/* Premium Header */}
+      <header className="border-b border-gray-200 bg-white sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
+              <span className="text-white font-black text-lg">G</span>
+            </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground font-mono">
-                GENAU
-              </h1>
-              <p className="text-xs text-muted-foreground font-mono">
-                Shared Consensus Audit
-              </p>
+              <h1 className="text-lg font-bold text-[#111111]">GENAU</h1>
+              <p className="text-xs text-[#86868B] font-mono">Audit Report #{slug}</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open("/", "_blank")}
-            className="gap-2"
+          <Button 
+            onClick={() => navigate("/auth")}
+            className="bg-[#0071E3] hover:bg-[#0077ED] text-white"
           >
-            <ExternalLink className="w-4 h-4" />
-            Try GENAU
+            Run Your Own Audit
           </Button>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="mb-6 text-xs text-muted-foreground font-mono">
+      <main className="max-w-5xl mx-auto px-6 py-8 pb-32">
+        {/* Question Audited Section */}
+        <div className="bg-[#F5F5F7] rounded-2xl p-6 mb-8 shadow-sm">
+          <p className="text-xs text-[#86868B] uppercase tracking-wide mb-2 font-semibold">Question Audited</p>
+          <h2 className="text-xl font-semibold text-[#111111] leading-relaxed">{audit.user_prompt}</h2>
+        </div>
+
+        <div className="mb-4 text-xs text-[#86868B] font-mono">
           Shared on {new Date(audit.created_at).toLocaleDateString()}
         </div>
         
@@ -148,18 +164,29 @@ const Share = () => {
           modelBName={audit.model_b_name}
           isLoading={false}
         />
-        
-        <div className="mt-12 text-center">
-          <div className="inline-block bg-card border border-border rounded-lg px-6 py-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              Want to run your own consensus audits?
-            </p>
-            <Button onClick={() => navigate("/auth")} size="lg">
-              Get Started with GENAU
-            </Button>
-          </div>
-        </div>
       </main>
+
+      {/* Sticky Footer CTA */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-sm">G</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#111111]">Generated by Genau</p>
+              <p className="text-xs text-[#86868B]">The AI Consensus Engine</p>
+            </div>
+          </div>
+          <Button 
+            onClick={() => navigate("/auth")} 
+            size="lg" 
+            className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg"
+          >
+            Run Your Own Audit →
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
