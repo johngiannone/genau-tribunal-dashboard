@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 
 interface Conversation {
@@ -36,7 +36,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, canAccessBilling } = useUserRole();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -281,13 +281,15 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             >
               <BarChart2 className="w-5 h-5 mx-auto" />
             </button>
-            <button 
-              onClick={() => navigate("/settings/billing")}
-              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
-              title="Billing"
-            >
-              <CreditCard className="w-5 h-5 mx-auto" />
-            </button>
+            {canAccessBilling && (
+              <button 
+                onClick={() => navigate("/settings/billing")}
+                className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
+                title="Billing"
+              >
+                <CreditCard className="w-5 h-5 mx-auto" />
+              </button>
+            )}
             <button 
               onClick={() => navigate("/settings")}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
