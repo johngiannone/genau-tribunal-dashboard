@@ -124,6 +124,39 @@ export type Database = {
           },
         ]
       }
+      auto_recharge_attempts: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          status: string
+          stripe_session_id: string | null
+          triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          status?: string
+          stripe_session_id?: string | null
+          triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          status?: string
+          stripe_session_id?: string | null
+          triggered_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       billing_transactions: {
         Row: {
           amount: number

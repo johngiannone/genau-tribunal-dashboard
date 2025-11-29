@@ -629,6 +629,19 @@ serve(async (req) => {
 
     console.log(`Credits deducted: $${estimatedCost.toFixed(6)}, New balance: $${newBalance.toFixed(6)}`)
 
+    // Trigger auto-recharge if enabled and balance below threshold (non-blocking)
+    if (organizationBilling.auto_recharge_enabled && 
+        newBalance < organizationBilling.auto_recharge_threshold) {
+      console.log(`Balance below threshold ($${organizationBilling.auto_recharge_threshold}), triggering auto-recharge`);
+      
+      adminSupabase.functions.invoke('process-auto-recharge', {
+        body: { user_id: user.id }
+      }).catch(err => {
+        console.error('Auto-recharge trigger failed:', err);
+        // Don't block the audit if auto-recharge fails
+      });
+    }
+
     // 8. Log analytics for all models with cost tracking
     const analyticsEvents = [
       ...drafts.map((draft, index) => {
