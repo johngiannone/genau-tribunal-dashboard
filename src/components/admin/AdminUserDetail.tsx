@@ -78,6 +78,12 @@ interface ActivityLog {
   metadata: any;
 }
 
+interface IPLocation {
+  city: string;
+  country: string;
+  countryCode: string | null;
+}
+
 interface UsageData {
   date: string;
   audits: number;
@@ -90,6 +96,7 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
   const [usageData, setUsageData] = useState<UsageData[]>([]);
   const [userUsage, setUserUsage] = useState<any>(null);
   const [riskScore, setRiskScore] = useState(0);
+  const [ipLocations, setIpLocations] = useState<Map<string, IPLocation>>(new Map());
 
   useEffect(() => {
     if (open && userId) {
@@ -134,6 +141,26 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
         ).length || 0;
         
         setRiskScore(Math.min(failedLogins * 10, 100));
+
+        // Fetch IP geolocation for unique IPs
+        const uniqueIps = [...new Set(logs?.map(log => log.ip_address).filter(Boolean) as string[])];
+        const locationPromises = uniqueIps.map(async (ip) => {
+          try {
+            const { data, error } = await supabase.functions.invoke('get-ip-location', {
+              body: { ip }
+            });
+            if (!error && data) {
+              return { ip, location: data };
+            }
+          } catch (err) {
+            console.error(`Failed to fetch location for ${ip}:`, err);
+          }
+          return { ip, location: { city: 'Unknown', country: 'Unknown', countryCode: null } };
+        });
+
+        const locations = await Promise.all(locationPromises);
+        const locationsMap = new Map(locations.map(({ ip, location }) => [ip, location]));
+        setIpLocations(locationsMap);
       }
 
       // Fetch user usage data
@@ -274,7 +301,11 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                     <p className="text-sm text-muted-foreground">Location</p>
                     <p className="font-medium flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
-                      {activityLogs[0]?.ip_address || 'Unknown'}
+                      {activityLogs[0]?.ip_address ? (
+                        <>
+                          {ipLocations.get(activityLogs[0].ip_address)?.city || 'Unknown'}, {ipLocations.get(activityLogs[0].ip_address)?.country || 'Unknown'}
+                        </>
+                      ) : 'Unknown'}
                     </p>
                   </div>
                 </div>
@@ -397,22 +428,37 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>IP Address</TableHead>
                         <TableHead>Device</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getLoginHistory().map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell className="text-sm">
-                            {new Date(log.created_at).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-sm">{log.ip_address || 'Unknown'}</TableCell>
-                          <TableCell className="text-sm">
-                            {parseUserAgent(log.user_agent)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {getLoginHistory().map((log) => {
+                        const location = log.ip_address ? ipLocations.get(log.ip_address) : null;
+                        return (
+                          <TableRow key={log.id}>
+                            <TableCell className="text-sm">
+                              {new Date(log.created_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {location ? (
+                                <span className="flex items-center gap-1">
+                                  {location.countryCode && <span>{location.countryCode}</span>}
+                                  {location.city !== 'Unknown' && `${location.city}, ${location.country}`}
+                                  {location.city === 'Unknown' && location.country}
+                                </span>
+                              ) : (
+                                'Unknown'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">{log.ip_address || 'Unknown'}</TableCell>
+                            <TableCell className="text-sm">
+                              {parseUserAgent(log.user_agent)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
