@@ -56,6 +56,7 @@ export default function Billing() {
   const [rechargeAttempts, setRechargeAttempts] = useState<AutoRechargeAttempt[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   
   const [autoRechargeEnabled, setAutoRechargeEnabled] = useState(false);
   const [autoRechargeThreshold, setAutoRechargeThreshold] = useState('20');
@@ -63,6 +64,22 @@ export default function Billing() {
 
   useEffect(() => {
     fetchBillingData();
+    
+    // Check for purchase result in URL params
+    const params = new URLSearchParams(window.location.search);
+    const purchaseStatus = params.get('purchase');
+    const amount = params.get('amount');
+    
+    if (purchaseStatus === 'success' && amount) {
+      toast.success(`Successfully added $${amount} in credits!`);
+      // Clear URL params
+      window.history.replaceState({}, '', '/settings/billing');
+      // Refresh billing data
+      setTimeout(() => fetchBillingData(), 1000);
+    } else if (purchaseStatus === 'cancelled') {
+      toast.error('Credit purchase was cancelled');
+      window.history.replaceState({}, '', '/settings/billing');
+    }
   }, []);
 
   const fetchBillingData = async () => {
@@ -143,6 +160,34 @@ export default function Billing() {
     } else {
       toast.success("Auto-recharge settings updated");
       fetchBillingData();
+    }
+  };
+
+  const handlePurchaseCredits = async (amount: number) => {
+    setCheckoutLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { amount }
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        toast.error('Failed to create checkout session');
+        return;
+      }
+
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        toast.error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast.error('Failed to initiate checkout');
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -266,27 +311,46 @@ export default function Billing() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  onClick={() => handlePurchaseCredits(50)}
+                  disabled={checkoutLoading}
+                >
                   <span className="text-2xl font-bold">$50</span>
                   <span className="text-xs text-gray-500">50 credits</span>
                 </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  onClick={() => handlePurchaseCredits(100)}
+                  disabled={checkoutLoading}
+                >
                   <span className="text-2xl font-bold">$100</span>
                   <span className="text-xs text-gray-500">100 credits</span>
                 </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  onClick={() => handlePurchaseCredits(250)}
+                  disabled={checkoutLoading}
+                >
                   <span className="text-2xl font-bold">$250</span>
                   <span className="text-xs text-gray-500">250 credits</span>
                 </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  onClick={() => handlePurchaseCredits(500)}
+                  disabled={checkoutLoading}
+                >
                   <span className="text-2xl font-bold">$500</span>
                   <span className="text-xs text-gray-500">500 credits</span>
                 </Button>
               </div>
-              <Button className="w-full" size="lg">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Custom Amount
-              </Button>
+              {checkoutLoading && (
+                <p className="text-sm text-gray-500 text-center">Redirecting to Stripe Checkout...</p>
+              )}
             </CardContent>
           </Card>
 
