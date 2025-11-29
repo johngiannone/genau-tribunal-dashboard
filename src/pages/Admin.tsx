@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { toast } from "sonner";
 import {
   Table,
@@ -64,7 +63,6 @@ interface UserData {
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusChangeDialog, setStatusChangeDialog] = useState<{
@@ -79,17 +77,8 @@ const Admin = () => {
   const [emailUser, setEmailUser] = useState<{ userId: string; email: string } | null>(null);
 
   useEffect(() => {
-    if (!adminLoading && !isAdmin) {
-      toast.error("Unauthorized access");
-      navigate("/app");
-    }
-  }, [isAdmin, adminLoading, navigate]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin]);
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -228,16 +217,12 @@ const Admin = () => {
     }
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null;
   }
 
   return (
