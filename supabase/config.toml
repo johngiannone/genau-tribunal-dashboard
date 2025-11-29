@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.store-biometrics]
 verify_jwt = false
+
+[functions.analyze-security-risks]
+verify_jwt = false
