@@ -4,11 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { FileDown, FileText, Download } from "lucide-react";
-import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { FileDown, FileText, CalendarIcon } from "lucide-react";
+import { format, subDays, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Transaction {
   id: string;
@@ -22,19 +26,41 @@ interface Transaction {
 }
 
 export const BillingTransactionsPanel = () => {
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
+
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ['admin-billing-transactions'],
+    queryKey: ['admin-billing-transactions', dateRange],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('billing_transactions')
         .select('*')
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString())
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(1000);
       
       if (error) throw error;
       return data as Transaction[];
     },
   });
+
+  const applyPreset = (preset: 'last7' | 'last30' | 'thisMonth') => {
+    const now = new Date();
+    switch (preset) {
+      case 'last7':
+        setDateRange({ from: subDays(now, 7), to: now });
+        break;
+      case 'last30':
+        setDateRange({ from: subDays(now, 30), to: now });
+        break;
+      case 'thisMonth':
+        setDateRange({ from: startOfMonth(now), to: now });
+        break;
+    }
+  };
 
   const exportToCSV = () => {
     if (!transactions || transactions.length === 0) {
@@ -148,10 +174,70 @@ export const BillingTransactionsPanel = () => {
               Transaction History
             </CardTitle>
             <CardDescription>
-              Organization-wide billing transactions (last 100)
+              Organization-wide billing transactions
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mr-2">
+              <Button
+                onClick={() => applyPreset('last7')}
+                variant="outline"
+                size="sm"
+                className="border-[#E5E5EA]"
+              >
+                Last 7 Days
+              </Button>
+              <Button
+                onClick={() => applyPreset('last30')}
+                variant="outline"
+                size="sm"
+                className="border-[#E5E5EA]"
+              >
+                Last 30 Days
+              </Button>
+              <Button
+                onClick={() => applyPreset('thisMonth')}
+                variant="outline"
+                size="sm"
+                className="border-[#E5E5EA]"
+              >
+                This Month
+              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-[#E5E5EA] min-w-[240px] justify-start"
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">From</label>
+                      <Calendar
+                        mode="single"
+                        selected={dateRange.from}
+                        onSelect={(date) => date && setDateRange(prev => ({ ...prev, from: date }))}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">To</label>
+                      <Calendar
+                        mode="single"
+                        selected={dateRange.to}
+                        onSelect={(date) => date && setDateRange(prev => ({ ...prev, to: date }))}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <Button
               onClick={exportToCSV}
               variant="outline"
