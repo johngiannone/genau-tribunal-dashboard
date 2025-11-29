@@ -49,6 +49,7 @@ import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { FingerprintAnalyticsPanel } from "@/components/FingerprintAnalyticsPanel";
 import { DisposableEmailStatsPanel } from "@/components/admin/DisposableEmailStatsPanel";
 import { AutomatedBanPanel } from "@/components/admin/AutomatedBanPanel";
+import { AdminUserDetail } from "@/components/admin/AdminUserDetail";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -83,6 +84,7 @@ const Admin = () => {
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [statusChangeMessage, setStatusChangeMessage] = useState("");
   const [emailUser, setEmailUser] = useState<{ userId: string; email: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ userId: string; email: string } | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -317,7 +319,10 @@ const Admin = () => {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.user_id} className={user.is_banned ? "bg-red-50" : ""}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell 
+                    className="font-mono text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
+                    onClick={() => setSelectedUser({ userId: user.user_id, email: user.email || 'Unknown' })}
+                  >
                     {user.user_id.slice(0, 8)}...
                   </TableCell>
                   <TableCell className="text-sm text-[#111111]">
@@ -680,6 +685,14 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* User Detail Sheet */}
+      <AdminUserDetail
+        userId={selectedUser?.userId || null}
+        userEmail={selectedUser?.email || null}
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+      />
     </div>
   );
 };
