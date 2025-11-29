@@ -465,15 +465,25 @@ const Admin = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateUser(user.user_id, {
-                        audits_this_month: (user.audits_this_month || 0) + 50
-                      })}
-                    >
-                      +50 Audits
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/admin/user/${user.user_id}`)}
+                        className="text-[#0071E3] border-[#0071E3] hover:bg-[#0071E3] hover:text-white"
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateUser(user.user_id, {
+                          audits_this_month: (user.audits_this_month || 0) + 50
+                        })}
+                      >
+                        +50 Audits
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
