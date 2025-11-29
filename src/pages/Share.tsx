@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { Button } from "@/components/ui/button";
-import { Twitter, Linkedin, MessageCircle } from "lucide-react";
+import { Twitter, Linkedin, MessageCircle, Link } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface SharedAudit {
   user_prompt: string;
@@ -19,6 +20,7 @@ interface SharedAudit {
 const Share = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [audit, setAudit] = useState<SharedAudit | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -116,6 +118,22 @@ const Share = () => {
     window.open(url, '_blank', 'width=600,height=400');
   };
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copied!",
+        description: "Share link has been copied to clipboard.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -182,6 +200,14 @@ const Share = () => {
           
           <div className="flex items-center gap-2">
             <span className="text-xs text-[#86868B] mr-2 font-medium">Share:</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="bg-white border-gray-200 hover:bg-[#111111] hover:text-white hover:border-[#111111] transition-all"
+            >
+              <Link className="w-4 h-4" />
+            </Button>
             <Button
               variant="outline"
               size="sm"
