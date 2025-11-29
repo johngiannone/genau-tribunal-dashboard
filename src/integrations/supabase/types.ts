@@ -199,8 +199,14 @@ export type Database = {
           block_expires_at: string | null
           blocked_at: string
           blocked_reason: string
+          country_code: string | null
+          detection_data: Json | null
+          fraud_score: number | null
           ip_address: string
           is_permanent: boolean
+          is_proxy: boolean | null
+          is_tor: boolean | null
+          is_vpn: boolean | null
           metadata: Json | null
         }
         Insert: {
@@ -208,8 +214,14 @@ export type Database = {
           block_expires_at?: string | null
           blocked_at?: string
           blocked_reason: string
+          country_code?: string | null
+          detection_data?: Json | null
+          fraud_score?: number | null
           ip_address: string
           is_permanent?: boolean
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
           metadata?: Json | null
         }
         Update: {
@@ -217,8 +229,14 @@ export type Database = {
           block_expires_at?: string | null
           blocked_at?: string
           blocked_reason?: string
+          country_code?: string | null
+          detection_data?: Json | null
+          fraud_score?: number | null
           ip_address?: string
           is_permanent?: boolean
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
           metadata?: Json | null
         }
         Relationships: []

@@ -36,6 +36,22 @@ const Auth = () => {
         return;
       }
 
+      // Check for VPN/Proxy detection
+      const { data: vpnCheckData, error: vpnCheckError } = await supabase.functions.invoke('detect-vpn-proxy');
+      
+      if (vpnCheckError) {
+        console.error('Error checking VPN/proxy:', vpnCheckError);
+        // Continue with signup even if check fails
+      } else if (vpnCheckData?.suspicious) {
+        toast({
+          title: "Suspicious Connection Detected",
+          description: `We detected that you may be using a ${vpnCheckData.is_vpn ? 'VPN' : vpnCheckData.is_proxy ? 'proxy' : 'suspicious network'}. Account creation from VPNs and proxies is restricted for security reasons.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const redirectUrl = `${window.location.origin}/app`;
       const { error } = await supabase.auth.signUp({
         email,

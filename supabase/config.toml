@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.check-ip-block]
 verify_jwt = false
+
+[functions.detect-vpn-proxy]
+verify_jwt = false

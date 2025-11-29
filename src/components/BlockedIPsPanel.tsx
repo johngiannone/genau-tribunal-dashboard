@@ -128,9 +128,11 @@ export const BlockedIPsPanel = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>IP Address</TableHead>
+                    <TableHead>Detection</TableHead>
+                    <TableHead>Fraud Score</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Blocked At</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Reason</TableHead>
                     <TableHead>Expires</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
@@ -141,6 +143,29 @@ export const BlockedIPsPanel = () => {
                       <TableCell className="font-mono font-semibold">
                         {ip.ip_address}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {ip.is_vpn && <Badge variant="destructive" className="text-xs">VPN</Badge>}
+                          {ip.is_proxy && <Badge variant="destructive" className="text-xs">Proxy</Badge>}
+                          {ip.is_tor && <Badge variant="destructive" className="text-xs">Tor</Badge>}
+                          {!ip.is_vpn && !ip.is_proxy && !ip.is_tor && <Badge variant="secondary" className="text-xs">Other</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {ip.fraud_score !== null ? (
+                          <Badge 
+                            variant={ip.fraud_score > 85 ? "destructive" : ip.fraud_score > 75 ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {ip.fraud_score}/100
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {ip.country_code || 'Unknown'}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {formatDistanceToNow(new Date(ip.blocked_at), { addSuffix: true })}
                       </TableCell>
@@ -150,11 +175,6 @@ export const BlockedIPsPanel = () => {
                         ) : (
                           <Badge variant="secondary">Temporary</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <p className="text-sm text-muted-foreground truncate">
-                          {ip.blocked_reason}
-                        </p>
                       </TableCell>
                       <TableCell>
                         {ip.is_permanent ? (
