@@ -45,6 +45,7 @@ const Index = () => {
   const [pendingPrompt, setPendingPrompt] = useState<{ prompt: string; fileUrl?: string } | null>(null);
   const [recommendation, setRecommendation] = useState<any>(null);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const [enableRecommendations, setEnableRecommendations] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -80,6 +81,7 @@ const Index = () => {
     if (session?.user) {
       fetchUsage();
       fetchCouncilConfig();
+      fetchPreferences();
     }
   }, [session]);
 
@@ -156,6 +158,25 @@ const Index = () => {
     }
 
     setUsage(data);
+  };
+
+  const fetchPreferences = async () => {
+    if (!session?.user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('enable_model_recommendations')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching preferences:", error);
+      return;
+    }
+
+    if (data) {
+      setEnableRecommendations(data.enable_model_recommendations ?? true);
+    }
   };
 
   const updateCouncilSlot = async (slot: 'slot_1' | 'slot_2', modelId: string, modelName: string) => {
@@ -365,17 +386,20 @@ const Index = () => {
       return;
     }
 
-    // Store pending prompt and fetch recommendation
+    // Store pending prompt and fetch recommendation only if enabled
     setPendingPrompt({ prompt: userPrompt, fileUrl });
-    const rec = await fetchRecommendation(userPrompt);
     
-    if (rec) {
-      setRecommendation(rec);
-      setShowRecommendationModal(true);
-      return; // Wait for user to accept/decline
+    if (enableRecommendations) {
+      const rec = await fetchRecommendation(userPrompt);
+      
+      if (rec) {
+        setRecommendation(rec);
+        setShowRecommendationModal(true);
+        return; // Wait for user to accept/decline
+      }
     }
 
-    // If no recommendation, proceed normally
+    // If recommendations disabled or no recommendation, proceed normally
     await executeAudit(userPrompt, fileUrl, null);
   };
 
