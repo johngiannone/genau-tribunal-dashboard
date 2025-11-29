@@ -43,6 +43,7 @@ import { RevenueForecastChart } from "@/components/RevenueForecastChart";
 import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
 import { BlockedIPsPanel } from "@/components/BlockedIPsPanel";
 import { VPNDetectionAnalytics } from "@/components/VPNDetectionAnalytics";
+import { SecurityMapWidget } from "@/components/SecurityMapWidget";
 import { UnauthorizedAccessPanel } from "@/components/UnauthorizedAccessPanel";
 import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -501,6 +502,7 @@ const Admin = () => {
 
       <TabsContent value="security">
         <div className="space-y-6">
+          <SecurityMapWidget />
           <VPNDetectionAnalytics />
           <UnauthorizedAccessPanel />
           <BlockedIPsPanel />
