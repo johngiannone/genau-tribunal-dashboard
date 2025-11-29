@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { Button } from "@/components/ui/button";
+import { Twitter, Linkedin, MessageCircle } from "lucide-react";
 
 interface SharedAudit {
   user_prompt: string;
@@ -92,6 +93,29 @@ const Share = () => {
     setLoading(false);
   };
 
+  const handleSocialShare = (platform: 'twitter' | 'linkedin' | 'whatsapp') => {
+    if (!audit) return;
+
+    const shareUrl = window.location.href;
+    const shareText = `Check out this AI consensus audit: "${audit.user_prompt.substring(0, 100)}${audit.user_prompt.length > 100 ? '...' : ''}" - ${audit.confidence}% confidence score via @GenauAI`;
+    
+    let url = '';
+    
+    switch (platform) {
+      case 'twitter':
+        url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'linkedin':
+        url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        break;
+      case 'whatsapp':
+        url = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+        break;
+    }
+    
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -150,8 +174,39 @@ const Share = () => {
           <h2 className="text-xl font-semibold text-[#111111] leading-relaxed">{audit.user_prompt}</h2>
         </div>
 
-        <div className="mb-4 text-xs text-[#86868B] font-mono">
-          Shared on {new Date(audit.created_at).toLocaleDateString()}
+        {/* Social Sharing Buttons */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-xs text-[#86868B] font-mono">
+            Shared on {new Date(audit.created_at).toLocaleDateString()}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#86868B] mr-2 font-medium">Share:</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSocialShare('twitter')}
+              className="bg-white border-gray-200 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition-all"
+            >
+              <Twitter className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSocialShare('linkedin')}
+              className="bg-white border-gray-200 hover:bg-[#0A66C2] hover:text-white hover:border-[#0A66C2] transition-all"
+            >
+              <Linkedin className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSocialShare('whatsapp')}
+              className="bg-white border-gray-200 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         
         <ConsensusMessage
