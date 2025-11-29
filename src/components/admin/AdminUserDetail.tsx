@@ -33,6 +33,7 @@ import {
   RefreshCw,
   UserCog,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { LoginMapWidget } from "@/components/LoginMapWidget";
@@ -100,6 +101,7 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
   const [userUsage, setUserUsage] = useState<any>(null);
   const [riskScore, setRiskScore] = useState(0);
   const [ipLocations, setIpLocations] = useState<Map<string, IPLocation>>(new Map());
+  const [anomalousLogins, setAnomalousLogins] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open && userId) {
@@ -164,6 +166,9 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
         const locations = await Promise.all(locationPromises);
         const locationsMap = new Map(locations.map(({ ip, location }) => [ip, location]));
         setIpLocations(locationsMap);
+
+        // Detect anomalous logins based on typical patterns
+        detectAnomalousLogins(logs || [], locationsMap);
       }
 
       // Fetch user usage data
@@ -244,6 +249,50 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
     return activityLogs
       .filter(log => log.activity_type === 'login')
       .slice(0, 5);
+  };
+
+  const detectAnomalousLogins = (logs: ActivityLog[], locations: Map<string, IPLocation>) => {
+    const loginLogs = logs.filter(log => log.activity_type === 'login' && log.ip_address);
+    
+    if (loginLogs.length < 3) {
+      // Not enough data to establish patterns
+      return;
+    }
+
+    // Count frequency of each country
+    const countryFrequency: Map<string, number> = new Map();
+    loginLogs.forEach(log => {
+      const location = locations.get(log.ip_address!);
+      if (location && location.country !== 'Unknown') {
+        const count = countryFrequency.get(location.country) || 0;
+        countryFrequency.set(location.country, count + 1);
+      }
+    });
+
+    // Find the most common country (user's typical location)
+    let maxCount = 0;
+    let typicalCountry = '';
+    countryFrequency.forEach((count, country) => {
+      if (count > maxCount) {
+        maxCount = count;
+        typicalCountry = country;
+      }
+    });
+
+    // Mark logins from different countries as anomalous if they're infrequent
+    const anomalies = new Set<string>();
+    loginLogs.forEach(log => {
+      const location = locations.get(log.ip_address!);
+      if (location && location.country !== 'Unknown') {
+        const frequency = countryFrequency.get(location.country) || 0;
+        // Consider anomalous if: different country AND less than 20% of total logins
+        if (location.country !== typicalCountry && frequency < loginLogs.length * 0.2) {
+          anomalies.add(log.id);
+        }
+      }
+    });
+
+    setAnomalousLogins(anomalies);
   };
 
   const parseUserAgent = (userAgent: string | null) => {
@@ -415,6 +464,7 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                           country: location.country,
                           ip: log.ip_address!,
                           timestamp: log.created_at,
+                          isAnomalous: anomalousLogins.has(log.id),
                         };
                       })
                       .filter(loc => loc.lat !== 0 && loc.lon !== 0)
@@ -423,7 +473,7 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                 </div>
 
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Clock className="w-4 h-4" />
@@ -444,6 +494,15 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                       {parseUserAgent(activityLogs[0]?.user_agent || null)}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      Anomalies
+                    </p>
+                    <p className="font-medium text-orange-600">
+                      {anomalousLogins.size} unusual {anomalousLogins.size === 1 ? 'login' : 'logins'}
+                    </p>
+                  </div>
                 </div>
 
                 <Separator />
@@ -457,13 +516,15 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                         <TableHead>Location</TableHead>
                         <TableHead>IP Address</TableHead>
                         <TableHead>Device</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getLoginHistory().map((log) => {
                         const location = log.ip_address ? ipLocations.get(log.ip_address) : null;
+                        const isAnomalous = anomalousLogins.has(log.id);
                         return (
-                          <TableRow key={log.id}>
+                          <TableRow key={log.id} className={isAnomalous ? 'bg-orange-50 dark:bg-orange-950/20' : ''}>
                             <TableCell className="text-sm">
                               {new Date(log.created_at).toLocaleString()}
                             </TableCell>
@@ -481,6 +542,18 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                             <TableCell className="text-sm">{log.ip_address || 'Unknown'}</TableCell>
                             <TableCell className="text-sm">
                               {parseUserAgent(log.user_agent)}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {isAnomalous ? (
+                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700">
+                                  <AlertTriangle className="w-3 h-3 mr-1" />
+                                  Unusual
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                                  Normal
+                                </Badge>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
