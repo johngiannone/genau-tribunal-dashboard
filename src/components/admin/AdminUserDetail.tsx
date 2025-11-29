@@ -35,6 +35,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LoginMapWidget } from "@/components/LoginMapWidget";
 
 interface AdminUserDetailProps {
   userId: string | null;
@@ -82,6 +83,8 @@ interface IPLocation {
   city: string;
   country: string;
   countryCode: string | null;
+  lat?: number;
+  lon?: number;
 }
 
 interface UsageData {
@@ -397,6 +400,29 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Login Location Map */}
+                <div>
+                  <p className="font-medium mb-2">Login Locations</p>
+                  <LoginMapWidget 
+                    locations={getLoginHistory()
+                      .filter(log => log.ip_address && ipLocations.has(log.ip_address))
+                      .map(log => {
+                        const location = ipLocations.get(log.ip_address!)!;
+                        return {
+                          lat: location.lat || 0,
+                          lon: location.lon || 0,
+                          city: location.city,
+                          country: location.country,
+                          ip: log.ip_address!,
+                          timestamp: log.created_at,
+                        };
+                      })
+                      .filter(loc => loc.lat !== 0 && loc.lon !== 0)
+                    }
+                  />
+                </div>
+
+                <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
