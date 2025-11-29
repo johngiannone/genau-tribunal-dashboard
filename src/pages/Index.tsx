@@ -5,10 +5,11 @@ import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ModelRecommendationModal } from "@/components/ModelRecommendationModal";
+import { ModelMarketModal } from "@/components/ModelMarketModal";
 import { ABTestingNotificationBanner } from "@/components/ABTestingNotificationBanner";
 import CostCalculator from "@/components/CostCalculator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap } from "lucide-react";
+import { Zap, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useABTestingNotification } from "@/hooks/useABTestingNotification";
@@ -58,6 +59,8 @@ const Index = () => {
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const [enableRecommendations, setEnableRecommendations] = useState(true);
   const [usedRecommendation, setUsedRecommendation] = useState(false);
+  const [selectedSlotForSwap, setSelectedSlotForSwap] = useState<'slot_1' | 'slot_2' | 'slot_3' | null>(null);
+  const [showModelSwapModal, setShowModelSwapModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -208,10 +211,12 @@ const Index = () => {
     }
   };
 
-  const updateCouncilSlot = async (slot: 'slot_1' | 'slot_2', modelId: string, modelName: string) => {
+  const updateCouncilSlot = async (slot: 'slot_1' | 'slot_2' | 'slot_3', modelId: string, modelName: string) => {
     if (!session?.user) return;
 
-    const role = slot === 'slot_1' ? 'The Speedster' : 'The Critic';
+    const role = slot === 'slot_1' ? 'The Speedster' 
+                 : slot === 'slot_2' ? 'The Critic' 
+                 : 'The Architect';
     
     const updatedConfig = {
       ...councilConfig,
@@ -232,7 +237,18 @@ const Index = () => {
       });
     } else {
       setCouncilConfig(updatedConfig);
+      toast({
+        title: "Model updated",
+        description: `${modelName} is now in position ${slot.split('_')[1]}`,
+      });
     }
+  };
+
+  const handleModelSwapFromPill = (modelId: string, modelName: string) => {
+    if (!selectedSlotForSwap) return;
+    updateCouncilSlot(selectedSlotForSwap, modelId, modelName);
+    setShowModelSwapModal(false);
+    setSelectedSlotForSwap(null);
   };
 
   const createNewConversation = async (title: string) => {
@@ -838,22 +854,46 @@ const Index = () => {
                         </div>
                       )}
                       
-                      {/* Model Status Pills - Larger and more prominent */}
+                      {/* Model Status Pills - Clickable for model swapping */}
                       <div className="inline-flex items-center gap-3 bg-secondary/50 backdrop-blur-sm px-6 py-3 rounded-full border border-border shadow-sm">
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedSlotForSwap('slot_1');
+                            setShowModelSwapModal(true);
+                          }}
+                          className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform"
+                          title="Click to change model"
+                        >
                           <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                           <span className="text-sm font-medium text-foreground">{councilConfig?.slot_1?.name || 'Llama 3'}</span>
-                        </div>
+                          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
                         <div className="h-4 w-px bg-border" />
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedSlotForSwap('slot_2');
+                            setShowModelSwapModal(true);
+                          }}
+                          className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform"
+                          title="Click to change model"
+                        >
                           <div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ animationDelay: '0.3s' }} />
                           <span className="text-sm font-medium text-foreground">{councilConfig?.slot_2?.name || 'Claude 3.5'}</span>
-                        </div>
+                          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
                         <div className="h-4 w-px bg-border" />
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedSlotForSwap('slot_3');
+                            setShowModelSwapModal(true);
+                          }}
+                          className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform"
+                          title="Click to change model"
+                        >
                           <div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ animationDelay: '0.6s' }} />
                           <span className="text-sm font-medium text-foreground">{councilConfig?.slot_3?.name || 'DeepSeek R1'}</span>
-                        </div>
+                          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
                       </div>
                     </>
                   )}
@@ -946,6 +986,13 @@ const Index = () => {
         }}
         recommendation={recommendation}
         isLoading={isLoadingRecommendation}
+      />
+
+      <ModelMarketModal
+        open={showModelSwapModal}
+        onOpenChange={setShowModelSwapModal}
+        onModelSelect={handleModelSwapFromPill}
+        currentModel={selectedSlotForSwap ? (councilConfig?.[selectedSlotForSwap]?.id || councilConfig?.[selectedSlotForSwap]) : undefined}
       />
     </div>
   );
