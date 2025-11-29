@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen } from "lucide-react";
+import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,8 @@ const Settings = () => {
   const [usage, setUsage] = useState<{ audit_count: number; is_premium: boolean } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [enableRecommendations, setEnableRecommendations] = useState(true);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -42,6 +45,7 @@ const Settings = () => {
   useEffect(() => {
     if (session?.user) {
       fetchUsage();
+      fetchPreferences();
     }
   }, [session]);
 
@@ -60,6 +64,57 @@ const Settings = () => {
     }
 
     setUsage(data);
+  };
+
+  const fetchPreferences = async () => {
+    if (!session?.user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('enable_model_recommendations')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching preferences:", error);
+      return;
+    }
+
+    if (data) {
+      setEnableRecommendations(data.enable_model_recommendations ?? true);
+    }
+  };
+
+  const handleToggleRecommendations = async (checked: boolean) => {
+    if (!session?.user) return;
+    
+    setIsLoadingPreferences(true);
+    setEnableRecommendations(checked);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ enable_model_recommendations: checked })
+      .eq('id', session.user.id);
+
+    setIsLoadingPreferences(false);
+
+    if (error) {
+      console.error("Error updating preferences:", error);
+      toast({
+        title: "Failed to update preference",
+        description: error.message,
+        variant: "destructive",
+      });
+      setEnableRecommendations(!checked);
+      return;
+    }
+
+    toast({
+      title: checked ? "Recommendations enabled" : "Recommendations disabled",
+      description: checked 
+        ? "AI will suggest optimal models before each audit" 
+        : "You'll use your configured council for all audits",
+    });
   };
 
   const handlePasswordChange = async () => {
@@ -209,6 +264,40 @@ const Settings = () => {
             >
               Configure Council
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Model Recommendations Preference */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Smart Model Recommendations
+            </CardTitle>
+            <CardDescription>
+              Let AI suggest optimal model combinations based on your prompt type
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="recommendations-toggle" className="text-base">
+                  Enable automatic recommendations
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {enableRecommendations 
+                    ? "AI will analyze your prompts and suggest the best models before each audit"
+                    : "You'll use your configured council for all audits without suggestions"
+                  }
+                </p>
+              </div>
+              <Switch
+                id="recommendations-toggle"
+                checked={enableRecommendations}
+                onCheckedChange={handleToggleRecommendations}
+                disabled={isLoadingPreferences}
+              />
+            </div>
           </CardContent>
         </Card>
 
