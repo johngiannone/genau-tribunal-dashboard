@@ -263,6 +263,7 @@ const Admin = () => {
             <Tabs defaultValue="users" className="space-y-6">
               <TabsList className="bg-[#F9FAFB] border border-[#E5E5EA]">
                 <TabsTrigger value="users">User Management</TabsTrigger>
+                <TabsTrigger value="billing">Billing Dashboard</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
@@ -464,6 +465,19 @@ const Admin = () => {
               ))}
             </TableBody>
           </Table>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="billing">
+        <div className="space-y-6">
+          <CostAlertsPanel />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CostBreakdownPanel />
+            <CostForecastPanel />
+          </div>
+          
+          <PriceSyncPanel />
         </div>
       </TabsContent>
 
