@@ -20,6 +20,22 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Check if IP is blocked before allowing signup
+      const { data: ipCheckData, error: ipCheckError } = await supabase.functions.invoke('check-ip-block');
+      
+      if (ipCheckError) {
+        console.error('Error checking IP block:', ipCheckError);
+        // Continue with signup even if check fails (fail open for better UX)
+      } else if (ipCheckData?.blocked) {
+        toast({
+          title: "Account Creation Restricted",
+          description: ipCheckData.message || "Unable to create account from your current location.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const redirectUrl = `${window.location.origin}/app`;
       const { error } = await supabase.auth.signUp({
         email,

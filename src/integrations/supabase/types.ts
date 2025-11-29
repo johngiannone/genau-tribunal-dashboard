@@ -193,6 +193,36 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_ips: {
+        Row: {
+          associated_user_id: string | null
+          block_expires_at: string | null
+          blocked_at: string
+          blocked_reason: string
+          ip_address: string
+          is_permanent: boolean
+          metadata: Json | null
+        }
+        Insert: {
+          associated_user_id?: string | null
+          block_expires_at?: string | null
+          blocked_at?: string
+          blocked_reason: string
+          ip_address: string
+          is_permanent?: boolean
+          metadata?: Json | null
+        }
+        Update: {
+          associated_user_id?: string | null
+          block_expires_at?: string | null
+          blocked_at?: string
+          blocked_reason?: string
+          ip_address?: string
+          is_permanent?: boolean
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       brand_documents: {
         Row: {
           created_at: string | null
