@@ -94,7 +94,7 @@ const Admin = () => {
         .from('user_usage')
         .select(`
           *,
-          profiles!inner(email)
+          profiles(email)
         `)
         .order('created_at', { ascending: false });
 
