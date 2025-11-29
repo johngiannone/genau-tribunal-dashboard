@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { learnUserPatterns, calculateAnomalyScore, type AnomalyScore, type UserPattern } from "@/lib/patternLearning";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +35,7 @@ import {
   UserCog,
   Loader2,
   AlertTriangle,
+  Brain,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { LoginMapWidget } from "@/components/LoginMapWidget";
@@ -102,6 +104,8 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
   const [riskScore, setRiskScore] = useState(0);
   const [ipLocations, setIpLocations] = useState<Map<string, IPLocation>>(new Map());
   const [anomalousLogins, setAnomalousLogins] = useState<Set<string>>(new Set());
+  const [anomalyScores, setAnomalyScores] = useState<Record<string, AnomalyScore>>({});
+  const [userPattern, setUserPattern] = useState<UserPattern | null>(null);
 
   useEffect(() => {
     if (open && userId) {
@@ -259,39 +263,40 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
       return;
     }
 
-    // Count frequency of each country
-    const countryFrequency: Map<string, number> = new Map();
-    loginLogs.forEach(log => {
-      const location = locations.get(log.ip_address!);
-      if (location && location.country !== 'Unknown') {
-        const count = countryFrequency.get(location.country) || 0;
-        countryFrequency.set(location.country, count + 1);
-      }
-    });
+    // Prepare login data with locations
+    const loginData = loginLogs.map(log => ({
+      id: log.id,
+      created_at: log.created_at,
+      ip_address: log.ip_address || '',
+      user_agent: log.user_agent || '',
+      location: locations.has(log.ip_address!) ? {
+        city: locations.get(log.ip_address!)?.city || '',
+        country: locations.get(log.ip_address!)?.country || '',
+        lat: locations.get(log.ip_address!)?.lat || 0,
+        lon: locations.get(log.ip_address!)?.lon || 0,
+      } : undefined,
+    }));
 
-    // Find the most common country (user's typical location)
-    let maxCount = 0;
-    let typicalCountry = '';
-    countryFrequency.forEach((count, country) => {
-      if (count > maxCount) {
-        maxCount = count;
-        typicalCountry = country;
-      }
-    });
+    // Learn user patterns from historical data
+    const pattern = learnUserPatterns(loginData);
+    setUserPattern(pattern);
 
-    // Mark logins from different countries as anomalous if they're infrequent
+    // Calculate anomaly scores for each login
+    const scores: Record<string, AnomalyScore> = {};
     const anomalies = new Set<string>();
-    loginLogs.forEach(log => {
-      const location = locations.get(log.ip_address!);
-      if (location && location.country !== 'Unknown') {
-        const frequency = countryFrequency.get(location.country) || 0;
-        // Consider anomalous if: different country AND less than 20% of total logins
-        if (location.country !== typicalCountry && frequency < loginLogs.length * 0.2) {
-          anomalies.add(log.id);
-        }
+
+    loginData.forEach((login, index) => {
+      const previousLogin = index > 0 ? loginData[index - 1] : undefined;
+      const score = calculateAnomalyScore(login, pattern, previousLogin);
+      scores[login.id] = score;
+
+      // Mark as anomalous if overall score > 40
+      if (score.overall > 40) {
+        anomalies.add(login.id);
       }
     });
 
+    setAnomalyScores(scores);
     setAnomalousLogins(anomalies);
   };
 
@@ -465,6 +470,7 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                           ip: log.ip_address!,
                           timestamp: log.created_at,
                           isAnomalous: anomalousLogins.has(log.id),
+                          anomalyScore: anomalyScores[log.id],
                         };
                       })
                       .filter(loc => loc.lat !== 0 && loc.lon !== 0)
@@ -502,6 +508,19 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                     <p className="font-medium text-orange-600">
                       {anomalousLogins.size} unusual {anomalousLogins.size === 1 ? 'login' : 'logins'}
                     </p>
+                    {userPattern && (
+                      <div className="mt-2 pt-2 border-t space-y-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Brain className="w-3 h-3" />
+                          <span>ML Pattern Analysis</span>
+                        </div>
+                        <div className="text-xs space-y-0.5 text-muted-foreground">
+                          <div>Device consistency: {Math.round(userPattern.deviceConsistency * 100)}%</div>
+                          <div>Location consistency: {Math.round(userPattern.locationConsistency * 100)}%</div>
+                          <div>Home locations: {userPattern.homeLocations.length}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -514,10 +533,11 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                       <TableRow>
                         <TableHead>Date</TableHead>
                         <TableHead>Location</TableHead>
-                        <TableHead>IP Address</TableHead>
-                        <TableHead>Device</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
+                  <TableHead>IP Address</TableHead>
+                  <TableHead>Device</TableHead>
+                  <TableHead>Anomaly Score</TableHead>
+                  <TableHead>Risk Factors</TableHead>
+                </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getLoginHistory().map((log) => {
@@ -543,16 +563,46 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                             <TableCell className="text-sm">
                               {parseUserAgent(log.user_agent)}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {isAnomalous ? (
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700">
-                                  <AlertTriangle className="w-3 h-3 mr-1" />
-                                  Unusual
-                                </Badge>
+                            <TableCell>
+                              {anomalyScores[log.id] ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 min-w-[60px]">
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                      <div 
+                                        className={`h-full transition-all ${
+                                          anomalyScores[log.id].overall > 60 ? 'bg-red-500' :
+                                          anomalyScores[log.id].overall > 40 ? 'bg-orange-500' :
+                                          'bg-green-500'
+                                        }`}
+                                        style={{ width: `${anomalyScores[log.id].overall}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <span className="text-sm font-medium w-10 text-right">
+                                    {anomalyScores[log.id].overall}%
+                                  </span>
+                                </div>
                               ) : (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
-                                  Normal
-                                </Badge>
+                                <span className="text-sm text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {anomalyScores[log.id] && (
+                                <div className="space-y-1 max-w-xs">
+                                  {anomalyScores[log.id].reasons.length > 0 ? (
+                                    anomalyScores[log.id].reasons.map((reason, idx) => (
+                                      <div key={idx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-orange-500" />
+                                        <span>{reason}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="text-xs text-green-600 flex items-center gap-1">
+                                      <span className="text-green-600">✓</span>
+                                      <span>Normal behavior</span>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>
