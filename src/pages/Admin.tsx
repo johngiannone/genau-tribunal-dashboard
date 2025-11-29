@@ -47,6 +47,7 @@ import { SecurityMapWidget } from "@/components/SecurityMapWidget";
 import { UnauthorizedAccessPanel } from "@/components/UnauthorizedAccessPanel";
 import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { FingerprintAnalyticsPanel } from "@/components/FingerprintAnalyticsPanel";
+import { DisposableEmailStatsPanel } from "@/components/admin/DisposableEmailStatsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
@@ -513,6 +514,7 @@ const Admin = () => {
       <TabsContent value="security">
         <div className="space-y-6">
           <SecurityMapWidget />
+          <DisposableEmailStatsPanel />
           <FingerprintAnalyticsPanel />
           <VPNDetectionAnalytics />
           <UnauthorizedAccessPanel />
