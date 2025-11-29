@@ -33,6 +33,7 @@ export interface AnomalyScore {
     velocityAnomaly: number; // Impossible travel
   };
   reasons: string[];
+  isImpossibleTravel?: boolean; // Flag for critical impossible travel events
 }
 
 interface LoginData {
@@ -213,7 +214,7 @@ export function calculateAnomalyScore(
     reasons.push('New IP address');
   }
 
-  // Velocity anomaly (impossible travel)
+  // Velocity anomaly (impossible travel) with enhanced detection
   let velocityAnomaly = 0;
   if (previousLogin?.location && login.location && 
       previousLogin.location.lat && login.location.lat) {
@@ -227,12 +228,25 @@ export function calculateAnomalyScore(
     const timeDiff = (new Date(login.created_at).getTime() - 
                      new Date(previousLogin.created_at).getTime()) / (1000 * 60 * 60); // hours
     
-    const speed = distance / timeDiff; // km/h
-    const maxReasonableSpeed = 900; // 900 km/h (commercial flight speed)
-    
-    if (speed > maxReasonableSpeed) {
-      velocityAnomaly = 80;
-      reasons.push(`Impossible travel: ${Math.round(distance)}km in ${Math.round(timeDiff)}h`);
+    // Skip if locations are very close (within 10km) - likely same city
+    if (distance > 10) {
+      const speed = distance / timeDiff; // km/h
+      
+      // Tiered impossible travel detection
+      const maxCommercialFlightSpeed = 900; // km/h
+      const maxPrivateJetSpeed = 1100; // km/h
+      const supersonic = 2000; // km/h (theoretical max for civilian travel)
+      
+      if (speed > supersonic) {
+        velocityAnomaly = 100;
+        reasons.push(`🚨 CRITICAL: Impossible travel detected - ${Math.round(distance)}km in ${Math.round(timeDiff * 60)}min (${Math.round(speed)}km/h)`);
+      } else if (speed > maxPrivateJetSpeed) {
+        velocityAnomaly = 90;
+        reasons.push(`⚠️ Highly suspicious: ${Math.round(distance)}km in ${Math.round(timeDiff)}h (${Math.round(speed)}km/h exceeds private jet speed)`);
+      } else if (speed > maxCommercialFlightSpeed) {
+        velocityAnomaly = 75;
+        reasons.push(`⚠️ Suspicious: ${Math.round(distance)}km in ${Math.round(timeDiff)}h (${Math.round(speed)}km/h exceeds commercial flight speed)`);
+      }
     }
   }
 
@@ -255,6 +269,7 @@ export function calculateAnomalyScore(
       velocityAnomaly,
     },
     reasons,
+    isImpossibleTravel: velocityAnomaly >= 75, // Flag critical travel anomalies
   };
 }
 

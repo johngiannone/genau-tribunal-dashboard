@@ -281,23 +281,23 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
     const pattern = learnUserPatterns(loginData);
     setUserPattern(pattern);
 
-    // Calculate anomaly scores for each login
+    // Calculate anomaly scores for each login and track impossible travel
     const scores: Record<string, AnomalyScore> = {};
-    const anomalies = new Set<string>();
+    const impossibleTravelIds = new Set<string>();
 
     loginData.forEach((login, index) => {
       const previousLogin = index > 0 ? loginData[index - 1] : undefined;
       const score = calculateAnomalyScore(login, pattern, previousLogin);
       scores[login.id] = score;
 
-      // Mark as anomalous if overall score > 40
-      if (score.overall > 40) {
-        anomalies.add(login.id);
+      // Mark as impossible travel if flagged by the anomaly detection
+      if (score.isImpossibleTravel) {
+        impossibleTravelIds.add(login.id);
       }
     });
 
     setAnomalyScores(scores);
-    setAnomalousLogins(anomalies);
+    setAnomalousLogins(impossibleTravelIds);
   };
 
   const parseUserAgent = (userAgent: string | null) => {
@@ -458,23 +458,25 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                 <div>
                   <p className="font-medium mb-2">Login Locations</p>
                   <LoginMapWidget 
-                    locations={getLoginHistory()
-                      .filter(log => log.ip_address && ipLocations.has(log.ip_address))
-                      .map(log => {
-                        const location = ipLocations.get(log.ip_address!)!;
-                        return {
-                          lat: location.lat || 0,
-                          lon: location.lon || 0,
-                          city: location.city,
-                          country: location.country,
-                          ip: log.ip_address!,
-                          timestamp: log.created_at,
-                          isAnomalous: anomalousLogins.has(log.id),
-                          anomalyScore: anomalyScores[log.id],
-                        };
-                      })
-                      .filter(loc => loc.lat !== 0 && loc.lon !== 0)
-                    }
+              locations={getLoginHistory()
+                .filter(log => log.ip_address && ipLocations.has(log.ip_address))
+                .map(log => {
+                  const location = ipLocations.get(log.ip_address!)!;
+                  const score = anomalyScores[log.id];
+                  return {
+                    lat: location.lat || 0,
+                    lon: location.lon || 0,
+                    city: location.city,
+                    country: location.country,
+                    ip: log.ip_address!,
+                    timestamp: log.created_at,
+                    isAnomalous: anomalousLogins.has(log.id),
+                    isImpossibleTravel: score?.isImpossibleTravel || false,
+                    anomalyScore: score,
+                  };
+                })
+                .filter(loc => loc.lat !== 0 && loc.lon !== 0)
+              }
                   />
                 </div>
 
@@ -503,11 +505,17 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <AlertTriangle className="w-4 h-4" />
-                      Anomalies
+                      Impossible Travel
                     </p>
-                    <p className="font-medium text-orange-600">
-                      {anomalousLogins.size} unusual {anomalousLogins.size === 1 ? 'login' : 'logins'}
-                    </p>
+                    <Badge variant={anomalousLogins.size > 0 ? "destructive" : "secondary"}>
+                      {anomalousLogins.size} {anomalousLogins.size === 1 ? 'event' : 'events'}
+                    </Badge>
+                    {anomalousLogins.size > 0 && (
+                      <div className="text-xs text-destructive flex items-center gap-1 mt-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>Critical security alert</span>
+                      </div>
+                    )}
                     {userPattern && (
                       <div className="mt-2 pt-2 border-t space-y-1">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -542,9 +550,13 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                     <TableBody>
                       {getLoginHistory().map((log) => {
                         const location = log.ip_address ? ipLocations.get(log.ip_address) : null;
-                        const isAnomalous = anomalousLogins.has(log.id);
+                        const score = anomalyScores[log.id];
+                        const isImpossibleTravel = score?.isImpossibleTravel || false;
                         return (
-                          <TableRow key={log.id} className={isAnomalous ? 'bg-orange-50 dark:bg-orange-950/20' : ''}>
+                          <TableRow 
+                            key={log.id} 
+                            className={isImpossibleTravel ? 'bg-red-50 dark:bg-red-950/30 border-l-4 border-l-red-500' : ''}
+                          >
                             <TableCell className="text-sm">
                               {new Date(log.created_at).toLocaleString()}
                             </TableCell>
@@ -564,22 +576,23 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                               {parseUserAgent(log.user_agent)}
                             </TableCell>
                             <TableCell>
-                              {anomalyScores[log.id] ? (
+                              {score ? (
                                 <div className="flex items-center gap-2">
                                   <div className="flex-1 min-w-[60px]">
                                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                                       <div 
                                         className={`h-full transition-all ${
-                                          anomalyScores[log.id].overall > 60 ? 'bg-red-500' :
-                                          anomalyScores[log.id].overall > 40 ? 'bg-orange-500' :
+                                          isImpossibleTravel ? 'bg-red-500' :
+                                          score.overall > 60 ? 'bg-red-500' :
+                                          score.overall > 40 ? 'bg-orange-500' :
                                           'bg-green-500'
                                         }`}
-                                        style={{ width: `${anomalyScores[log.id].overall}%` }}
+                                        style={{ width: `${score.overall}%` }}
                                       />
                                     </div>
                                   </div>
-                                  <span className="text-sm font-medium w-10 text-right">
-                                    {anomalyScores[log.id].overall}%
+                                  <span className={`text-sm font-medium w-10 text-right ${isImpossibleTravel ? 'text-red-600 dark:text-red-400' : ''}`}>
+                                    {score.overall}%
                                   </span>
                                 </div>
                               ) : (
@@ -587,12 +600,12 @@ export function AdminUserDetail({ userId, userEmail, open, onOpenChange }: Admin
                               )}
                             </TableCell>
                             <TableCell>
-                              {anomalyScores[log.id] && (
+                              {score && (
                                 <div className="space-y-1 max-w-xs">
-                                  {anomalyScores[log.id].reasons.length > 0 ? (
-                                    anomalyScores[log.id].reasons.map((reason, idx) => (
-                                      <div key={idx} className="text-xs text-muted-foreground flex items-start gap-1">
-                                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-orange-500" />
+                                  {score.reasons.length > 0 ? (
+                                    score.reasons.map((reason, idx) => (
+                                      <div key={idx} className={`text-xs flex items-start gap-1 ${isImpossibleTravel ? 'text-red-700 dark:text-red-300 font-medium' : 'text-muted-foreground'}`}>
+                                        <AlertTriangle className={`w-3 h-3 mt-0.5 flex-shrink-0 ${isImpossibleTravel ? 'text-red-500' : 'text-orange-500'}`} />
                                         <span>{reason}</span>
                                       </div>
                                     ))

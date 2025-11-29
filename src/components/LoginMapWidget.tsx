@@ -12,6 +12,7 @@ interface LoginLocation {
   ip: string;
   timestamp: string;
   isAnomalous?: boolean;
+  isImpossibleTravel?: boolean;
   anomalyScore?: {
     overall: number;
     factors: {
@@ -22,6 +23,7 @@ interface LoginLocation {
       velocityAnomaly: number;
     };
     reasons: string[];
+    isImpossibleTravel?: boolean;
   };
 }
 
@@ -68,45 +70,56 @@ export function LoginMapWidget({ locations }: LoginMapWidgetProps) {
           // Add markers for each login location
           locations.forEach((location) => {
             if (location.lat && location.lon) {
+              const isImpossibleTravel = location.isImpossibleTravel || location.anomalyScore?.isImpossibleTravel;
+              
               // Create a marker element
               const el = document.createElement('div');
-              el.className = 'login-marker';
-              el.style.width = '20px';
-              el.style.height = '20px';
+              el.className = isImpossibleTravel ? 'login-marker impossible-travel' : 
+                             location.isAnomalous ? 'login-marker anomalous' : 'login-marker';
+              el.style.width = isImpossibleTravel ? '24px' : '20px';
+              el.style.height = isImpossibleTravel ? '24px' : '20px';
               el.style.borderRadius = '50%';
               
               // Color based on anomaly status
-              if (location.isAnomalous) {
+              if (isImpossibleTravel) {
+                el.style.backgroundColor = '#dc2626'; // Red for impossible travel
+                el.style.border = '3px solid #fca5a5';
+                el.style.boxShadow = '0 0 16px rgba(220, 38, 38, 0.7)';
+              } else if (location.isAnomalous) {
                 el.style.backgroundColor = '#f97316'; // Orange for anomalous
-                el.style.animation = 'pulse 2s infinite';
+                el.style.border = '2px solid white';
+                el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
               } else {
                 el.style.backgroundColor = '#0071E3'; // Blue for normal
+                el.style.border = '2px solid white';
+                el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
               }
               
-              el.style.border = '2px solid white';
-              el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
               el.style.cursor = 'pointer';
+              el.style.zIndex = isImpossibleTravel ? '999' : 'auto';
 
               // Create popup with login details
-              const statusBadge = location.isAnomalous 
+              const statusBadge = isImpossibleTravel
+                ? '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; border: 1px solid #fca5a5;">🚨 IMPOSSIBLE TRAVEL</span>'
+                : location.isAnomalous 
                 ? '<span style="background: #fed7aa; color: #9a3412; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">⚠️ UNUSUAL BEHAVIOR</span>'
                 : '<span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">✓ NORMAL</span>';
               
               const anomalyDetails = location.anomalyScore ? `
                 <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-                  <div style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #374151;">
-                    Anomaly Score: ${location.anomalyScore.overall}%
+                  <div style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: ${isImpossibleTravel ? '#991b1b' : '#374151'};">
+                    Risk Score: ${location.anomalyScore.overall}%
                   </div>
                   ${location.anomalyScore.reasons.length > 0 ? `
-                    <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">
-                      ${location.anomalyScore.reasons.map(r => `<div style="margin-bottom: 2px;">• ${r}</div>`).join('')}
+                    <div style="font-size: 10px; color: ${isImpossibleTravel ? '#991b1b' : '#6b7280'}; margin-top: 4px;">
+                      ${location.anomalyScore.reasons.map(r => `<div style="margin-bottom: 2px; font-weight: ${isImpossibleTravel ? '600' : '400'};">• ${r}</div>`).join('')}
                     </div>
                   ` : ''}
                 </div>
               ` : '';
               
               const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-                <div style="padding: 8px; min-width: 180px; max-width: 220px;">
+                <div style="padding: 8px; min-width: 220px; max-width: 260px;">
                   <div style="margin-bottom: 6px;">${statusBadge}</div>
                   <div style="font-weight: bold; margin-bottom: 4px;">${location.city}, ${location.country}</div>
                   <div style="font-size: 12px; color: #666; margin-bottom: 2px;">IP: ${location.ip}</div>
@@ -202,6 +215,27 @@ export function LoginMapWidget({ locations }: LoginMapWidgetProps) {
               opacity: 0.7;
               transform: scale(1.1);
             }
+          }
+          
+          @keyframes pulse-critical {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+              box-shadow: 0 0 16px rgba(220, 38, 38, 0.7);
+            }
+            50% {
+              opacity: 0.8;
+              transform: scale(1.2);
+              box-shadow: 0 0 24px rgba(220, 38, 38, 1);
+            }
+          }
+          
+          .login-marker.anomalous {
+            animation: pulse 2s ease-in-out infinite;
+          }
+          
+          .login-marker.impossible-travel {
+            animation: pulse-critical 1.2s ease-in-out infinite;
           }
         `}
       </style>
