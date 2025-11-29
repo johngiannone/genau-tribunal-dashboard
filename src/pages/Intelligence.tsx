@@ -9,6 +9,7 @@ import { ArrowLeft, Brain, TrendingUp, AlertTriangle, Activity } from "lucide-re
 import { FingerprintCollisionReport } from "@/components/intelligence/FingerprintCollisionReport";
 import { TimezoneMismatchDetection } from "@/components/intelligence/TimezoneMismatchDetection";
 import { BotLikelihoodScoring } from "@/components/intelligence/BotLikelihoodScoring";
+import { BehavioralBiometricsPanel } from "@/components/intelligence/BehavioralBiometricsPanel";
 import { FeatureUsageHeatmap } from "@/components/intelligence/FeatureUsageHeatmap";
 
 interface IntelligenceMetrics {
@@ -262,6 +263,7 @@ export default function Intelligence() {
 
           <TabsContent value="bots" className="space-y-6">
             <BotLikelihoodScoring />
+            <BehavioralBiometricsPanel />
           </TabsContent>
 
           <TabsContent value="features" className="space-y-6">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useFingerprint } from "./hooks/useFingerprint";
+import { useBiometrics } from "./hooks/useBiometrics";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -24,6 +25,9 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   // Collect browser fingerprint on app load
   useFingerprint();
+  
+  // Track behavioral biometrics
+  useBiometrics();
   
   return (
     <BrowserRouter>
