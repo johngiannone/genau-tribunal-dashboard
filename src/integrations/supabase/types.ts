@@ -401,40 +401,49 @@ export type Database = {
       }
       training_dataset: {
         Row: {
-          chosen_response: string
           created_at: string
+          draft_a_model: string | null
+          draft_a_response: string | null
+          draft_b_model: string | null
+          draft_b_response: string | null
           human_rating: number | null
           id: string
           model_config: Json
           prompt: string
-          rejected_response_a: string
-          rejected_response_b: string
           updated_at: string
-          user_id: string
+          user_id: string | null
+          verdict_model: string | null
+          verdict_response: string | null
         }
         Insert: {
-          chosen_response: string
           created_at?: string
+          draft_a_model?: string | null
+          draft_a_response?: string | null
+          draft_b_model?: string | null
+          draft_b_response?: string | null
           human_rating?: number | null
           id?: string
           model_config: Json
           prompt: string
-          rejected_response_a: string
-          rejected_response_b: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
+          verdict_model?: string | null
+          verdict_response?: string | null
         }
         Update: {
-          chosen_response?: string
           created_at?: string
+          draft_a_model?: string | null
+          draft_a_response?: string | null
+          draft_b_model?: string | null
+          draft_b_response?: string | null
           human_rating?: number | null
           id?: string
           model_config?: Json
           prompt?: string
-          rejected_response_a?: string
-          rejected_response_b?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          verdict_model?: string | null
+          verdict_response?: string | null
         }
         Relationships: []
       }

@@ -718,15 +718,18 @@ serve(async (req) => {
         .insert({
           user_id: user.id,
           prompt,
-          chosen_response: verdictData.choices[0].message.content,
-          rejected_response_a: drafts[0]?.response || '',
-          rejected_response_b: drafts[1]?.response || '',
+          draft_a_model: drafts[0]?.modelId || 'unknown',
+          draft_a_response: drafts[0]?.response || '',
+          draft_b_model: drafts[1]?.modelId || 'unknown',
+          draft_b_response: drafts[1]?.response || '',
+          verdict_model: auditorSlot.id,
+          verdict_response: verdictData.choices[0].message.content,
           model_config: councilConfig
         })
         .select()
-        .single()
+        .maybeSingle()
 
-      if (!trainingError) {
+      if (!trainingError && trainingData) {
         trainingDatasetId = trainingData.id
         console.log('Training data saved')
       }
