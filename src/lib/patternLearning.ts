@@ -49,7 +49,8 @@ interface LoginData {
 }
 
 /**
- * Learn patterns from historical login data
+ * Learn patterns from historical login data using exponential moving averages
+ * Recent data is weighted more heavily to adapt to changing legitimate patterns
  */
 export function learnUserPatterns(logins: LoginData[]): UserPattern {
   if (logins.length < 3) {
@@ -68,44 +69,68 @@ export function learnUserPatterns(logins: LoginData[]): UserPattern {
     };
   }
 
-  // Time patterns
-  const hours = logins.map(l => new Date(l.created_at).getHours());
-  const days = logins.map(l => new Date(l.created_at).getDay());
-  const typicalHours = findFrequentValues(hours, 0.2); // Top 20% of hours
-  const typicalDays = findFrequentValues(days, 0.2);
+  // Sort logins by timestamp (oldest to newest)
+  const sortedLogins = [...logins].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 
-  // Login frequency
-  const timestamps = logins.map(l => new Date(l.created_at).getTime()).sort();
+  // Calculate time weights using exponential decay
+  // Recent logins get higher weight (alpha = 0.3 means 30% weight on newest item)
+  const alpha = 0.3;
+  const weights = sortedLogins.map((_, idx) => 
+    Math.pow(1 - alpha, sortedLogins.length - 1 - idx)
+  );
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const normalizedWeights = weights.map(w => w / totalWeight);
+
+  // Time patterns with EMA
+  const hours = sortedLogins.map(l => new Date(l.created_at).getHours());
+  const days = sortedLogins.map(l => new Date(l.created_at).getDay());
+  const typicalHours = findFrequentValuesWeighted(hours, normalizedWeights, 0.15);
+  const typicalDays = findFrequentValuesWeighted(days, normalizedWeights, 0.15);
+
+  // Login frequency with time-weighted averaging
+  const timestamps = sortedLogins.map(l => new Date(l.created_at).getTime());
   const intervals = [];
+  const intervalWeights = [];
   for (let i = 1; i < timestamps.length; i++) {
     intervals.push((timestamps[i] - timestamps[i - 1]) / (1000 * 60 * 60)); // hours
+    intervalWeights.push(normalizedWeights[i]);
   }
   const avgLoginFrequency = intervals.length > 0 
-    ? intervals.reduce((a, b) => a + b, 0) / intervals.length 
+    ? intervals.reduce((sum, interval, idx) => sum + interval * intervalWeights[idx], 0) / 
+      intervalWeights.reduce((a, b) => a + b, 0)
     : 24;
 
-  // Device patterns
-  const devices = logins.map(l => l.user_agent || '');
-  const commonDevices = findFrequentValues(devices, 0.3);
-  const deviceConsistency = calculateConsistency(devices);
+  // Device patterns with weighted consistency
+  const devices = sortedLogins.map(l => l.user_agent || '');
+  const commonDevices = findFrequentValuesWeighted(devices, normalizedWeights, 0.25);
+  const deviceConsistency = calculateWeightedConsistency(devices, normalizedWeights);
 
-  // Location patterns
-  const locationsWithCoords = logins
+  // Location patterns with adaptive clustering
+  const locationsWithWeights = sortedLogins
     .filter(l => l.location?.lat && l.location?.lon)
-    .map(l => ({ lat: l.location!.lat, lon: l.location!.lon }));
+    .map((l, idx) => ({ 
+      lat: l.location!.lat, 
+      lon: l.location!.lon,
+      weight: normalizedWeights[idx]
+    }));
   
-  const homeLocations = clusterLocations(locationsWithCoords);
+  const homeLocations = clusterLocationsWeighted(locationsWithWeights);
   
-  const countries = logins
+  const countries = sortedLogins
     .filter(l => l.location?.country)
     .map(l => l.location!.country);
-  const typicalCountries = findFrequentValues(countries, 0.3);
-  const locationConsistency = calculateConsistency(countries);
+  const countryWeights = sortedLogins
+    .filter(l => l.location?.country)
+    .map((_, idx) => normalizedWeights[sortedLogins.findIndex(sl => sl.id === sortedLogins[idx].id)]);
+  const typicalCountries = findFrequentValuesWeighted(countries, countryWeights, 0.25);
+  const locationConsistency = calculateWeightedConsistency(countries, countryWeights);
 
-  // IP patterns
-  const ips = logins.map(l => l.ip_address || '');
-  const commonIPs = findFrequentValues(ips, 0.3);
-  const ipConsistency = calculateConsistency(ips);
+  // IP patterns with weighted analysis
+  const ips = sortedLogins.map(l => l.ip_address || '');
+  const commonIPs = findFrequentValuesWeighted(ips, normalizedWeights, 0.25);
+  const ipConsistency = calculateWeightedConsistency(ips, normalizedWeights);
 
   return {
     typicalHours,
@@ -234,7 +259,25 @@ export function calculateAnomalyScore(
 }
 
 /**
- * Find values that appear frequently (above threshold percentage)
+ * Find values that appear frequently using weighted counts (EMA-based)
+ */
+function findFrequentValuesWeighted<T>(values: T[], weights: number[], threshold: number): T[] {
+  const weightedCounts = new Map<T, number>();
+  values.forEach((v, idx) => {
+    weightedCounts.set(v, (weightedCounts.get(v) || 0) + weights[idx]);
+  });
+  
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const minWeight = totalWeight * threshold;
+  
+  return Array.from(weightedCounts.entries())
+    .filter(([_, weight]) => weight >= minWeight)
+    .sort((a, b) => b[1] - a[1]) // Sort by weight descending
+    .map(([value]) => value);
+}
+
+/**
+ * Find values that appear frequently (above threshold percentage) - Legacy method
  */
 function findFrequentValues<T>(values: T[], threshold: number): T[] {
   const counts = new Map<T, number>();
@@ -247,7 +290,24 @@ function findFrequentValues<T>(values: T[], threshold: number): T[] {
 }
 
 /**
- * Calculate consistency score (0-1) based on how often the most common value appears
+ * Calculate weighted consistency score (0-1) using EMA
+ * Higher weight on recent values for adaptive learning
+ */
+function calculateWeightedConsistency<T>(values: T[], weights: number[]): number {
+  if (values.length === 0) return 0;
+  
+  const weightedCounts = new Map<T, number>();
+  values.forEach((v, idx) => {
+    weightedCounts.set(v, (weightedCounts.get(v) || 0) + weights[idx]);
+  });
+  
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const maxWeight = Math.max(...Array.from(weightedCounts.values()));
+  return maxWeight / totalWeight;
+}
+
+/**
+ * Calculate consistency score (0-1) based on how often the most common value appears - Legacy
  */
 function calculateConsistency<T>(values: T[]): number {
   if (values.length === 0) return 0;
@@ -260,7 +320,44 @@ function calculateConsistency<T>(values: T[]): number {
 }
 
 /**
- * Cluster nearby locations to find "home" locations
+ * Cluster nearby locations with weighted centroid calculation using EMA
+ * Recent locations have more influence on home location determination
+ */
+function clusterLocationsWeighted(
+  locations: { lat: number; lon: number; weight: number }[]
+): { lat: number; lon: number; count: number }[] {
+  if (locations.length === 0) return [];
+  
+  const clusters: { lat: number; lon: number; count: number; totalWeight: number }[] = [];
+  const clusterRadius = 50; // 50km radius
+  
+  locations.forEach(loc => {
+    // Find nearby cluster
+    const nearbyCluster = clusters.find(c => 
+      calculateDistance(loc.lat, loc.lon, c.lat, c.lon) < clusterRadius
+    );
+    
+    if (nearbyCluster) {
+      // Add to existing cluster with weighted centroid update
+      const newWeight = nearbyCluster.totalWeight + loc.weight;
+      nearbyCluster.lat = (nearbyCluster.lat * nearbyCluster.totalWeight + loc.lat * loc.weight) / newWeight;
+      nearbyCluster.lon = (nearbyCluster.lon * nearbyCluster.totalWeight + loc.lon * loc.weight) / newWeight;
+      nearbyCluster.totalWeight = newWeight;
+      nearbyCluster.count++;
+    } else {
+      // Create new cluster
+      clusters.push({ lat: loc.lat, lon: loc.lon, count: 1, totalWeight: loc.weight });
+    }
+  });
+  
+  // Sort by total weight (most significant locations first)
+  return clusters
+    .sort((a, b) => b.totalWeight - a.totalWeight)
+    .map(({ lat, lon, count }) => ({ lat, lon, count }));
+}
+
+/**
+ * Cluster nearby locations to find "home" locations - Legacy method
  */
 function clusterLocations(
   locations: { lat: number; lon: number }[]
