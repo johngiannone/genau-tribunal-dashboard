@@ -122,7 +122,24 @@ serve(async (req) => {
         }
       }
 
-      // 5. Log activity
+      // 5. Send email notification
+      const emailType = rechargeType === 'auto_recharge' ? 'auto_recharge_success' : 'purchase_success';
+      console.log(`Sending ${emailType} email notification...`);
+      
+      supabaseClient.functions.invoke('send-billing-notification', {
+        body: {
+          userId,
+          type: emailType,
+          data: {
+            amount,
+            currentBalance: newBalance
+          }
+        }
+      }).catch(err => {
+        console.error('Email notification failed:', err);
+      });
+
+      // 6. Log activity
       await supabaseClient.from('activity_logs').insert({
         user_id: userId,
         activity_type: 'profile_update',
