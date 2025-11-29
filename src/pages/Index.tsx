@@ -5,10 +5,12 @@ import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { ModelRecommendationModal } from "@/components/ModelRecommendationModal";
+import { ABTestingNotificationBanner } from "@/components/ABTestingNotificationBanner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useABTestingNotification } from "@/hooks/useABTestingNotification";
 import { Session } from "@supabase/supabase-js";
 
 interface Message {
@@ -49,6 +51,9 @@ const Index = () => {
   const [usedRecommendation, setUsedRecommendation] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // A/B Testing notification hook
+  const { showNotification, performanceData, dismissNotification } = useABTestingNotification(session);
 
   // Auth state management
   useEffect(() => {
@@ -771,6 +776,53 @@ const Index = () => {
         {/* Input Area */}
         <ChatInput onSend={handleSendMessage} disabled={isProcessing} />
       </div>
+
+      {/* A/B Testing Notification Banner */}
+      {showNotification && performanceData && (
+        <ABTestingNotificationBanner
+          performanceData={performanceData}
+          onDismiss={dismissNotification}
+        />
+      )}
+
+      {/* Modals */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+      />
+      
+      <ModelRecommendationModal
+        isOpen={showRecommendationModal}
+        onClose={() => {
+          setShowRecommendationModal(false);
+          setPendingPrompt(null);
+        }}
+        onAccept={async () => {
+          setShowRecommendationModal(false);
+          if (pendingPrompt && recommendation) {
+            // Build temporary council from recommendation
+            const tempCouncil = {
+              slot_1: { id: recommendation.recommendedDrafters[0], name: recommendation.recommendedDrafters[0] },
+              slot_2: { id: recommendation.recommendedDrafters[1], name: recommendation.recommendedDrafters[1] },
+              slot_3: { id: recommendation.recommendedDrafters[2], name: recommendation.recommendedDrafters[2] },
+              slot_4: { id: recommendation.recommendedDrafters.length > 3 ? recommendation.recommendedDrafters[3] : null, name: recommendation.recommendedDrafters.length > 3 ? recommendation.recommendedDrafters[3] : null },
+              slot_5: { id: recommendation.recommendedDrafters.length > 4 ? recommendation.recommendedDrafters[4] : null, name: recommendation.recommendedDrafters.length > 4 ? recommendation.recommendedDrafters[4] : null },
+              auditor: { id: recommendation.recommendedAuditor, name: recommendation.recommendedAuditor }
+            };
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil);
+            setPendingPrompt(null);
+          }
+        }}
+        onDecline={async () => {
+          setShowRecommendationModal(false);
+          if (pendingPrompt) {
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null);
+            setPendingPrompt(null);
+          }
+        }}
+        recommendation={recommendation}
+        isLoading={isLoadingRecommendation}
+      />
     </div>
   );
 };
