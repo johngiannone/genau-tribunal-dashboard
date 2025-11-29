@@ -17,9 +17,12 @@ import { Badge } from "@/components/ui/badge";
 interface TrainingData {
   id: string;
   prompt: string;
-  chosen_response: string;
-  rejected_response_a: string;
-  rejected_response_b: string;
+  draft_a_model: string;
+  draft_a_response: string;
+  draft_b_model: string;
+  draft_b_response: string;
+  verdict_model: string;
+  verdict_response: string;
   model_config: any;
   human_rating: number;
   created_at: string;
@@ -83,8 +86,13 @@ export default function Vault() {
       const jsonLines = trainingData.map((item) => {
         return JSON.stringify({
           prompt: item.prompt,
-          completion: item.chosen_response,
-          rejected: [item.rejected_response_a, item.rejected_response_b],
+          completion: item.verdict_response,
+          rejected: [item.draft_a_response, item.draft_b_response],
+          models: {
+            draft_a: item.draft_a_model,
+            draft_b: item.draft_b_model,
+            verdict: item.verdict_model,
+          },
           model_config: item.model_config,
           rating: item.human_rating,
           timestamp: item.created_at,
@@ -224,7 +232,7 @@ export default function Vault() {
                           : item.prompt}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {item.model_config?.slot_1?.id?.split("/")[1] || "Unknown"}
+                        {item.draft_a_model?.split("/")[1] || item.draft_a_model || "Unknown"}
                       </TableCell>
                       <TableCell>{getRatingBadge(item.human_rating)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
