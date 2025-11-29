@@ -11,6 +11,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ModelMarketModal } from "./ModelMarketModal";
 import { exportVerdictToPDF } from "@/lib/pdfExport";
 import { EmailShareModal } from "./EmailShareModal";
+import { useIsPro } from "@/hooks/useIsPro";
+import { UpgradeModal } from "./UpgradeModal";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -239,7 +241,9 @@ export const ConsensusMessage = ({
   const [showModelMarket, setShowModelMarket] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<'slot_1' | 'slot_2' | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { toast } = useToast();
+  const { isPro } = useIsPro();
 
   const getModelDisplayName = (modelId: string) => {
     if (modelId === "Model A" || modelId === "Model B") return modelId;
@@ -499,6 +503,10 @@ export const ConsensusMessage = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => {
+                          if (!isPro) {
+                            setShowUpgradeModal(true);
+                            return;
+                          }
                           if (synthesisResponse) {
                             exportVerdictToPDF({
                               verdict: synthesisResponse,
@@ -618,6 +626,9 @@ export const ConsensusMessage = ({
         modelAName={modelAName}
         modelBName={modelBName}
       />
+      
+      {/* Upgrade Modal */}
+      <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
     </>
   );
 };

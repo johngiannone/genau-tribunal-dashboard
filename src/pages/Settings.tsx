@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2 } from "lucide-react";
+import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
+import { KnowledgeBaseTab } from "@/components/KnowledgeBaseTab";
 
 const Settings = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -208,6 +209,22 @@ const Settings = () => {
             >
               Configure Council
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Knowledge Base */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Knowledge Base
+            </CardTitle>
+            <CardDescription>
+              Upload brand guidelines for the Council to reference during audits
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <KnowledgeBaseTab />
           </CardContent>
         </Card>
 
