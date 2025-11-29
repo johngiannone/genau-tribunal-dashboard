@@ -41,9 +41,19 @@ interface DailySpend {
   amount: number;
 }
 
+interface AutoRechargeAttempt {
+  id: string;
+  amount: number;
+  status: string;
+  triggered_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
 export default function Billing() {
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [rechargeAttempts, setRechargeAttempts] = useState<AutoRechargeAttempt[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   
@@ -91,6 +101,20 @@ export default function Billing() {
       console.error("Error fetching transactions:", transactionsError);
     } else {
       setTransactions(transactionsData || []);
+    }
+
+    // Fetch auto-recharge attempts
+    const { data: attemptsData, error: attemptsError } = await supabase
+      .from('auto_recharge_attempts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('triggered_at', { ascending: false })
+      .limit(20);
+
+    if (attemptsError) {
+      console.error("Error fetching recharge attempts:", attemptsError);
+    } else {
+      setRechargeAttempts(attemptsData || []);
     }
 
     setLoading(false);
@@ -458,6 +482,56 @@ export default function Billing() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Auto-Recharge History */}
+        {rechargeAttempts.length > 0 && (
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Auto-Recharge History</CardTitle>
+              <CardDescription>Automatic credit top-up attempts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Triggered</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rechargeAttempts.map((attempt) => (
+                    <TableRow key={attempt.id}>
+                      <TableCell className="text-sm">
+                        {format(new Date(attempt.triggered_at), 'MMM dd, yyyy HH:mm')}
+                      </TableCell>
+                      <TableCell className="font-mono font-semibold text-green-600">
+                        ${attempt.amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          attempt.status === 'completed' 
+                            ? 'bg-green-100 text-green-700'
+                            : attempt.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {attempt.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {attempt.completed_at 
+                          ? format(new Date(attempt.completed_at), 'MMM dd, HH:mm')
+                          : attempt.error_message || 'In progress...'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
       </div>
     </div>
