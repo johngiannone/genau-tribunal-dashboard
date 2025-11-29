@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { ConsensusMessage } from "@/components/ConsensusMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { ModelRecommendationModal } from "@/components/ModelRecommendationModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +41,10 @@ const Index = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [hasContext, setHasContext] = useState(false);
   const [councilConfig, setCouncilConfig] = useState<any>(null);
+  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
+  const [pendingPrompt, setPendingPrompt] = useState<{ prompt: string; fileUrl?: string } | null>(null);
+  const [recommendation, setRecommendation] = useState<any>(null);
+  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -312,6 +317,36 @@ const Index = () => {
     }
   };
 
+  const fetchRecommendation = async (prompt: string) => {
+    setIsLoadingRecommendation(true);
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
+        throw new Error("Not authenticated");
+      }
+
+      const { data, error } = await supabase.functions.invoke('recommend-models', {
+        body: { prompt },
+        headers: {
+          Authorization: `Bearer ${currentSession.access_token}`
+        }
+      });
+
+      if (error) {
+        console.error("Recommendation error:", error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error("Failed to fetch recommendations:", err);
+      return null;
+    } finally {
+      setIsLoadingRecommendation(false);
+    }
+  };
+
   const handleSendMessage = async (userPrompt: string, fileUrl?: string) => {
     if (!session?.user) {
       navigate("/auth");
@@ -329,6 +364,22 @@ const Index = () => {
       setShowUpgradeModal(true);
       return;
     }
+
+    // Store pending prompt and fetch recommendation
+    setPendingPrompt({ prompt: userPrompt, fileUrl });
+    const rec = await fetchRecommendation(userPrompt);
+    
+    if (rec) {
+      setRecommendation(rec);
+      setShowRecommendationModal(true);
+      return; // Wait for user to accept/decline
+    }
+
+    // If no recommendation, proceed normally
+    await executeAudit(userPrompt, fileUrl, null);
+  };
+
+  const executeAudit = async (userPrompt: string, fileUrl?: string, temporaryCouncil?: any) => {
 
     // Create conversation if this is the first message
     let conversationId = currentConversationId;
@@ -370,13 +421,13 @@ const Index = () => {
         setStatusText("Initializing Council...");
       }
 
-      // Send to consensus with conversation context
+      // Send to consensus with conversation context (use temporary council if provided)
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
         body: { 
           prompt: userPrompt,
           fileUrl: fileUrl || null,
           conversationId: conversationId,
-          councilConfig: councilConfig || null
+          councilConfig: temporaryCouncil || councilConfig || null
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
@@ -521,6 +572,63 @@ const Index = () => {
     <div className="flex h-screen w-full overflow-hidden bg-white">
       {/* Upgrade Modal */}
       <UpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
+      
+      {/* Model Recommendation Modal */}
+      <ModelRecommendationModal
+        isOpen={showRecommendationModal}
+        onClose={() => {
+          setShowRecommendationModal(false);
+          setPendingPrompt(null);
+          setRecommendation(null);
+        }}
+        recommendation={recommendation}
+        onAccept={async () => {
+          setShowRecommendationModal(false);
+          if (pendingPrompt && recommendation) {
+            // Build temporary council config from recommendations
+            const tempCouncil = {
+              slot_1: {
+                id: recommendation.recommendations.drafters[0].id,
+                name: recommendation.recommendations.drafters[0].name,
+                role: recommendation.recommendations.drafters[0].role
+              },
+              slot_2: {
+                id: recommendation.recommendations.drafters[1].id,
+                name: recommendation.recommendations.drafters[1].name,
+                role: recommendation.recommendations.drafters[1].role
+              },
+              slot_3: {
+                id: recommendation.recommendations.drafters[2].id,
+                name: recommendation.recommendations.drafters[2].name,
+                role: recommendation.recommendations.drafters[2].role
+              },
+              slot_4: {
+                id: recommendation.recommendations.auditor.id,
+                name: recommendation.recommendations.auditor.name,
+                role: recommendation.recommendations.auditor.role
+              },
+              slot_5: {
+                id: recommendation.recommendations.auditor.id,
+                name: recommendation.recommendations.auditor.name,
+                role: recommendation.recommendations.auditor.role
+              }
+            };
+            
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil);
+            setPendingPrompt(null);
+            setRecommendation(null);
+          }
+        }}
+        onDecline={async () => {
+          setShowRecommendationModal(false);
+          if (pendingPrompt) {
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null);
+            setPendingPrompt(null);
+            setRecommendation(null);
+          }
+        }}
+        isLoading={isProcessing}
+      />
       
       {/* Sidebar */}
       <Sidebar 
