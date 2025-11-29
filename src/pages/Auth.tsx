@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain } from "lucide-react";
+import { isDisposableEmail, getDisposableEmailError } from "@/lib/disposableEmailDomains";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -20,6 +21,17 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Check for disposable email domains
+      if (isDisposableEmail(email)) {
+        toast({
+          title: "Invalid Email Address",
+          description: getDisposableEmailError(),
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Check if IP is blocked before allowing signup
       const { data: ipCheckData, error: ipCheckError } = await supabase.functions.invoke('check-ip-block');
       
