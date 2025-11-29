@@ -5,10 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Check, Search, Loader2, AlertTriangle, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { fetchOpenRouterModels, filterModelsByCategory, sortModels, Model } from "@/lib/openrouter";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -212,20 +212,41 @@ export const ModelMarketModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Category Tabs */}
-        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-card/50">
-            <TabsTrigger value="favorites" className="text-xs">
-              <Star className="w-3 h-3 mr-1 fill-current" />
-              Favorites
-            </TabsTrigger>
-            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-            <TabsTrigger value="free" className="text-xs">Free</TabsTrigger>
-            <TabsTrigger value="top-tier" className="text-xs">Top Tier</TabsTrigger>
-            <TabsTrigger value="coding" className="text-xs">Coding</TabsTrigger>
-            <TabsTrigger value="roleplay" className="text-xs">Roleplay</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Filter Pills */}
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={activeCategory === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory("all")}
+            className="rounded-full"
+          >
+            All
+          </Button>
+          <Button
+            variant={activeCategory === "free" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory("free")}
+            className="rounded-full"
+          >
+            Free
+          </Button>
+          <Button
+            variant={activeCategory === "coding" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory("coding")}
+            className="rounded-full"
+          >
+            Coding
+          </Button>
+          <Button
+            variant={activeCategory === "chat" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory("chat")}
+            className="rounded-full"
+          >
+            Chat
+          </Button>
+        </div>
 
         {/* Search Bar and Sort */}
         <div className="flex gap-3">
@@ -378,110 +399,141 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
     ? "FREE"
     : `$${model.avgCostPer1M < 1 ? model.avgCostPer1M.toFixed(3) : model.avgCostPer1M.toFixed(2)} / 1M`;
 
+  // Cost tier logic
+  const getCostTierBadge = () => {
+    if (model.isFree) {
+      return { label: "Free", className: "bg-green-100 text-green-700 border-green-300" };
+    } else if (model.avgCostPer1M < 1) {
+      return { label: "$", className: "bg-green-100 text-green-700 border-green-300" };
+    } else if (model.avgCostPer1M < 10) {
+      return { label: "$$", className: "bg-yellow-100 text-yellow-700 border-yellow-300" };
+    } else {
+      return { label: "$$$", className: "bg-red-100 text-red-700 border-red-300" };
+    }
+  };
+
+  const costTier = getCostTierBadge();
+
+  // Provider icon mapping
+  const getProviderIcon = (provider: string) => {
+    const providerLower = provider.toLowerCase();
+    if (providerLower.includes("openai")) return "🤖";
+    if (providerLower.includes("anthropic")) return "🧠";
+    if (providerLower.includes("google")) return "🔍";
+    if (providerLower.includes("meta")) return "📘";
+    if (providerLower.includes("mistral")) return "🌪️";
+    if (providerLower.includes("cohere")) return "💬";
+    return "⚡";
+  };
+
   return (
-    <div
-      className={`group relative p-5 rounded-xl border transition-all duration-200 cursor-pointer bg-white ${
-        isSelected
-          ? "border-blue-500 shadow-md"
-          : "border-gray-200 hover:border-blue-500 hover:shadow-md"
-      }`}
-      onClick={onClick}
-    >
-      {/* Favorite Star Button - Top Left */}
-      <button
-        onClick={onToggleFavorite}
-        className="absolute top-4 left-4 z-10 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+    <TooltipProvider>
+      <div
+        className={`group relative p-4 rounded-lg border transition-all duration-200 cursor-pointer bg-white ${
+          isSelected
+            ? "border-teal-500 shadow-md ring-2 ring-teal-500/20"
+            : "border-gray-200 hover:border-teal-400 hover:shadow-md"
+        }`}
+        onClick={onClick}
       >
-        <Star
-          className={`w-6 h-6 transition-all ${
-            isFavorite
-              ? "fill-[#FFD700] text-[#FFD700]"
-              : "text-gray-400 hover:text-[#FFD700]"
-          }`}
-        />
-      </button>
+        {/* Provider Icon - Top Left */}
+        <div className="absolute top-3 left-3 text-xl">
+          {getProviderIcon(model.provider)}
+        </div>
 
-      {/* Selected Check - Top Right */}
-      {isSelected && (
-        <div className="absolute top-4 right-4">
-          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-            <Check className="w-4 h-4 text-white" />
+        {/* Favorite Star Button - Top Right */}
+        <button
+          onClick={onToggleFavorite}
+          className="absolute top-3 right-3 z-10 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star
+            className={`w-5 h-5 transition-all ${
+              isFavorite
+                ? "fill-[#FFD700] text-[#FFD700]"
+                : "text-gray-400 hover:text-[#FFD700]"
+            }`}
+          />
+        </button>
+
+        {/* Selected Check Badge - Top Right */}
+        {isSelected && (
+          <div className="absolute top-3 right-10">
+            <Badge className="text-xs font-medium bg-teal-500 text-white border-teal-600">
+              <Check className="w-3 h-3 mr-1" />
+              Selected
+            </Badge>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Price Badge - Bottom Right - Show on Hover */}
-      {!model.isFree && (
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <Badge className="text-xs font-mono bg-gray-100 text-gray-700 border-gray-300">
-            {priceDisplay}
-          </Badge>
-        </div>
-      )}
-
-      {/* Free Badge - Always Visible in Bottom Right */}
-      {model.isFree && (
-        <div className="absolute bottom-4 right-4">
-          <Badge className="text-xs font-mono bg-green-100 text-green-700 border-green-300">
-            FREE
-          </Badge>
-        </div>
-      )}
-
-      <div className="space-y-3 pr-8">
-        {/* Provider Badge */}
-        <div>
-          <Badge variant="outline" className="text-xs font-normal text-gray-600 border-gray-300 mb-2">
-            {model.provider}
-          </Badge>
-        </div>
-
-        {/* Model Name - Larger and Bolder */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-lg font-bold text-gray-900 leading-tight">{model.name}</h3>
-          {model.isPopular && (
-            <Badge className="text-xs font-medium bg-orange-100 text-orange-700 border-orange-300">
-              🔥 Popular
+        <div className="space-y-2.5 pt-8">
+          {/* Provider & Cost Tier Row */}
+          <div className="flex items-center justify-between gap-2">
+            <Badge variant="outline" className="text-xs font-normal text-gray-600 border-gray-300">
+              {model.provider}
             </Badge>
-          )}
-          {model.isNew && (
-            <Badge className="text-xs font-medium bg-green-100 text-green-700 border-green-300">
-              ✨ New
-            </Badge>
-          )}
-        </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className={`text-xs font-bold cursor-help ${costTier.className}`}>
+                  {costTier.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{priceDisplay}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
 
-        {/* Context Length */}
-        <div className="flex items-center gap-2 text-xs text-gray-600">
-          <span>{(model.contextLength / 1000).toFixed(0)}k context</span>
-          {model.contextLength >= 100000 && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-              Long Context
-            </Badge>
-          )}
-        </div>
+          {/* Model Name - Bold and Primary */}
+          <div>
+            <h3 className="text-base font-bold text-gray-900 leading-tight mb-1">{model.name}</h3>
+            {(model.isPopular || model.isNew) && (
+              <div className="flex gap-1 mt-1">
+                {model.isPopular && (
+                  <Badge className="text-xs font-medium bg-orange-100 text-orange-700 border-orange-300">
+                    🔥 Popular
+                  </Badge>
+                )}
+                {model.isNew && (
+                  <Badge className="text-xs font-medium bg-green-100 text-green-700 border-green-300">
+                    ✨ New
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* Description - Limited to 2 Lines */}
-        <div>
-          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+          {/* Context Window */}
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">
+              {(model.contextLength / 1000).toFixed(0)}k
+            </Badge>
+            {model.contextLength >= 100000 && (
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                Long Context
+              </Badge>
+            )}
+          </div>
+
+          {/* Description - Truncated to 2 Lines */}
+          <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
             {model.description}
           </p>
-        </div>
 
-        {/* Select Button */}
-        <Button
-          size="sm"
-          variant={isSelected ? "default" : "outline"}
-          className="w-full mt-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-        >
-          {isSelected ? "Selected" : "Select Model"}
-        </Button>
+          {/* Select Button */}
+          <Button
+            size="sm"
+            variant={isSelected ? "default" : "outline"}
+            className={`w-full mt-2 ${isSelected ? "bg-teal-500 hover:bg-teal-600" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+          >
+            {isSelected ? "Selected" : "Select Model"}
+          </Button>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };

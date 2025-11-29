@@ -195,6 +195,16 @@ export function filterModelsByCategory(models: Model[], category: string): Model
         m.name.toLowerCase().includes('code')
       );
     
+    case 'chat':
+      return models.filter(m => 
+        m.id.includes('gpt') || 
+        m.id.includes('claude') ||
+        m.id.includes('gemini') ||
+        m.id.includes('llama') ||
+        m.name.toLowerCase().includes('chat') ||
+        m.name.toLowerCase().includes('instruct')
+      );
+    
     case 'roleplay':
       return models.filter(m => 
         m.id.includes('mythomax') || 
