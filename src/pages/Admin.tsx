@@ -41,6 +41,7 @@ import { CostForecastPanel } from "@/components/CostForecastPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { RevenueForecastChart } from "@/components/RevenueForecastChart";
 import { SecurityLogsPanel } from "@/components/SecurityLogsPanel";
+import { UnauthorizedAccessPanel } from "@/components/UnauthorizedAccessPanel";
 import { EmailLogsPanel } from "@/components/EmailLogsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -497,7 +498,10 @@ const Admin = () => {
       </TabsContent>
 
       <TabsContent value="security">
-        <SecurityLogsPanel />
+        <div className="space-y-6">
+          <UnauthorizedAccessPanel />
+          <SecurityLogsPanel />
+        </div>
       </TabsContent>
 
       <TabsContent value="emails">
