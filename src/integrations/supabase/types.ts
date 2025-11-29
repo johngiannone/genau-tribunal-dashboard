@@ -157,6 +157,75 @@ export type Database = {
         }
         Relationships: []
       }
+      behavioral_signals: {
+        Row: {
+          avg_click_interval: number | null
+          avg_keystroke_interval: number | null
+          avg_mouse_acceleration: number | null
+          avg_mouse_velocity: number | null
+          bot_indicators: Json | null
+          bot_likelihood_score: number | null
+          click_accuracy_score: number | null
+          collected_at: string | null
+          id: string
+          keystroke_interval_variance: number | null
+          last_updated: string | null
+          metadata: Json | null
+          mouse_path_curvature: number | null
+          mouse_velocity_variance: number | null
+          session_id: string
+          time_to_first_click: number | null
+          total_click_events: number | null
+          total_keystroke_events: number | null
+          total_mouse_events: number | null
+          user_id: string | null
+        }
+        Insert: {
+          avg_click_interval?: number | null
+          avg_keystroke_interval?: number | null
+          avg_mouse_acceleration?: number | null
+          avg_mouse_velocity?: number | null
+          bot_indicators?: Json | null
+          bot_likelihood_score?: number | null
+          click_accuracy_score?: number | null
+          collected_at?: string | null
+          id?: string
+          keystroke_interval_variance?: number | null
+          last_updated?: string | null
+          metadata?: Json | null
+          mouse_path_curvature?: number | null
+          mouse_velocity_variance?: number | null
+          session_id: string
+          time_to_first_click?: number | null
+          total_click_events?: number | null
+          total_keystroke_events?: number | null
+          total_mouse_events?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          avg_click_interval?: number | null
+          avg_keystroke_interval?: number | null
+          avg_mouse_acceleration?: number | null
+          avg_mouse_velocity?: number | null
+          bot_indicators?: Json | null
+          bot_likelihood_score?: number | null
+          click_accuracy_score?: number | null
+          collected_at?: string | null
+          id?: string
+          keystroke_interval_variance?: number | null
+          last_updated?: string | null
+          metadata?: Json | null
+          mouse_path_curvature?: number | null
+          mouse_velocity_variance?: number | null
+          session_id?: string
+          time_to_first_click?: number | null
+          total_click_events?: number | null
+          total_keystroke_events?: number | null
+          total_mouse_events?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       billing_transactions: {
         Row: {
           amount: number
