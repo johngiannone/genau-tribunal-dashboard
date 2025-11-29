@@ -404,6 +404,7 @@ export type Database = {
       }
       training_dataset: {
         Row: {
+          council_source: string | null
           created_at: string
           draft_a_model: string | null
           draft_a_response: string | null
@@ -419,6 +420,7 @@ export type Database = {
           verdict_response: string | null
         }
         Insert: {
+          council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
           draft_a_response?: string | null
@@ -434,6 +436,7 @@ export type Database = {
           verdict_response?: string | null
         }
         Update: {
+          council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
           draft_a_response?: string | null

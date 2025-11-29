@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Database, Download, Trash2, Calendar, ArrowLeft, TrendingUp, Award } from "lucide-react";
+import { Database, Download, Trash2, Calendar, ArrowLeft, TrendingUp, Award, FlaskConical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ABTestingAnalytics } from "@/components/ABTestingAnalytics";
 import {
   Table,
   TableBody,
@@ -28,6 +29,7 @@ interface TrainingData {
   model_config: any;
   human_rating: number;
   created_at: string;
+  council_source: string | null;
 }
 
 interface ModelComboStats {
@@ -48,6 +50,7 @@ export default function Vault() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showABTesting, setShowABTesting] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -255,6 +258,14 @@ export default function Vault() {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant={showABTesting ? "secondary" : "outline"}
+                onClick={() => setShowABTesting(!showABTesting)}
+                className="gap-2"
+              >
+                <FlaskConical className="h-4 w-4" />
+                {showABTesting ? "Hide A/B Testing" : "A/B Testing"}
+              </Button>
+              <Button
                 variant={showAnalytics ? "secondary" : "outline"}
                 onClick={() => setShowAnalytics(!showAnalytics)}
                 className="gap-2"
@@ -291,6 +302,13 @@ export default function Vault() {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* A/B Testing Section */}
+              {showABTesting && (
+                <div className="mb-6">
+                  <ABTestingAnalytics trainingData={trainingData} />
+                </div>
+              )}
+
               {/* Analytics Section */}
               {showAnalytics && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

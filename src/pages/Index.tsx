@@ -46,6 +46,7 @@ const Index = () => {
   const [recommendation, setRecommendation] = useState<any>(null);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const [enableRecommendations, setEnableRecommendations] = useState(true);
+  const [usedRecommendation, setUsedRecommendation] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -446,12 +447,14 @@ const Index = () => {
       }
 
       // Send to consensus with conversation context (use temporary council if provided)
+      const councilSource = temporaryCouncil ? 'recommended' : (councilConfig ? 'user_configured' : 'default');
       const { data, error } = await supabase.functions.invoke('chat-consensus', {
         body: { 
           prompt: userPrompt,
           fileUrl: fileUrl || null,
           conversationId: conversationId,
-          councilConfig: temporaryCouncil || councilConfig || null
+          councilConfig: temporaryCouncil || councilConfig || null,
+          councilSource: councilSource
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
