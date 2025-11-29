@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, User, FileUp, Settings, LogIn, LogOut } from "lucide-react";
+import { Activity, User, FileUp, Settings, LogIn, LogOut, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,8 @@ const getActivityIcon = (type: string) => {
       return <User className="w-4 h-4 text-orange-500" />;
     case 'admin_change':
       return <Settings className="w-4 h-4 text-red-500" />;
+    case 'unauthorized_access':
+      return <ShieldAlert className="w-4 h-4 text-destructive" />;
     default:
       return <Activity className="w-4 h-4 text-gray-500" />;
   }
@@ -46,6 +48,8 @@ const getActivityColor = (type: string) => {
       return 'bg-orange-100 text-orange-700 border-orange-200';
     case 'admin_change':
       return 'bg-red-100 text-red-700 border-red-200';
+    case 'unauthorized_access':
+      return 'bg-destructive/10 text-destructive border-destructive/20';
     default:
       return 'bg-gray-100 text-gray-700 border-gray-200';
   }
@@ -152,6 +156,7 @@ export const LiveActivityFeed = () => {
 
   const filterButtons = [
     { value: 'all', label: 'All', icon: Activity },
+    { value: 'unauthorized_access', label: 'Security', icon: ShieldAlert },
     { value: 'login', label: 'Login', icon: LogIn },
     { value: 'logout', label: 'Logout', icon: LogOut },
     { value: 'audit_completed', label: 'Audits', icon: Activity },

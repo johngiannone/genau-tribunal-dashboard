@@ -678,6 +678,7 @@ export type Database = {
         | "admin_change"
         | "profile_update"
         | "file_upload"
+        | "unauthorized_access"
       alert_type: "daily_threshold" | "audit_threshold" | "budget_forecast"
       app_role: "admin" | "user"
     }
@@ -815,6 +816,7 @@ export const Constants = {
         "admin_change",
         "profile_update",
         "file_upload",
+        "unauthorized_access",
       ],
       alert_type: ["daily_threshold", "audit_threshold", "budget_forecast"],
       app_role: ["admin", "user"],
