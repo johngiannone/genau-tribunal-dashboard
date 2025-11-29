@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Globe, AlertTriangle } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { CountryDetailsDialog } from "./CountryDetailsDialog";
 
 interface DetectionEvent {
   ip_address: string;
@@ -61,6 +62,7 @@ export const SecurityMapWidget = () => {
   const [recentDetections, setRecentDetections] = useState<DetectionEvent[]>([]);
   const [liveCount, setLiveCount] = useState(0);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [selectedCountry, setSelectedCountry] = useState<{ code: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -166,6 +168,7 @@ export const SecurityMapWidget = () => {
     el.style.width = "24px";
     el.style.height = "24px";
     el.style.borderRadius = "50%";
+    el.style.cursor = "pointer";
     
     // Color based on threat level
     if (detection.fraud_score && detection.fraud_score > 85) {
@@ -180,6 +183,26 @@ export const SecurityMapWidget = () => {
 
     el.style.border = "2px solid white";
     el.style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)";
+    el.style.transition = "transform 0.2s ease";
+
+    // Add hover effect
+    el.addEventListener("mouseenter", () => {
+      el.style.transform = "scale(1.3)";
+    });
+    el.addEventListener("mouseleave", () => {
+      el.style.transform = "scale(1)";
+    });
+
+    // Add click handler to open country details
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (detection.country_code) {
+        setSelectedCountry({
+          code: detection.country_code,
+          name: getCountryName(detection.country_code),
+        });
+      }
+    });
 
     if (animated) {
       el.style.animation = "pulse-marker 2s ease-in-out";
@@ -238,8 +261,56 @@ export const SecurityMapWidget = () => {
     return String.fromCodePoint(...codePoints);
   };
 
+  const getCountryName = (countryCode: string) => {
+    const countryNames: Record<string, string> = {
+      US: "United States",
+      CN: "China",
+      IN: "India",
+      BR: "Brazil",
+      RU: "Russia",
+      GB: "United Kingdom",
+      DE: "Germany",
+      FR: "France",
+      CA: "Canada",
+      AU: "Australia",
+      JP: "Japan",
+      MX: "Mexico",
+      IT: "Italy",
+      ES: "Spain",
+      KR: "South Korea",
+      ID: "Indonesia",
+      TR: "Turkey",
+      SA: "Saudi Arabia",
+      AR: "Argentina",
+      PL: "Poland",
+      NG: "Nigeria",
+      NL: "Netherlands",
+      BE: "Belgium",
+      SE: "Sweden",
+      CH: "Switzerland",
+      AT: "Austria",
+      NO: "Norway",
+      DK: "Denmark",
+      FI: "Finland",
+      IE: "Ireland",
+      PT: "Portugal",
+      GR: "Greece",
+      CZ: "Czech Republic",
+      RO: "Romania",
+    };
+    return countryNames[countryCode] || countryCode;
+  };
+
   return (
-    <div className="space-y-4">
+    <>
+      <CountryDetailsDialog
+        open={selectedCountry !== null}
+        onOpenChange={(open) => !open && setSelectedCountry(null)}
+        countryCode={selectedCountry?.code || ""}
+        countryName={selectedCountry?.name || ""}
+      />
+      
+      <div className="space-y-4">
       {/* Map Container */}
       <Card className="overflow-hidden">
         <CardHeader className="pb-3">
@@ -344,6 +415,7 @@ export const SecurityMapWidget = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 };

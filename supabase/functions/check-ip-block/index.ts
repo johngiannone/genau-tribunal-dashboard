@@ -38,6 +38,57 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Also check for country-level blocks
+    let countryBlock = null;
+    
+    // First try to get country from existing detection
+    if (blockedIP?.country_code) {
+      // Check if there's an active country-level block
+      const { data: countryBlockData } = await supabaseClient
+        .from('blocked_ips')
+        .select('*')
+        .eq('ip_address', `COUNTRY_BLOCK_${blockedIP.country_code}`)
+        .maybeSingle();
+
+      if (countryBlockData) {
+        countryBlock = countryBlockData;
+      }
+    }
+
+    // Check country block first (takes precedence)
+    if (countryBlock) {
+      // Check if country block has expired
+      if (!countryBlock.is_permanent && countryBlock.block_expires_at) {
+        const expiresAt = new Date(countryBlock.block_expires_at);
+        const now = new Date();
+        
+        if (expiresAt < now) {
+          // Country block expired, clean it up
+          await supabaseClient
+            .from('blocked_ips')
+            .delete()
+            .eq('ip_address', countryBlock.ip_address);
+          
+          console.log('Country block expired, removed:', countryBlock.ip_address);
+        } else {
+          // Country block is active
+          const hoursRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
+          
+          return new Response(
+            JSON.stringify({ 
+              blocked: true,
+              reason: `All signups from ${countryBlock.country_code} are temporarily blocked`,
+              message: `Account creation is temporarily restricted from your country (${countryBlock.country_code}). Please try again in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}.`,
+              blockType: 'country',
+              is_permanent: false,
+              expires_at: countryBlock.block_expires_at,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+      }
+    }
+
     // If no block found, allow signup
     if (!blockedIP) {
       return new Response(
