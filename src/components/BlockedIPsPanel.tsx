@@ -4,16 +4,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShieldAlert, ShieldCheck, Trash2, TrashIcon, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type BlockedIP = Tables<"blocked_ips">;
 
 export const BlockedIPsPanel = () => {
   const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bulkActionDialog, setBulkActionDialog] = useState<{
+    open: boolean;
+    action: "expired" | "country" | null;
+    country?: string;
+  }>({ open: false, action: null });
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchBlockedIPs();
@@ -89,6 +107,69 @@ export const BlockedIPsPanel = () => {
   const activeBlocks = blockedIPs.filter(ip => !isExpired(ip.block_expires_at, ip.is_permanent));
   const expiredBlocks = blockedIPs.filter(ip => isExpired(ip.block_expires_at, ip.is_permanent));
 
+  // Get unique countries from active blocks
+  const uniqueCountries = Array.from(
+    new Set(activeBlocks.map(ip => ip.country_code).filter(Boolean))
+  ).sort() as string[];
+
+  const handleBulkUnblock = async () => {
+    if (!bulkActionDialog.action) return;
+
+    setProcessing(true);
+    try {
+      if (bulkActionDialog.action === "expired") {
+        // Delete all expired blocks
+        const expiredIPs = expiredBlocks.map(ip => ip.ip_address);
+        
+        if (expiredIPs.length === 0) {
+          toast.info("No expired blocks to remove");
+          setBulkActionDialog({ open: false, action: null });
+          setProcessing(false);
+          return;
+        }
+
+        const { error } = await supabase
+          .from("blocked_ips")
+          .delete()
+          .in("ip_address", expiredIPs);
+
+        if (error) throw error;
+
+        toast.success(`Removed ${expiredIPs.length} expired block${expiredIPs.length !== 1 ? 's' : ''}`);
+      } else if (bulkActionDialog.action === "country" && bulkActionDialog.country) {
+        // Delete all blocks from specific country
+        const countryIPs = blockedIPs
+          .filter(ip => ip.country_code === bulkActionDialog.country)
+          .map(ip => ip.ip_address);
+
+        if (countryIPs.length === 0) {
+          toast.info("No blocks found for this country");
+          setBulkActionDialog({ open: false, action: null });
+          setProcessing(false);
+          return;
+        }
+
+        const { error } = await supabase
+          .from("blocked_ips")
+          .delete()
+          .in("ip_address", countryIPs);
+
+        if (error) throw error;
+
+        toast.success(`Removed ${countryIPs.length} block${countryIPs.length !== 1 ? 's' : ''} from ${bulkActionDialog.country}`);
+      }
+
+      fetchBlockedIPs();
+      setBulkActionDialog({ open: false, action: null });
+      setSelectedCountry("");
+    } catch (error) {
+      console.error("Bulk unblock error:", error);
+      toast.error("Failed to perform bulk unblock");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -104,7 +185,65 @@ export const BlockedIPsPanel = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
+      {/* Bulk Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrashIcon className="h-5 w-5" />
+            Bulk Actions
+          </CardTitle>
+          <CardDescription>
+            Remove multiple blocked IPs at once
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setBulkActionDialog({ open: true, action: "expired" })}
+              disabled={expiredBlocks.length === 0}
+              className="gap-2"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Clear All Expired ({expiredBlocks.length})
+            </Button>
+
+            <div className="flex gap-2 flex-1">
+              <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select country to unblock" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueCountries.map(country => {
+                    const count = blockedIPs.filter(ip => ip.country_code === country).length;
+                    return (
+                      <SelectItem key={country} value={country}>
+                        {country} ({count} block{count !== 1 ? 's' : ''})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => setBulkActionDialog({ 
+                  open: true, 
+                  action: "country", 
+                  country: selectedCountry 
+                })}
+                disabled={!selectedCountry}
+                className="gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                Unblock Country
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Active Blocks */}
       <Card>
         <CardHeader>
@@ -264,5 +403,52 @@ export const BlockedIPsPanel = () => {
         </Card>
       )}
     </div>
+
+    {/* Bulk Action Confirmation Dialog */}
+    <AlertDialog 
+      open={bulkActionDialog.open} 
+      onOpenChange={(open) => !open && setBulkActionDialog({ open: false, action: null })}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {bulkActionDialog.action === "expired" 
+              ? "Remove All Expired Blocks?" 
+              : `Unblock All IPs from ${bulkActionDialog.country}?`
+            }
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {bulkActionDialog.action === "expired" ? (
+              <>
+                This will permanently remove <strong>{expiredBlocks.length}</strong> expired IP block
+                {expiredBlocks.length !== 1 ? 's' : ''} from the database. This action cannot be undone.
+              </>
+            ) : (
+              <>
+                This will permanently remove <strong>
+                  {blockedIPs.filter(ip => ip.country_code === bulkActionDialog.country).length}
+                </strong> IP block{blockedIPs.filter(ip => ip.country_code === bulkActionDialog.country).length !== 1 ? 's' : ''} from{' '}
+                <strong>{bulkActionDialog.country}</strong>. Users from this country will be able to create accounts again.
+                This action cannot be undone.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleBulkUnblock();
+            }}
+            disabled={processing}
+            className="bg-destructive hover:bg-destructive/90"
+          >
+            {processing ? "Removing..." : "Remove Blocks"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 };
