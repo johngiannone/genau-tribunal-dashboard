@@ -11,6 +11,7 @@ interface LoginLocation {
   country: string;
   ip: string;
   timestamp: string;
+  isAnomalous?: boolean;
 }
 
 interface LoginMapWidgetProps {
@@ -62,14 +63,27 @@ export function LoginMapWidget({ locations }: LoginMapWidgetProps) {
               el.style.width = '20px';
               el.style.height = '20px';
               el.style.borderRadius = '50%';
-              el.style.backgroundColor = '#0071E3';
+              
+              // Color based on anomaly status
+              if (location.isAnomalous) {
+                el.style.backgroundColor = '#f97316'; // Orange for anomalous
+                el.style.animation = 'pulse 2s infinite';
+              } else {
+                el.style.backgroundColor = '#0071E3'; // Blue for normal
+              }
+              
               el.style.border = '2px solid white';
               el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
               el.style.cursor = 'pointer';
 
               // Create popup with login details
+              const statusBadge = location.isAnomalous 
+                ? '<span style="background: #fed7aa; color: #9a3412; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">⚠️ UNUSUAL</span>'
+                : '<span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">✓ NORMAL</span>';
+              
               const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
                 <div style="padding: 8px; min-width: 150px;">
+                  <div style="margin-bottom: 6px;">${statusBadge}</div>
                   <div style="font-weight: bold; margin-bottom: 4px;">${location.city}, ${location.country}</div>
                   <div style="font-size: 12px; color: #666; margin-bottom: 2px;">IP: ${location.ip}</div>
                   <div style="font-size: 11px; color: #999;">${new Date(location.timestamp).toLocaleString()}</div>
@@ -152,6 +166,20 @@ export function LoginMapWidget({ locations }: LoginMapWidgetProps) {
         </div>
       )}
       <div ref={mapContainer} className="absolute inset-0" />
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.7;
+              transform: scale(1.1);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
