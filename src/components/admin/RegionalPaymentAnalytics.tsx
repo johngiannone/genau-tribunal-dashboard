@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, Globe, TrendingUp, Users } from 'lucide-react';
+import { DollarSign, Globe, TrendingUp, Users, Download, FileText } from 'lucide-react';
+import { exportRegionalDataToCSV, exportRegionalDataToPDF } from '@/lib/regionalAnalyticsExport';
+import { toast } from 'sonner';
 
 interface RegionalData {
   country: string;
@@ -53,6 +56,10 @@ export default function RegionalPaymentAnalytics() {
   const [currencyData, setCurrencyData] = useState<CurrencyData[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  
+  const currencyChartRef = useRef<HTMLDivElement>(null);
+  const countryChartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchRegionalAnalytics();
@@ -163,6 +170,37 @@ export default function RegionalPaymentAnalytics() {
     return ((transactionCount / userCount) * 100).toFixed(1);
   };
 
+  const handleExportCSV = () => {
+    try {
+      exportRegionalDataToCSV(regionalData, currencyData, totalRevenue, totalTransactions);
+      toast.success('CSV exported successfully');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export CSV');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      setExporting(true);
+      toast.info('Generating PDF report...');
+      await exportRegionalDataToPDF(
+        regionalData,
+        currencyData,
+        totalRevenue,
+        totalTransactions,
+        currencyChartRef.current,
+        countryChartRef.current
+      );
+      toast.success('PDF report generated successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to generate PDF report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -174,6 +212,34 @@ export default function RegionalPaymentAnalytics() {
 
   return (
     <div className="space-y-6">
+      {/* Header with export buttons */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Regional Payment Analytics</h2>
+          <p className="text-muted-foreground">Transaction breakdown by country and currency</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            size="sm"
+            disabled={loading || regionalData.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button
+            onClick={handleExportPDF}
+            variant="default"
+            size="sm"
+            disabled={loading || regionalData.length === 0 || exporting}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {exporting ? 'Generating...' : 'Export PDF'}
+          </Button>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -218,7 +284,8 @@ export default function RegionalPaymentAnalytics() {
             <CardTitle>Revenue by Currency</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <div ref={currencyChartRef}>
+              <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={currencyData}
@@ -237,6 +304,7 @@ export default function RegionalPaymentAnalytics() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -246,7 +314,8 @@ export default function RegionalPaymentAnalytics() {
             <CardTitle>Top Countries by Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <div ref={countryChartRef}>
+              <ResponsiveContainer width="100%" height={300}>
               <BarChart data={regionalData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -262,6 +331,7 @@ export default function RegionalPaymentAnalytics() {
                 <Bar dataKey="totalRevenue" fill="#0071E3" />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
