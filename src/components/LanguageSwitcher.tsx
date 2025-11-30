@@ -20,6 +20,9 @@ export const LanguageSwitcher = () => {
     // Set cookie to prevent geo-routing override
     document.cookie = `user_locale=${langCode}; path=/; max-age=31536000`; // 1 year
     
+    // Save to localStorage for persistence across sessions
+    localStorage.setItem('user_locale', langCode);
+    
     i18n.changeLanguage(langCode);
     
     // Update URL path with new language

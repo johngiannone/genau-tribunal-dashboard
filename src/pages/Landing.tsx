@@ -76,10 +76,10 @@ const Landing = () => {
               {t('pricing.title')}
             </Link>
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Features
+              {t('landing.features')}
             </a>
             <a href="#demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Demo
+              {t('landing.demo')}
             </a>
           </nav>
           <div className="flex items-center gap-4">
@@ -103,9 +103,9 @@ const Landing = () => {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.05] mb-4">
-            <span className="text-[#111111]">Ask once. </span>
+            <span className="text-[#111111]">{t('landing.hero')} </span>
             <span className="bg-gradient-to-b from-[#111111] to-[#666666] bg-clip-text text-transparent">
-              Get the consensus.
+              {t('landing.heroAccent')}
             </span>
           </h1>
           <p className="text-xl text-[#86868B] max-w-[600px] mx-auto mb-12 leading-[1.6]">
@@ -127,7 +127,7 @@ const Landing = () => {
                 size="lg" 
                 className="rounded-full h-14 px-10 text-base border-border hover:border-foreground transition-colors"
               >
-                View Pricing
+                {t('landing.viewPricing')}
               </Button>
             </Link>
           </div>
@@ -184,7 +184,7 @@ const Landing = () => {
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground font-mono">
-                  Live Example • Click to view full analysis
+                  {t('landing.liveExample')}
                 </div>
               </div>
 
@@ -213,7 +213,7 @@ const Landing = () => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">{currentExample.model_a_name}</p>
-                      <p className="text-xs text-muted-foreground">Drafter A</p>
+                      <p className="text-xs text-muted-foreground">{t('landing.drafterA')}</p>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-4">
@@ -235,7 +235,7 @@ const Landing = () => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">{currentExample.model_b_name}</p>
-                      <p className="text-xs text-muted-foreground">Drafter B</p>
+                      <p className="text-xs text-muted-foreground">{t('landing.drafterB')}</p>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-4">
@@ -259,14 +259,14 @@ const Landing = () => {
                         <Eye className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-foreground">The Synthesis</p>
-                        <p className="text-xs text-muted-foreground">Final Answer</p>
+                        <p className="text-sm font-semibold text-foreground">{t('landing.synthesis')}</p>
+                        <p className="text-xs text-muted-foreground">{t('landing.finalAnswer')}</p>
                       </div>
                     </div>
                     {currentExample.confidence && (
                       <div className="px-3 py-1 bg-success/10 rounded-full">
                         <span className="text-xs font-semibold text-success">
-                          {Math.round(currentExample.confidence)}% Confidence
+                          {Math.round(currentExample.confidence)}% {t('landing.confidence')}
                         </span>
                       </div>
                     )}
@@ -289,14 +289,14 @@ const Landing = () => {
                   </div>
                 </div>
                 <div className="text-sm text-muted-foreground font-mono">
-                  consensus.ai/demo
+                  {t('landing.demoUrl')}
                 </div>
               </div>
 
               <div className="px-8 py-6 bg-secondary/10">
                 <div className="inline-block bg-primary/10 px-4 py-2 rounded-full">
                   <p className="text-sm font-medium text-foreground">
-                    "What are the key benefits of renewable energy?"
+                    "{t('landing.exampleQuestion')}"
                   </p>
                 </div>
               </div>
@@ -309,7 +309,7 @@ const Landing = () => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">GPT-4o</p>
-                      <p className="text-xs text-muted-foreground">The Chairman</p>
+                      <p className="text-xs text-muted-foreground">{t('landing.theChairman')}</p>
                     </div>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
@@ -326,7 +326,7 @@ const Landing = () => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">Claude 3.5</p>
-                      <p className="text-xs text-muted-foreground">The Critic</p>
+                      <p className="text-xs text-muted-foreground">{t('landing.theCritic')}</p>
                     </div>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
@@ -345,12 +345,12 @@ const Landing = () => {
                         <Eye className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-foreground">The Synthesis</p>
-                        <p className="text-xs text-muted-foreground">Final Answer</p>
+                        <p className="text-sm font-semibold text-foreground">{t('landing.synthesis')}</p>
+                        <p className="text-xs text-muted-foreground">{t('landing.finalAnswer')}</p>
                       </div>
                     </div>
                     <div className="px-3 py-1 bg-success/10 rounded-full">
-                      <span className="text-xs font-semibold text-success">99% Confidence</span>
+                      <span className="text-xs font-semibold text-success">99% {t('landing.confidence')}</span>
                     </div>
                   </div>
                   <div className="space-y-2 text-sm">
@@ -375,10 +375,10 @@ const Landing = () => {
           className="text-center mb-20"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
-            How It Works
+            {t('landing.howItWorks')}
           </h2>
           <p className="text-xl text-[#86868B] max-w-2xl mx-auto">
-            A simple, powerful process to get the best answer from multiple AI minds
+            {t('landing.howItWorksSubtitle')}
           </p>
         </motion.div>
 
@@ -403,10 +403,10 @@ const Landing = () => {
                   1
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Ask Your Question
+                  {t('landing.step1Title')}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Submit any question or upload a document for analysis
+                  {t('landing.step1Description')}
                 </p>
               </div>
             </motion.div>
@@ -427,10 +427,10 @@ const Landing = () => {
                   2
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Council Deliberates
+                  {t('landing.step2Title')}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Multiple AI models analyze your question in parallel
+                  {t('landing.step2Description')}
                 </p>
               </div>
             </motion.div>
@@ -451,10 +451,10 @@ const Landing = () => {
                   3
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Auditor Reviews
+                  {t('landing.step3Title')}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  An expert model compares all responses for accuracy
+                  {t('landing.step3Description')}
                 </p>
               </div>
             </motion.div>
@@ -475,10 +475,10 @@ const Landing = () => {
                   4
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Get Synthesis
+                  {t('landing.step4Title')}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Receive a unified answer with confidence score
+                  {t('landing.step4Description')}
                 </p>
               </div>
             </motion.div>
@@ -498,26 +498,26 @@ const Landing = () => {
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-semibold text-foreground mb-1">Why Consensus?</h4>
+                  <h4 className="font-semibold text-foreground mb-1">{t('landing.whyConsensus')}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Single AI models can be wrong. Multiple models reaching consensus are far more reliable.
+                    {t('landing.whyConsensusText')}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-6 text-center">
                 <div>
                   <div className="text-2xl font-bold text-primary mb-1">99%</div>
-                  <div className="text-xs text-muted-foreground">Avg. Confidence</div>
+                  <div className="text-xs text-muted-foreground">{t('landing.avgConfidence')}</div>
                 </div>
                 <div className="h-12 w-px bg-border" />
                 <div>
                   <div className="text-2xl font-bold text-primary mb-1">&lt;2s</div>
-                  <div className="text-xs text-muted-foreground">Response Time</div>
+                  <div className="text-xs text-muted-foreground">{t('landing.responseTime')}</div>
                 </div>
                 <div className="h-12 w-px bg-border" />
                 <div>
                   <div className="text-2xl font-bold text-primary mb-1">5+</div>
-                  <div className="text-xs text-muted-foreground">AI Models</div>
+                  <div className="text-xs text-muted-foreground">{t('landing.aiModels')}</div>
                 </div>
               </div>
             </div>
@@ -535,10 +535,10 @@ const Landing = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
-            Frequently Asked Questions
+            {t('landing.faqTitle')}
           </h2>
           <p className="text-xl text-[#86868B] max-w-2xl mx-auto">
-            Everything you need to know about Consensus
+            {t('landing.faqSubtitle')}
           </p>
         </motion.div>
 
@@ -551,55 +551,55 @@ const Landing = () => {
           <Accordion type="single" collapsible className="w-full space-y-4">
             <AccordionItem value="item-1" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                Which AI models are included?
+                {t('landing.faq1Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                By default, your council includes GPT-4o (The Chairman), Claude 3.5 Sonnet (The Critic), Qwen 2.5 Coder (The Architect), Grok 2 (The Reporter), and Llama 3.3 (The Speedster). You can customize this lineup by selecting from 330+ models including Gemini, Mistral, DeepSeek, and more.
+                {t('landing.faq1Answer')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-2" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                How accurate is the consensus?
+                {t('landing.faq2Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                Our multi-model consensus approach achieves 99% average confidence scores. By running multiple AI systems in parallel and having an auditor review their responses, we eliminate single-model hallucinations and biases. The synthesis only presents findings where models agree, ensuring high reliability.
+                {t('landing.faq2Answer')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-3" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                Can I customize my council?
+                {t('landing.faq3Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                Yes! Navigate to Settings → Council to customize all five council slots. Choose from 330+ models based on your needs—whether you prioritize speed, creativity, coding ability, or cost efficiency. You can even swap models mid-conversation.
+                {t('landing.faq3Answer')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-4" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                What's the difference between Free and Pro plans?
+                {t('landing.faq4Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                Free Observer accounts get 3 audits per month to try the system. Pro Professional ($29/mo) unlocks 200 audits and 50 file uploads monthly. Max Power User ($99/mo) includes 800 audits, unlimited files, and 2M token context windows for large document analysis.
+                {t('landing.faq4Answer')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-5" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                Can I upload documents for analysis?
+                {t('landing.faq5Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                Absolutely. Upload PDFs, images, or documents directly in the chat interface. The Librarian (Gemini) will analyze your file and create context that persists across the entire conversation. All council members will reference this context when answering your questions.
+                {t('landing.faq5Answer')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-6" className="border border-[#E5E5EA] rounded-2xl px-6 bg-white shadow-sm">
               <AccordionTrigger className="text-left text-lg font-semibold text-[#111111] hover:no-underline py-6">
-                How fast are the responses?
+                {t('landing.faq6Question')}
               </AccordionTrigger>
               <AccordionContent className="text-[#86868B] leading-relaxed pb-6">
-                Most audits complete in under 2 seconds. Because all models run in parallel rather than sequentially, you get the benefit of multiple AI perspectives without the wait. Response times vary based on which models you've selected—faster models like Llama deliver near-instant results.
+                {t('landing.faq6Answer')}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -616,10 +616,10 @@ const Landing = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
-            Everything you need
+            {t('landing.featuresTitle')}
           </h2>
           <p className="text-xl text-[#86868B] max-w-2xl mx-auto">
-            Powerful features to help you make better decisions with AI
+            {t('landing.featuresSubtitle')}
           </p>
         </motion.div>
 
@@ -627,20 +627,20 @@ const Landing = () => {
           {[
             {
               icon: Zap,
-              title: "Multi-Model Consensus",
-              description: "Run GPT-4o, Claude, Llama, and more in parallel. Get synthesized insights from multiple AI perspectives.",
+              title: t('landing.feature1Title'),
+              description: t('landing.feature1Description'),
               delay: 0
             },
             {
               icon: Shield,
-              title: "Confidence Scoring",
-              description: "Every response includes a confidence score, showing you how aligned the AI models are on the answer.",
+              title: t('landing.feature2Title'),
+              description: t('landing.feature2Description'),
               delay: 0.1
             },
             {
               icon: Users,
-              title: "Customizable Council",
-              description: "Choose which AI models to include in your council. Tailor the consensus to your specific needs.",
+              title: t('landing.feature3Title'),
+              description: t('landing.feature3Description'),
               delay: 0.2
             }
           ].map((feature, index) => (
@@ -685,17 +685,17 @@ const Landing = () => {
           className="apple-card p-12 md:p-16 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/10"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
-            Ready to get started?
+            {t('landing.ctaTitle')}
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of users leveraging multi-model AI consensus for better decisions.
+            {t('landing.ctaSubtitle')}
           </p>
           <Link to={`/${lang || 'en'}/auth`}>
             <Button 
               size="lg" 
               className="rounded-full h-14 px-10 text-base shadow-lg hover:shadow-primary/20 transition-all duration-300"
             >
-              Start Free Trial
+              {t('landing.startFreeTrial')}
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </Link>
@@ -708,17 +708,17 @@ const Landing = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <span className="text-sm text-muted-foreground">© 2025 Consensus. All rights reserved.</span>
+              <span className="text-sm text-muted-foreground">{t('landing.copyright')}</span>
             </div>
             <div className="flex items-center gap-6">
               <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+                {t('pricing.title')}
               </Link>
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Documentation
+                {t('landing.documentation')}
               </a>
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Support
+                {t('landing.support')}
               </a>
               <LanguageSwitcher />
             </div>
