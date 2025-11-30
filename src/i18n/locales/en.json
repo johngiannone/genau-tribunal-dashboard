@@ -1,0 +1,37 @@
+{
+  "landing": {
+    "hero": "Ask once. Get the consensus.",
+    "subtitle": "Running multiple AI models in parallel for precision auditing."
+  },
+  "pricing": {
+    "title": "The Council Awaits",
+    "subtitle": "Choose your path to unlimited consensus. Get precision AI audits from multiple models working in parallel.",
+    "personal": "Personal",
+    "business": "Business",
+    "perMonth": "/mo",
+    "getStarted": "Get Started",
+    "enterprise": "Enterprise",
+    "enterpriseDescription": "Need SSO or On-Premise Deployment?",
+    "contactSales": "Contact Sales",
+    "ready": "Ready to get started?",
+    "createAccount": "Create Free Account",
+    "backToLogin": "Back to Login"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "viewPricing": "View Membership Options"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit"
+  }
+}

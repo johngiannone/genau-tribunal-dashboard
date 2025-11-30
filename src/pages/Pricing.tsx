@@ -1,10 +1,19 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { PricingSection } from "@/components/PricingSection";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ArrowLeft, Brain } from "lucide-react";
+
+type Currency = 'USD' | 'GBP' | 'EUR';
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const { lang } = useParams();
+  
+  // Determine currency based on language
+  const currency: Currency = lang === 'de' ? 'EUR' : lang === 'en-gb' ? 'GBP' : 'USD';
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -18,11 +27,11 @@ const Pricing = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate(`/${lang || 'en'}/auth`)}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Login
+            {t('pricing.backToLogin')}
           </Button>
 
           <div className="flex items-center gap-2">
@@ -34,36 +43,36 @@ const Pricing = () => {
             </span>
           </div>
 
-          <div className="w-[100px]" /> {/* Spacer for centering */}
+          <LanguageSwitcher />
         </div>
       </div>
 
       {/* Hero Section */}
       <div className="relative z-10 text-center py-12 px-4">
         <h1 className="text-5xl font-mono font-bold gradient-text mb-4">
-          The Council Awaits
+          {t('pricing.title')}
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Choose your path to unlimited consensus. Get precision AI audits from multiple models working in parallel.
+          {t('pricing.subtitle')}
         </p>
       </div>
 
       {/* Pricing Section */}
       <div className="relative z-10">
-        <PricingSection mode="public" />
+        <PricingSection mode="public" currency={currency} />
       </div>
 
       {/* Footer CTA */}
       <div className="relative z-10 text-center py-12 px-4">
         <p className="text-muted-foreground mb-4">
-          Ready to get started?
+          {t('pricing.ready')}
         </p>
         <Button
           size="lg"
-          onClick={() => navigate("/auth")}
+          onClick={() => navigate(`/${lang || 'en'}/auth`)}
           className="gap-2"
         >
-          Create Free Account
+          {t('pricing.createAccount')}
         </Button>
       </div>
     </div>

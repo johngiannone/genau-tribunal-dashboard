@@ -1,6 +1,7 @@
 import { Button } from "./ui/button";
 import { Check, Info } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   Tooltip,
@@ -18,6 +19,7 @@ interface PricingCardProps {
   stripeLink: string;
   isPrimary?: boolean;
   mode?: "public" | "authenticated";
+  pricePrefix?: string;
 }
 
 export const PricingCard = ({ 
@@ -28,15 +30,18 @@ export const PricingCard = ({
   isPopular = false,
   stripeLink,
   isPrimary = false,
-  mode = "authenticated"
+  mode = "authenticated",
+  pricePrefix = "$"
 }: PricingCardProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { lang } = useParams();
 
   const handleClick = () => {
     if (mode === "public") {
       // Redirect to auth with plan name as query param
       const planSlug = name.toLowerCase().replace(/\s+/g, "-");
-      navigate(`/auth?plan=${planSlug}`);
+      navigate(`/${lang || 'en'}/auth?plan=${planSlug}`);
     } else {
       // Check if it's a placeholder link
       if (stripeLink.startsWith("https://stripe.com/") || stripeLink === "#") {
@@ -68,8 +73,8 @@ export const PricingCard = ({
         </div>
 
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-foreground">${price}</span>
-          <span className="text-muted-foreground">/month</span>
+          <span className="text-4xl font-bold text-foreground">{pricePrefix}{price}</span>
+          <span className="text-muted-foreground">{t('pricing.perMonth')}</span>
         </div>
 
         <ul className="space-y-2">
@@ -103,7 +108,7 @@ export const PricingCard = ({
               : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}
         >
-          {price === 0 ? (mode === "public" ? 'Sign Up Free' : 'Current Plan') : 'Get Started'}
+          {price === 0 ? (mode === "public" ? t('pricing.getStarted') : 'Current Plan') : t('pricing.getStarted')}
         </Button>
       </div>
     </div>
