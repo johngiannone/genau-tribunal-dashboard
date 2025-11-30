@@ -43,16 +43,21 @@ serve(async (req) => {
     console.log(`User country detected: ${userCountry}`);
 
     // Determine Stripe account and currency based on region
-    const isEuropeanRegion = ['DE', 'GB', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry);
-    
     let stripeKey: string;
     let currency: string;
     
-    if (isEuropeanRegion) {
+    if (userCountry === 'GB') {
+      // UK uses GBP
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'gbp';
+      console.log('Using UK Stripe account with GBP currency');
+    } else if (['DE', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry)) {
+      // EU countries use EUR
       stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
       currency = 'eur';
       console.log('Using UK/EU Stripe account with EUR currency');
     } else {
+      // Rest of world uses USD
       stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
       currency = 'usd';
       console.log('Using US Stripe account with USD currency');
@@ -73,7 +78,7 @@ serve(async (req) => {
       body: new URLSearchParams({
         'payment_method_types[]': 'card',
         'line_items[0][price_data][currency]': currency,
-        'line_items[0][price_data][product_data][name]': `Genau Credits - ${currency === 'eur' ? '€' : '$'}${amount}`,
+        'line_items[0][price_data][product_data][name]': `Genau Credits - ${currency === 'gbp' ? '£' : currency === 'eur' ? '€' : '$'}${amount}`,
         'line_items[0][price_data][product_data][description]': 'AI Consensus Engine Credits',
         'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
         'line_items[0][quantity]': '1',

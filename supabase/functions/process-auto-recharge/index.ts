@@ -83,23 +83,28 @@ serve(async (req) => {
     console.log(`User country for auto-recharge: ${userCountry}`);
 
     // Determine Stripe account and currency based on region
-    const isEuropeanRegion = ['DE', 'GB', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry);
-    
     let stripeKey: string;
     let currency: string;
     
-    if (isEuropeanRegion) {
+    if (userCountry === 'GB') {
+      // UK uses GBP
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'gbp';
+      console.log('Using UK Stripe account with GBP currency');
+    } else if (['DE', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry)) {
+      // EU countries use EUR
       stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
       currency = 'eur';
       console.log('Using UK/EU Stripe account with EUR currency');
     } else {
+      // Rest of world uses USD
       stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
       currency = 'usd';
       console.log('Using US Stripe account with USD currency');
     }
 
     const rechargeAmount = billing.auto_recharge_amount;
-    console.log(`Creating Stripe checkout for ${currency === 'eur' ? '€' : '$'}${rechargeAmount}`);
+    console.log(`Creating Stripe checkout for ${currency === 'gbp' ? '£' : currency === 'eur' ? '€' : '$'}${rechargeAmount}`);
 
     // Get user email for Stripe
     const { data: { user }, error: userError } = await supabaseClient.auth.admin.getUserById(user_id);
