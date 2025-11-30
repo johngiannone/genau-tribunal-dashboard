@@ -636,7 +636,7 @@ serve(async (req) => {
     }
 
     // 🚀 QUERY ROUTER: Analyze intent and create execution plan
-    let queryPlan: any = null
+    let queryPlan: { primary_intent: string; required_agents: string[]; search_queries: string[] } | null = null
     try {
       console.log("Calling query-router to analyze intent...")
       const routerResponse = await adminSupabase.functions.invoke('query-router', {
@@ -702,9 +702,10 @@ serve(async (req) => {
     let drafterSlots = allSlots.filter(slot => slot.slotKey !== auditorSlot.slotKey)
     
     // 🎯 INTELLIGENT FILTERING: Use query plan to select relevant agents
-    if (queryPlan && queryPlan.agentsNeeded && Array.isArray(queryPlan.agentsNeeded)) {
-      const requiredAgents = queryPlan.agentsNeeded.map((a: string) => a.toLowerCase())
+    if (queryPlan && queryPlan.required_agents && Array.isArray(queryPlan.required_agents)) {
+      const requiredAgents = queryPlan.required_agents.map((a: string) => a.toLowerCase())
       console.log(`Query plan requires agents: ${requiredAgents.join(', ')}`)
+      console.log(`Primary intent: ${queryPlan.primary_intent}`)
       
       // Map agent names to slots based on role keywords
       const agentRoleMap: Record<string, string[]> = {
