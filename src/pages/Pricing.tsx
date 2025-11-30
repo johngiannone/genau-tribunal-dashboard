@@ -90,17 +90,27 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* Fixed Bottom Bar - Logo & Language Selector */}
+      {/* Fixed Bottom Bar - Logo, Support Link & Language Selector */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo Left */}
-          <div className="flex items-center gap-2">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0071E3]/10">
-              <Brain className="w-4 h-4 text-[#0071E3]" />
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0071E3]/10">
+                <Brain className="w-4 h-4 text-[#0071E3]" />
+              </div>
+              <span className="font-bold text-[#111111] tracking-tight">
+                Genau
+              </span>
             </div>
-            <span className="font-bold text-[#111111] tracking-tight">
-              Genau
-            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/${lang || 'en'}/support`)}
+              className="text-sm text-gray-500 hover:text-[#111111]"
+            >
+              Help Center
+            </Button>
           </div>
           
           {/* Language Selector Right */}

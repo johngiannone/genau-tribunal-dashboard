@@ -829,12 +829,12 @@ const Landing = () => {
               <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {t('pricing.title')}
               </Link>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a href="https://docs.genau.io" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {t('landing.documentation')}
               </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                {t('landing.support')}
-              </a>
+              <Link to={`/${lang || 'en'}/support`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Help Center
+              </Link>
               <LanguageSwitcher />
             </div>
           </div>
