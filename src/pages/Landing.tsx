@@ -54,7 +54,10 @@ const Landing = () => {
   const currentExample = sharedAudits[currentExampleIndex];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Subtle Radial Gradient Background */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-radial from-primary/5 via-transparent to-transparent pointer-events-none" />
+      
       {/* Sticky Header with Glassmorphism */}
       <motion.header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -66,7 +69,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-semibold text-foreground">Consensus</span>
+            <span className="text-xl font-black tracking-tight text-foreground">Consensus</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -80,10 +83,12 @@ const Landing = () => {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <LanguageSwitcher />
+            <Link to={`/${lang || 'en'}/auth`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              {t('auth.signIn')}
+            </Link>
             <Link to={`/${lang || 'en'}/auth`}>
-              <Button variant="outline" className="rounded-full border-border hover:border-foreground transition-colors">
-                {t('auth.signIn')}
+              <Button className="rounded-full bg-foreground text-background hover:bg-foreground/90">
+                {t('pricing.getStarted')}
               </Button>
             </Link>
           </div>
@@ -91,16 +96,19 @@ const Landing = () => {
       </motion.header>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-32 pb-24 text-center">
+      <section className="relative max-w-7xl mx-auto px-6 pt-32 pb-48 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-[#111111] tracking-tight leading-[1.05] mb-8 bg-gradient-to-b from-[#111111] to-[#666666] bg-clip-text text-transparent">
-            {t('landing.hero')}
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.05] mb-4">
+            <span className="text-[#111111]">Ask once. </span>
+            <span className="bg-gradient-to-b from-[#111111] to-[#666666] bg-clip-text text-transparent">
+              Get the consensus.
+            </span>
           </h1>
-          <p className="text-xl md:text-2xl text-[#86868B] max-w-3xl mx-auto mb-12 leading-[1.6]">
+          <p className="text-xl text-[#86868B] max-w-[600px] mx-auto mb-12 leading-[1.6]">
             {t('landing.subtitle')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -126,19 +134,28 @@ const Landing = () => {
         </motion.div>
       </section>
 
-      {/* Interactive Demo Section - The Centerpiece */}
-      <section id="demo" className="max-w-6xl mx-auto px-6 py-20">
+      {/* Interactive Demo Section - Floating Glassmorphism Card */}
+      <section id="demo" className="max-w-6xl mx-auto px-6 -mt-32 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
+          animate={{ 
+            opacity: 1, 
+            y: [0, -10, 0],
+          }}
+          transition={{ 
+            opacity: { duration: 0.7 },
+            y: {
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }
+          }}
           className="relative"
         >
           {currentExample ? (
             /* Real Audit Demo - Click to View Full Result */
             <div 
-              className="relative bg-white border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-[1.01]"
+              className="relative bg-white/80 backdrop-blur-xl border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-all hover:shadow-[0_25px_60px_rgba(0,0,0,0.2)] hover:scale-[1.01]"
               onClick={() => navigate(`/share/${currentExample.share_slug}`)}
             >
               {/* Demo Header */}
@@ -262,7 +279,7 @@ const Landing = () => {
             </div>
           ) : (
             /* Fallback Static Demo */
-            <div className="relative bg-white border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden">
+            <div className="relative bg-white/80 backdrop-blur-xl border border-[#E5E5EA] rounded-3xl shadow-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-background to-secondary/20 px-8 py-6 border-b border-border">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="flex gap-2">
