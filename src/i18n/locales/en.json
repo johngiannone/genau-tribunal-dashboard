@@ -15,7 +15,8 @@
     "contactSales": "Contact Sales",
     "ready": "Ready to get started?",
     "createAccount": "Create Free Account",
-    "backToLogin": "Back to Login"
+    "backToLogin": "Back to Login",
+    "vatIncluded": "VAT included"
   },
   "auth": {
     "signIn": "Sign In",

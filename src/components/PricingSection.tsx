@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { PricingCard } from "./PricingCard";
-import { Mail } from "lucide-react";
+import { Mail, RefreshCw } from "lucide-react";
+import { useExchangeRates } from "@/hooks/useExchangeRates";
+import { Skeleton } from "./ui/skeleton";
 
 type Currency = 'USD' | 'GBP' | 'EUR';
 
@@ -13,7 +15,8 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
   EUR: '€',
 };
 
-const CURRENCY_RATES: Record<Currency, number> = {
+// Fallback rates if API fails
+const FALLBACK_RATES: Record<Currency, number> = {
   USD: 1,
   GBP: 0.79,
   EUR: 0.92,
@@ -75,10 +78,14 @@ interface PricingSectionProps {
 export const PricingSection = ({ mode = "authenticated", currency = "USD" }: PricingSectionProps) => {
   const { t, i18n } = useTranslation();
   const [isBusiness, setIsBusiness] = useState(false);
+  const { data: exchangeRates, isLoading, error } = useExchangeRates();
+  
+  // Use real exchange rates or fallback
+  const rates = exchangeRates || FALLBACK_RATES;
   
   // Convert prices to selected currency
   const convertPrice = (priceUSD: number) => {
-    return Math.round(priceUSD * CURRENCY_RATES[currency]);
+    return Math.round(priceUSD * rates[currency]);
   };
   
   // Add currency symbol and format plans
@@ -92,8 +99,33 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
   
   const plans = isBusiness ? formatPlans(businessPlans) : formatPlans(personalPlans);
 
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-6xl mx-auto space-y-8 py-8">
+        <div className="flex items-center justify-center gap-4">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-6 w-12" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-96 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 py-8">
+      {/* Exchange Rate Info */}
+      {exchangeRates && (
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <RefreshCw className="w-3 h-3" />
+          <span>Live exchange rates updated hourly</span>
+        </div>
+      )}
+      
       {/* Toggle Switch */}
       <div className="flex items-center justify-center gap-4">
         <Label 
