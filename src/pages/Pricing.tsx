@@ -19,7 +19,7 @@ const Pricing = () => {
     'USD';
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Subtle Background Gradient */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-50/30 via-transparent to-transparent pointer-events-none" />
 
@@ -36,46 +36,44 @@ const Pricing = () => {
         </Button>
       </div>
 
-      {/* Language Switcher - Top Right */}
-      <div className="absolute top-6 right-6 z-20">
-        <LanguageSwitcher />
-      </div>
+      {/* Main Content - Vertically Centered */}
+      <div className="min-h-screen flex items-center justify-center pb-32 pt-20 px-6">
+        <div className="w-full max-w-7xl">
+          {/* Hero Section - Centered */}
+          <div className="relative z-10 text-center mb-16">
+            <h1 className="text-6xl md:text-7xl font-black text-[#111111] tracking-tight leading-[1.05] mb-6">
+              {t('pricing.title')}
+            </h1>
+            <p className="text-xl text-gray-500 max-w-[600px] mx-auto leading-relaxed">
+              {t('pricing.subtitle')}
+            </p>
+          </div>
 
-      {/* Main Content - Centered */}
-      <div className="flex-1 flex flex-col items-center justify-start pt-24 pb-32">
-        {/* Hero Section - Centered */}
-        <div className="relative z-10 text-center px-6 mb-16">
-          <h1 className="text-6xl md:text-7xl font-black text-[#111111] tracking-tight leading-[1.05] mb-6">
-            {t('pricing.title')}
-          </h1>
-          <p className="text-xl text-gray-500 max-w-[600px] mx-auto leading-relaxed">
-            {t('pricing.subtitle')}
-          </p>
-        </div>
+          {/* Pricing Section */}
+          <div className="relative z-10">
+            <PricingSection mode="public" currency={currency} />
+          </div>
 
-        {/* Pricing Section */}
-        <div className="relative z-10 w-full">
-          <PricingSection mode="public" currency={currency} />
-        </div>
-
-        {/* Footer CTA */}
-        <div className="relative z-10 text-center py-16 px-6">
-          <p className="text-gray-500 mb-6 text-lg">
-            {t('pricing.ready')}
-          </p>
-          <Button
-            size="lg"
-            onClick={() => navigate(`/${lang || 'en'}/auth`)}
-            className="h-14 px-10 rounded-full bg-[#111111] text-white hover:bg-[#000000] shadow-lg hover:shadow-xl transition-all"
-          >
-            {t('pricing.createAccount')}
-          </Button>
+          {/* Footer CTA */}
+          <div className="relative z-10 text-center pt-16">
+            <p className="text-gray-500 mb-6 text-lg">
+              {t('pricing.ready')}
+            </p>
+            <Button
+              size="lg"
+              onClick={() => navigate(`/${lang || 'en'}/auth`)}
+              className="h-14 px-10 rounded-full bg-[#111111] text-white hover:bg-[#000000] shadow-lg hover:shadow-xl transition-all"
+            >
+              {t('pricing.createAccount')}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Fixed Bottom Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 py-4">
+      {/* Fixed Bottom Bar - Logo & Language Selector */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          {/* Logo Left */}
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0071E3]/10">
               <Brain className="w-4 h-4 text-[#0071E3]" />
@@ -84,9 +82,9 @@ const Pricing = () => {
               Consensus
             </span>
           </div>
-          <p className="text-sm text-gray-400 hidden sm:block">
-            © 2025 Consensus. {t('landing.copyright').replace('© 2025 Consensus. ', '')}
-          </p>
+          
+          {/* Language Selector Right */}
+          <LanguageSwitcher />
         </div>
       </div>
     </div>
