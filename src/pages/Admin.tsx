@@ -55,6 +55,7 @@ import { CostMetricsPanel } from "@/components/admin/CostMetricsPanel";
 import { SimpleCostForecastPanel } from "@/components/admin/SimpleCostForecastPanel";
 import { ProviderManagement } from "@/components/admin/ProviderManagement";
 import { ProviderCostComparison } from "@/components/admin/ProviderCostComparison";
+import { CostSavingsMonitor } from "@/components/admin/CostSavingsMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -644,6 +645,7 @@ const Admin = () => {
 
               <TabsContent value="providers">
                 <div className="space-y-6">
+                  <CostSavingsMonitor />
                   <ProviderManagement />
                   <ProviderCostComparison />
                 </div>
