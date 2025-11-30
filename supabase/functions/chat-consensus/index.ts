@@ -637,17 +637,61 @@ serve(async (req) => {
 
     // 🚀 QUERY ROUTER: Analyze intent and create execution plan
     let queryPlan: { primary_intent: string; required_agents: string[]; search_queries: string[] } | null = null
+    let cacheHit = false
+    
     try {
-      console.log("Calling query-router to analyze intent...")
-      const routerResponse = await adminSupabase.functions.invoke('query-router', {
-        body: { prompt }
-      })
+      // Generate hash of the prompt for cache lookup
+      const promptNormalized = prompt.trim().toLowerCase()
+      const encoder = new TextEncoder()
+      const data = encoder.encode(promptNormalized)
+      const hashBuffer = await crypto.subtle.digest('MD5', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const promptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
       
-      if (routerResponse.error) {
-        console.warn("Query router failed, using full council:", routerResponse.error)
+      console.log("Checking query cache for hash:", promptHash)
+      
+      // Check cache first
+      const { data: cachedEntry, error: cacheError } = await adminSupabase
+        .from('query_cache')
+        .select('structured_json, expires_at')
+        .eq('prompt_hash', promptHash)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle()
+      
+      if (cachedEntry && !cacheError) {
+        queryPlan = cachedEntry.structured_json as any
+        cacheHit = true
+        console.log("✓ Cache HIT - Using cached routing plan:", JSON.stringify(queryPlan, null, 2))
       } else {
-        queryPlan = routerResponse.data?.plan
-        console.log("Query plan received:", JSON.stringify(queryPlan, null, 2))
+        console.log("✗ Cache MISS - Calling query-router...")
+        const routerResponse = await adminSupabase.functions.invoke('query-router', {
+          body: { prompt }
+        })
+        
+        if (routerResponse.error) {
+          console.warn("Query router failed, using full council:", routerResponse.error)
+        } else {
+          queryPlan = routerResponse.data?.plan
+          console.log("Query plan generated:", JSON.stringify(queryPlan, null, 2))
+          
+          // Cache the result for future queries
+          if (queryPlan) {
+            const { error: insertError } = await adminSupabase
+              .from('query_cache')
+              .insert({
+                prompt_hash: promptHash,
+                structured_json: queryPlan,
+                created_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+              })
+            
+            if (insertError) {
+              console.warn("Failed to cache query plan:", insertError)
+            } else {
+              console.log("✓ Query plan cached successfully")
+            }
+          }
+        }
       }
     } catch (routerError) {
       console.warn("Query router error, falling back to full council:", routerError)
@@ -1292,7 +1336,8 @@ serve(async (req) => {
             ...queryPlan,
             search_executed: !!(queryPlan.search_queries && queryPlan.search_queries.length > 0),
             search_results_count: searchContext ? queryPlan.search_queries?.length || 0 : 0
-          } : {}
+          } : {},
+          cache_hit: cacheHit
         })
         .select()
         .maybeSingle()
@@ -1334,7 +1379,8 @@ serve(async (req) => {
               search_queries: queryPlan?.search_queries || [],
               primary_intent: queryPlan?.primary_intent || null,
               routing_strategy: assignedStrategy,
-              experiment_id: routingExperiment?.experimentId || null
+              experiment_id: routingExperiment?.experimentId || null,
+              cache_hit: cacheHit
             }
           })
         
