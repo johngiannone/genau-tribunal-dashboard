@@ -245,6 +245,24 @@ export const Sidebar = ({
   };
 
   const handleLogout = async () => {
+    // Calculate session duration
+    const sessionStart = localStorage.getItem('session_start');
+    const sessionDuration = sessionStart 
+      ? Math.round((Date.now() - new Date(sessionStart).getTime()) / 60000) 
+      : null;
+
+    // Log logout activity in background
+    supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'logout',
+        description: 'User signed out',
+        metadata: {
+          session_duration_minutes: sessionDuration
+        }
+      }
+    }).catch(err => console.error('Failed to log logout activity:', err));
+
+    localStorage.removeItem('session_start');
     await supabase.auth.signOut();
     navigate("/auth");
   };
