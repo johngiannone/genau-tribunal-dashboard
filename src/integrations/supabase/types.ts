@@ -347,7 +347,9 @@ export type Database = {
         Row: {
           context: string | null
           created_at: string
+          folder_id: string | null
           id: string
+          organization_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -355,7 +357,9 @@ export type Database = {
         Insert: {
           context?: string | null
           created_at?: string
+          folder_id?: string | null
           id?: string
+          organization_id?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -363,12 +367,29 @@ export type Database = {
         Update: {
           context?: string | null
           created_at?: string
+          folder_id?: string | null
           id?: string
+          organization_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "project_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_alerts: {
         Row: {
@@ -522,6 +543,36 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_members: number | null
+          name: string
+          owner_id: string
+          subscription_tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_members?: number | null
+          name: string
+          owner_id: string
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_members?: number | null
+          name?: string
+          owner_id?: string
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           council_config: Json | null
@@ -549,6 +600,39 @@ export type Database = {
           favorite_models?: Json | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      project_folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          position: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          position?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          position?: number | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -624,6 +708,47 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          id: string
+          invite_status: string | null
+          invited_at: string | null
+          invited_email: string | null
+          joined_at: string | null
+          organization_id: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          invite_status?: string | null
+          invited_at?: string | null
+          invited_email?: string | null
+          joined_at?: string | null
+          organization_id?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          invite_status?: string | null
+          invited_at?: string | null
+          invited_email?: string | null
+          joined_at?: string | null
+          organization_id?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_dataset: {
         Row: {
           council_source: string | null
@@ -681,6 +806,39 @@ export type Database = {
           verdict_model?: string | null
           verdict_rating?: number | null
           verdict_response?: string | null
+        }
+        Relationships: []
+      }
+      user_branding: {
+        Row: {
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          report_footer: string | null
+          report_title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer?: string | null
+          report_title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          report_footer?: string | null
+          report_title?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -771,6 +929,7 @@ export type Database = {
           is_premium: boolean
           last_reset_at: string | null
           monthly_budget_limit: number | null
+          organization_id: string | null
           per_audit_cost_threshold: number | null
           subscription_tier: string | null
           suspended_until: string | null
@@ -791,6 +950,7 @@ export type Database = {
           is_premium?: boolean
           last_reset_at?: string | null
           monthly_budget_limit?: number | null
+          organization_id?: string | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           suspended_until?: string | null
@@ -811,13 +971,22 @@ export type Database = {
           is_premium?: boolean
           last_reset_at?: string | null
           monthly_budget_limit?: number | null
+          organization_id?: string | null
           per_audit_cost_threshold?: number | null
           subscription_tier?: string | null
           suspended_until?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen, Sparkles, Users, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
 import { KnowledgeBaseTab } from "@/components/KnowledgeBaseTab";
+import { TeamManagementTab } from "@/components/TeamManagementTab";
+import { BrandingSettingsTab } from "@/components/BrandingSettingsTab";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Settings = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -21,6 +25,7 @@ const Settings = () => {
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { tier } = useUserRole();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

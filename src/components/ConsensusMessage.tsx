@@ -15,6 +15,7 @@ import { exportVerdictToPDF } from "@/lib/pdfExport";
 import { EmailShareModal } from "./EmailShareModal";
 import { useIsPro } from "@/hooks/useIsPro";
 import { UpgradeModal } from "./UpgradeModal";
+import { ExpertMarketplaceBanner } from "./ExpertMarketplaceBanner";
 
 interface ConsensusMessageProps {
   userPrompt: string;
@@ -42,6 +43,7 @@ interface ConsensusMessageProps {
     estimatedCost: number;
     modelCount: number;
   };
+  isTurboMode?: boolean;
 }
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
@@ -274,6 +276,7 @@ export const ConsensusMessage = ({
   currentModelAId,
   currentModelBId,
   computeStats,
+  isTurboMode = false,
 }: ConsensusMessageProps) => {
   const [isSharing, setIsSharing] = useState(false);
   const [showModelMarket, setShowModelMarket] = useState(false);
@@ -282,8 +285,27 @@ export const ConsensusMessage = ({
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [refineFeedback, setRefineFeedback] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [showExpertBanner, setShowExpertBanner] = useState(false);
   const { toast } = useToast();
   const { isPro } = useIsPro();
+
+  // Helper to detect code-related queries
+  const isCodeRelatedQuery = (prompt: string): boolean => {
+    const codeKeywords = [
+      'python', 'javascript', 'typescript', 'java', 'bug', 'error', 
+      'code', 'debug', 'function', 'api', 'database', 'sql', 'react',
+      'node', 'css', 'html', 'fix', 'crash', 'exception', 'compile'
+    ];
+    return codeKeywords.some(kw => prompt.toLowerCase().includes(kw));
+  };
+
+  // Check if we should show expert banner
+  useEffect(() => {
+    const dismissed = localStorage.getItem('expert_banner_dismissed');
+    if (!dismissed && isCodeRelatedQuery(userPrompt)) {
+      setShowExpertBanner(true);
+    }
+  }, [userPrompt]);
 
   const getModelDisplayName = (modelId: string) => {
     if (modelId === "Model A" || modelId === "Model B") return modelId;
@@ -698,6 +720,18 @@ export const ConsensusMessage = ({
           ) : null}
           </div>
         </div>
+
+        {/* Expert Marketplace Banner */}
+        {showExpertBanner && synthesisResponse && (
+          <div className="mt-4">
+            <ExpertMarketplaceBanner 
+              onClose={() => {
+                setShowExpertBanner(false);
+                localStorage.setItem('expert_banner_dismissed', 'true');
+              }} 
+            />
+          </div>
+        )}
       </div>
       
       {/* Model Market Modal */}

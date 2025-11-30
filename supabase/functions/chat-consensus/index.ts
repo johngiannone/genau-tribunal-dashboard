@@ -101,7 +101,7 @@ serve(async (req) => {
     console.log("Account status check passed:", accountStatus)
 
     // 3. Parse request early to get prompt for moderation check
-    const { prompt, fileUrl, conversationId, councilConfig, councilSource, notifyByEmail } = await req.json()
+    const { prompt, fileUrl, conversationId, councilConfig, councilSource, notifyByEmail, turboMode } = await req.json()
     
     if (!prompt) {
       return new Response(
@@ -297,6 +297,13 @@ serve(async (req) => {
     }
 
     // Dynamically extract drafter and auditor slots from council config
+    // ⚡ TURBO MODE: Override with high-speed Groq models
+    const turboConfig = {
+      slot_1: { id: "groq/llama-3-70b-8192", name: "Llama 3 70B Turbo", role: "Turbo Drafter A" },
+      slot_2: { id: "groq/llama-3-70b-8192", name: "Llama 3 70B Turbo", role: "Turbo Drafter B" },
+      auditor: { id: "groq/mixtral-8x7b-32768", name: "Mixtral Turbo", role: "Turbo Auditor" }
+    }
+
     const defaultConfig = {
       slot_1: { id: "openai/gpt-4o", name: "GPT-4o", role: "The Chairman" },
       slot_2: { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5", role: "The Critic" },
@@ -306,7 +313,7 @@ serve(async (req) => {
       slot_6: { id: "deepseek/deepseek-r1", name: "DeepSeek R1", role: "The Auditor" }
     }
     
-    const config = councilConfig || defaultConfig
+    const config = turboMode ? turboConfig : (councilConfig || defaultConfig)
     
     // Separate drafters from auditor
     const allSlots = Object.entries(config).map(([key, value]) => {
