@@ -14,8 +14,8 @@ const Pricing = () => {
   
   // Determine currency based on language/region
   const currency: Currency = 
+    lang === 'en-gb' ? 'GBP' :
     (lang === 'de' || lang === 'fr' || lang === 'it' || lang === 'es') ? 'EUR' : 
-    lang === 'en-gb' ? 'GBP' : 
     'USD';
 
   return (
