@@ -6,6 +6,7 @@ import de from './locales/de.json';
 import fr from './locales/fr.json';
 import it from './locales/it.json';
 import es from './locales/es.json';
+import enGb from './locales/en-gb.json';
 
 // Load saved locale from localStorage if available
 const savedLocale = localStorage.getItem('user_locale');
@@ -20,7 +21,7 @@ i18n
       fr: { translation: fr },
       it: { translation: it },
       es: { translation: es },
-      'en-gb': { translation: en }, // UK uses English translations
+      'en-gb': { translation: enGb },
     },
     lng: savedLocale || undefined, // Use saved locale if available
     fallbackLng: 'en',

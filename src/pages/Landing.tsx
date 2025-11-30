@@ -675,6 +675,121 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Use Cases Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20 bg-gradient-to-b from-secondary/5 to-background">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-[#111111] mb-4 tracking-tight">
+            {t('landing.useCaseTitle')}
+          </h2>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              title: t('landing.useCase1Title'),
+              description: t('landing.useCase1Description'),
+              delay: 0
+            },
+            {
+              title: t('landing.useCase2Title'),
+              description: t('landing.useCase2Description'),
+              delay: 0.1
+            },
+            {
+              title: t('landing.useCase3Title'),
+              description: t('landing.useCase3Description'),
+              delay: 0.2
+            }
+          ].map((useCase, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: useCase.delay }}
+              className="bg-white border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <h3 className="text-lg font-semibold text-foreground mb-3">
+                {useCase.title}
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {useCase.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="max-w-7xl mx-auto px-6 py-32">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
+            {t('landing.testimonialsTitle')}
+          </h2>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            {
+              quote: t('landing.testimonial1Quote'),
+              author: t('landing.testimonial1Author'),
+              role: t('landing.testimonial1Role'),
+              company: t('landing.testimonial1Company'),
+              delay: 0
+            },
+            {
+              quote: t('landing.testimonial2Quote'),
+              author: t('landing.testimonial2Author'),
+              role: t('landing.testimonial2Role'),
+              company: t('landing.testimonial2Company'),
+              delay: 0.15
+            },
+            {
+              quote: t('landing.testimonial3Quote'),
+              author: t('landing.testimonial3Author'),
+              role: t('landing.testimonial3Role'),
+              company: t('landing.testimonial3Company'),
+              delay: 0.3
+            }
+          ].map((testimonial, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: testimonial.delay }}
+              className="apple-card p-8 bg-gradient-to-br from-background to-secondary/10"
+            >
+              <div className="mb-6">
+                <svg className="w-10 h-10 text-primary/20" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                </svg>
+              </div>
+              <p className="text-foreground mb-6 leading-relaxed">
+                "{testimonial.quote}"
+              </p>
+              <div className="border-t border-border pt-4">
+                <p className="font-semibold text-foreground">{testimonial.author}</p>
+                <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                <p className="text-xs text-muted-foreground mt-1">{testimonial.company}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="max-w-5xl mx-auto px-6 py-20">
         <motion.div

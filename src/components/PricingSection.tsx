@@ -188,6 +188,12 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
         ))}
       </div>
 
+      {/* Pricing Example Note */}
+      <div className="text-center text-sm text-muted-foreground px-4">
+        <p>{t('pricing.pricingExample')}</p>
+        <p className="mt-2 text-primary font-medium">{t('pricing.savingsNote')}</p>
+      </div>
+
       {/* Enterprise Banner */}
       <div className="relative rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-8 text-center mx-4">
         <div className="space-y-4">

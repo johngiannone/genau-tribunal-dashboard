@@ -58,7 +58,27 @@
     "startFreeTrial": "Iniciar prueba gratuita",
     "copyright": "© 2025 Consensus. Todos los derechos reservados.",
     "documentation": "Documentación",
-    "support": "Soporte"
+    "support": "Soporte",
+    "testimonialsTitle": "Confianza de líderes del sector",
+    "testimonial1Quote": "Consensus revolucionó nuestra estrategia de contenido turístico. El análisis multi-IA nos ayuda a crear experiencias personalizadas para visitantes internacionales.",
+    "testimonial1Author": "Carmen Rodríguez",
+    "testimonial1Role": "Directora de Marketing",
+    "testimonial1Company": "Meliá Hotels International",
+    "testimonial2Quote": "Para nuestras campañas multilingües, Consensus valida que los mensajes resuenen auténticamente en cada mercado. Resultados excepcionales.",
+    "testimonial2Author": "Javier López",
+    "testimonial2Role": "Director Creativo",
+    "testimonial2Company": "Turismo de España",
+    "testimonial3Quote": "Usamos Consensus para optimizar descripciones de productos y experiencias. La calidad del contenido mejoró notablemente manteniendo nuestra esencia mediterránea.",
+    "testimonial3Author": "Isabel Martín",
+    "testimonial3Role": "Content Manager",
+    "testimonial3Company": "El Corte Inglés",
+    "useCaseTitle": "Casos de uso reales",
+    "useCase1Title": "Sector turístico",
+    "useCase1Description": "Hoteles y agencias usan Consensus para crear contenido personalizado en múltiples idiomas",
+    "useCase2Title": "Hospitalidad",
+    "useCase2Description": "Restaurantes y servicios premium validan comunicaciones con clientes internacionales",
+    "useCase3Title": "E-commerce",
+    "useCase3Description": "Retailers optimizan descripciones de productos para mercados español y latinoamericano"
   },
   "pricing": {
     "title": "El Consejo te espera",
@@ -106,7 +126,9 @@
     "agencyFeature2": "5.000 auditorías compartidas/mes",
     "agencyFeature3": "Informes de marca blanca",
     "agencyFeature4": "Marca personalizada",
-    "agencyFeature5": "Soporte prioritario"
+    "agencyFeature5": "Soporte prioritario",
+    "pricingExample": "Ejemplo: Un hotel con 160 auditorías/mes paga 29€/mes IVA incluido",
+    "savingsNote": "Ahorra 20% con facturación anual"
   },
   "auth": {
     "signIn": "Iniciar sesión",
