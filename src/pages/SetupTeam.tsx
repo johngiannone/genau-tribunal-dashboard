@@ -59,6 +59,10 @@ export default function SetupTeam() {
     navigate(-1); // Go back to previous page
   };
 
+  const handleSkip = () => {
+    navigate("/app");
+  };
+
   const handleCreateOrganization = async () => {
     if (!teamName.trim()) {
       toast.error("Please enter a team name");
@@ -203,6 +207,13 @@ export default function SetupTeam() {
               >
                 Continue
               </Button>
+              <Button
+                onClick={handleSkip}
+                variant="ghost"
+                className="w-full text-[#86868B] hover:text-[#111111]"
+              >
+                Skip for now
+              </Button>
             </div>
           )}
 
@@ -238,20 +249,29 @@ export default function SetupTeam() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setStep(1)}
+                    variant="outline"
+                    className="flex-1 h-12 rounded-xl border-[#E5E5EA]"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleCreateOrganization}
+                    disabled={!industry || loading}
+                    className="flex-1 h-12 bg-[#0071E3] hover:bg-[#0077ED] text-white font-medium rounded-xl"
+                  >
+                    Create Team
+                  </Button>
+                </div>
                 <Button
-                  onClick={() => setStep(1)}
-                  variant="outline"
-                  className="flex-1 h-12 rounded-xl border-[#E5E5EA]"
+                  onClick={handleSkip}
+                  variant="ghost"
+                  className="w-full text-[#86868B] hover:text-[#111111]"
                 >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleCreateOrganization}
-                  disabled={!industry || loading}
-                  className="flex-1 h-12 bg-[#0071E3] hover:bg-[#0077ED] text-white font-medium rounded-xl"
-                >
-                  Create Team
+                  Skip for now
                 </Button>
               </div>
             </div>
