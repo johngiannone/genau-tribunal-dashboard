@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TeamKnowledgeBase from "@/components/TeamKnowledgeBase";
 
 interface Organization {
   id: string;
@@ -251,6 +252,9 @@ export default function Team() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Knowledge Base */}
+        {organization && <TeamKnowledgeBase organizationId={organization.id} />}
 
         {/* Shared Audit History */}
         <Card className="border-[#E5E5EA]">
