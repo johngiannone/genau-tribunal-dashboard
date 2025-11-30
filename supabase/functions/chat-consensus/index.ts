@@ -95,13 +95,42 @@ async function getProviderConfig(adminSupabase: any): Promise<any> {
   }
 }
 
-// Smart cascading fallback helper function with 3-provider support
+// Cost-aware provider selection based on ai_models pricing
+async function getCheapestProvider(modelId: string, adminSupabase: any): Promise<string | null> {
+  try {
+    // Query ai_models for all providers offering this model, ordered by cost
+    const { data, error } = await adminSupabase
+      .from('ai_models')
+      .select('provider, input_price, output_price')
+      .eq('id', modelId)
+      .order('input_price', { ascending: true })
+    
+    if (error || !data || data.length === 0) {
+      console.log(`No pricing data found for ${modelId}, using default priority`)
+      return null
+    }
+    
+    // Return the cheapest provider
+    const cheapest = data[0]
+    console.log(`Cost-aware routing: ${modelId} cheapest on ${cheapest.provider} ($${cheapest.input_price}/$${cheapest.output_price})`)
+    return cheapest.provider
+  } catch (err) {
+    console.error("Error fetching cheapest provider:", err)
+    return null
+  }
+}
+
+// Smart cascading fallback helper function with cost-aware routing
 async function fetchWithFallback(
-  modelId: string, 
+  modelId: string,
+  adminSupabase: any,
   messages: any[], 
   contentArray?: any[],
   providerConfig?: any
 ): Promise<{ data: any; provider: string }> {
+  // First, check if we can find the cheapest provider for this model
+  const cheapestProvider = await getCheapestProvider(modelId, adminSupabase)
+  
   // Determine provider priority
   const config = providerConfig || {
     provider_priority: ["openrouter", "together", "basten"],
@@ -110,7 +139,17 @@ async function fetchWithFallback(
     manual_override: false
   }
   
-  const providerPriority = config.provider_priority || ["openrouter", "together", "basten"]
+  let providerPriority = config.provider_priority || ["openrouter", "together", "basten"]
+  
+  // If we found a cheapest provider, reorder priority to try it first
+  if (cheapestProvider) {
+    providerPriority = [
+      cheapestProvider,
+      ...providerPriority.filter((p: string) => p !== cheapestProvider)
+    ]
+    console.log(`Cost-aware routing: Prioritizing ${cheapestProvider} for ${modelId}`)
+  }
+  
   const fallbackEnabled = config.fallback_enabled !== false && config.auto_fallback !== false
   
   const errors: Array<{ provider: string; error: any }> = []
@@ -709,6 +748,7 @@ serve(async (req) => {
       try {
         const result = await fetchWithFallback(
           drafter.id,
+          adminSupabase,
           [
             { 
               role: "system", 
@@ -760,6 +800,7 @@ serve(async (req) => {
     
     const verdictResult = await fetchWithFallback(
       auditorSlot.id,
+      adminSupabase,
       [
         {
           role: "system",
