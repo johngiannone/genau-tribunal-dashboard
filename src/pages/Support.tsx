@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Mail, Bug, Search, CheckCircle, ArrowLeft } from "lucide-react";
+import { BookOpen, Mail, Bug, Search, CheckCircle, ArrowLeft, Ticket } from "lucide-react";
 import { BugReportModal } from "@/components/BugReportModal";
 
 const Support = () => {
@@ -12,6 +12,13 @@ const Support = () => {
   const [bugReportOpen, setBugReportOpen] = useState(false);
 
   const quickActions = [
+    {
+      icon: Ticket,
+      title: "My Tickets",
+      description: "View and track your submitted support tickets.",
+      action: () => navigate(`/${lang || 'en'}/tickets`),
+      color: "bg-orange-50 border-orange-200 hover:bg-orange-100"
+    },
     {
       icon: BookOpen,
       title: "Documentation",
@@ -88,7 +95,7 @@ const Support = () => {
 
       {/* Quick Actions Grid */}
       <section className="max-w-5xl mx-auto px-6 py-12">
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, index) => (
             <button
               key={index}

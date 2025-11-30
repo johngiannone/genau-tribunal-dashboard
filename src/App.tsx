@@ -25,6 +25,7 @@ import Billing from "./pages/Billing";
 import SetupTeam from "./pages/SetupTeam";
 import Team from "./pages/Team";
 import Support from "./pages/Support";
+import Tickets from "./pages/Tickets";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,7 @@ const AppContent = () => {
           <Route path="/:lang/setup-team" element={<SetupTeam />} />
           <Route path="/:lang/team" element={<Team />} />
           <Route path="/:lang/support" element={<Support />} />
+          <Route path="/:lang/tickets" element={<Tickets />} />
           <Route path="/:lang/share/:slug" element={<Share />} />
           <Route 
             path="/:lang/admin" 
