@@ -24,6 +24,7 @@ import Share from "./pages/Share";
 import Billing from "./pages/Billing";
 import SetupTeam from "./pages/SetupTeam";
 import Team from "./pages/Team";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,6 +108,7 @@ const AppContent = () => {
           <Route path="/:lang/vault" element={<Vault />} />
           <Route path="/:lang/setup-team" element={<SetupTeam />} />
           <Route path="/:lang/team" element={<Team />} />
+          <Route path="/:lang/support" element={<Support />} />
           <Route path="/:lang/share/:slug" element={<Share />} />
           <Route 
             path="/:lang/admin" 
