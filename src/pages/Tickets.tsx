@@ -41,7 +41,10 @@ export default function Tickets() {
 
       const { data, error } = await supabase
         .from("support_tickets")
-        .select("*")
+        .select(`
+          *,
+          assigned_admin:profiles!assigned_to(email)
+        `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -194,6 +197,11 @@ export default function Tickets() {
                           <Calendar className="w-3 h-3" />
                           {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
                         </div>
+                        {ticket.assigned_admin && (
+                          <div className="flex items-center gap-1 text-green-600 font-medium">
+                            Assigned to: {ticket.assigned_admin.email}
+                          </div>
+                        )}
                       </div>
                       <Button
                         size="sm"
