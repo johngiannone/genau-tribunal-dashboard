@@ -3,12 +3,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "./ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowUp, Paperclip, X } from "lucide-react";
+import { ArrowUp, Paperclip, X, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsPro } from "@/hooks/useIsPro";
 
 interface ChatInputProps {
-  onSend: (message: string, fileUrl?: string, emailWhenReady?: boolean) => void;
+  onSend: (message: string, fileUrl?: string, emailWhenReady?: boolean, turboMode?: boolean) => void;
   disabled?: boolean;
 }
 
@@ -18,8 +20,10 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const [emailWhenReady, setEmailWhenReady] = useState(false);
+  const [turboMode, setTurboMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { isPro } = useIsPro();
 
   // Resize image helper
   const resizeImage = (file: File): Promise<Blob> => {
@@ -142,13 +146,14 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       }
     }
 
-    // Send message with email flag
-    onSend(message.trim(), fileUrl, emailWhenReady);
+    // Send message with email flag and turbo mode
+    onSend(message.trim(), fileUrl, emailWhenReady, turboMode);
     setMessage("");
     handleRemoveFile();
     setIsUploading(false);
     setUploadStatus("");
     setEmailWhenReady(false);
+    setTurboMode(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -217,6 +222,27 @@ export const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             >
               <Paperclip className="h-5 w-5" />
             </Button>
+
+            {/* Turbo Mode Toggle */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={turboMode ? "default" : "ghost"}
+                    size="icon"
+                    disabled={!isPro}
+                    onClick={() => setTurboMode(!turboMode)}
+                    className={`shrink-0 h-10 w-10 ${turboMode ? "bg-yellow-500 hover:bg-yellow-600" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Zap className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isPro ? "Turbo Mode: Faster responses" : "Upgrade to Pro for Turbo Mode"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             {isUploading && (
               <span className="text-sm text-muted-foreground">{uploadStatus || "Preparing file..."}</span>

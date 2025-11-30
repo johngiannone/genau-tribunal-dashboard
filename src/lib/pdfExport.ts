@@ -1,12 +1,20 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
+interface BrandingOptions {
+  logoUrl?: string;
+  reportTitle?: string;
+  reportFooter?: string;
+  primaryColor?: string;
+}
+
 interface ExportVerdictOptions {
   verdict: string;
   confidence?: number;
   userPrompt: string;
   drafts?: Array<{ agentName: string; role: string; content: string }>;
   timestamp: string;
+  branding?: BrandingOptions;
 }
 
 export const exportVerdictToPDF = ({
