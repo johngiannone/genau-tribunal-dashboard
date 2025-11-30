@@ -648,17 +648,26 @@ const Landing = () => {
               key={index}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
+              whileHover={{ 
+                scale: 1.03,
+                y: -8,
+                transition: { duration: 0.3, ease: "easeOut" }
+              }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: feature.delay }}
-              className="apple-card p-8 hover:shadow-xl transition-shadow duration-300"
+              className="group apple-card p-8 hover:shadow-2xl hover:border-primary/20 transition-all duration-300 cursor-pointer"
             >
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
-                <feature.icon className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-3 text-left">
+              <motion.div 
+                className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300"
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+              >
+                <feature.icon className="w-8 h-8 text-primary group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
+              </motion.div>
+              <h3 className="text-xl font-semibold text-foreground mb-3 text-left group-hover:text-primary transition-colors duration-300">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground leading-relaxed text-left">
+              <p className="text-muted-foreground leading-relaxed text-left group-hover:text-foreground transition-colors duration-300">
                 {feature.description}
               </p>
             </motion.div>
