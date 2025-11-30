@@ -39,6 +39,10 @@ export const SupportTicketsPanel = () => {
 
   const updateTicketStatus = async (ticketId: string, newStatus: string) => {
     try {
+      // Get current ticket status first
+      const currentTicket = tickets.find(t => t.id === ticketId);
+      const oldStatus = currentTicket?.status || 'open';
+
       const { error } = await supabase
         .from("support_tickets")
         .update({ status: newStatus })
@@ -50,6 +54,20 @@ export const SupportTicketsPanel = () => {
         title: "Status updated",
         description: `Ticket marked as ${newStatus}`,
       });
+
+      // Send email notification for status changes (in_progress, resolved, closed)
+      if (['in_progress', 'resolved', 'closed'].includes(newStatus)) {
+        supabase.functions.invoke('send-ticket-status-email', {
+          body: {
+            ticketId,
+            newStatus,
+            oldStatus
+          }
+        }).catch(err => {
+          console.error('Failed to send status email:', err);
+          // Don't fail the whole operation if email fails
+        });
+      }
 
       refetch();
     } catch (error: any) {
