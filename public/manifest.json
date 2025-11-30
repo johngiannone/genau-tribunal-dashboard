@@ -1,7 +1,7 @@
 {
-  "name": "Genau - AI Auditor",
+  "name": "Genau",
   "short_name": "Genau",
-  "description": "Multi-model AI consensus engine for precision auditing",
+  "description": "Multi-model AI analysis for precision auditing",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#0A192F",
