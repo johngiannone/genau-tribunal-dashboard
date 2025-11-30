@@ -15,7 +15,8 @@
     "contactSales": "Contactar ventas",
     "ready": "¿Listo para comenzar?",
     "createAccount": "Crear una cuenta gratuita",
-    "backToLogin": "Volver al inicio de sesión"
+    "backToLogin": "Volver al inicio de sesión",
+    "vatIncluded": "IVA incluido"
   },
   "auth": {
     "signIn": "Iniciar sesión",

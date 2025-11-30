@@ -12,8 +12,11 @@ const Pricing = () => {
   const { t, i18n } = useTranslation();
   const { lang } = useParams();
   
-  // Determine currency based on language
-  const currency: Currency = lang === 'de' ? 'EUR' : lang === 'en-gb' ? 'GBP' : 'USD';
+  // Determine currency based on language/region
+  const currency: Currency = 
+    (lang === 'de' || lang === 'fr' || lang === 'it' || lang === 'es') ? 'EUR' : 
+    lang === 'en-gb' ? 'GBP' : 
+    'USD';
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
