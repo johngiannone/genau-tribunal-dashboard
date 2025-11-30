@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, Briefcase, CheckCircle2 } from "lucide-react";
+import { Loader2, Building2, Briefcase, CheckCircle2, ArrowLeft, LogOut, Brain } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -31,6 +38,26 @@ export default function SetupTeam() {
   const [teamName, setTeamName] = useState("");
   const [industry, setIndustry] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const handleBack = () => {
+    navigate(-1); // Go back to previous page
+  };
 
   const handleCreateOrganization = async () => {
     if (!teamName.trim()) {
@@ -90,8 +117,50 @@ export default function SetupTeam() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-6">
-      <Card className="w-full max-w-2xl border-[#E5E5EA] shadow-lg">
+    <div className="min-h-screen bg-[#F5F5F7]">
+      {/* Navigation Header */}
+      <header className="bg-white border-b border-[#E5E5EA] sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="gap-2 text-[#86868B] hover:text-[#111111]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-[#111111]">Consensus</span>
+            </div>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {userEmail.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-[#86868B]">{userEmail}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex items-center justify-center p-6 pt-12">
+        <Card className="w-full max-w-2xl border-[#E5E5EA] shadow-lg">
         <CardHeader className="text-center border-b border-[#E5E5EA]">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#0071E3] to-[#0055B8] flex items-center justify-center">
             <Building2 className="w-8 h-8 text-white" />
@@ -217,6 +286,7 @@ export default function SetupTeam() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
