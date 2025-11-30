@@ -57,6 +57,7 @@ import { ProviderManagement } from "@/components/admin/ProviderManagement";
 import { ProviderCostComparison } from "@/components/admin/ProviderCostComparison";
 import { CostSavingsMonitor } from "@/components/admin/CostSavingsMonitor";
 import { ABTestingRoutingDashboard } from "@/components/admin/ABTestingRoutingDashboard";
+import { SupportTicketsPanel } from "@/components/admin/SupportTicketsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -351,6 +352,7 @@ const Admin = () => {
                 <TabsTrigger value="regional">Regional Analytics</TabsTrigger>
                 <TabsTrigger value="providers">Providers</TabsTrigger>
                 <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
+                <TabsTrigger value="support">Support Tickets</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="deletion-audit">Deletion Audit</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -661,6 +663,10 @@ const Admin = () => {
 
               <TabsContent value="ab-testing">
                 <ABTestingRoutingDashboard />
+              </TabsContent>
+
+              <TabsContent value="support">
+                <SupportTicketsPanel />
               </TabsContent>
 
       <TabsContent value="logs">

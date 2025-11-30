@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface BugReportModalProps {
   open: boolean;
@@ -23,9 +30,23 @@ interface BugReportModalProps {
 export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [subject, setSubject] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("Bug");
   const [description, setDescription] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
+
+  // Auto-fill email if user is logged in
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+    };
+    if (open) {
+      fetchUserEmail();
+    }
+  }, [open]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,7 +66,7 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!subject.trim() || !description.trim()) {
+    if (!email.trim() || !subject.trim() || !description.trim()) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -77,28 +98,51 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
         screenshotUrl = publicUrl;
       }
 
-      // Get current user email
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Send bug report email
-      const { error: emailError } = await supabase.functions.invoke('send-bug-report', {
-        body: {
-          subject,
-          description,
-          screenshotUrl,
-          userEmail: user?.email || 'anonymous',
-        },
-      });
+      // Insert ticket into database
+      const { data: ticketData, error: ticketError } = await supabase
+        .from('support_tickets')
+        .insert({
+          user_id: user?.id || null,
+          email: email.trim(),
+          subject: subject.trim(),
+          description: description.trim(),
+          screenshot_url: screenshotUrl,
+          status: 'open',
+          priority: subject === 'Bug' ? 'high' : 'medium',
+        })
+        .select('id')
+        .single();
 
-      if (emailError) throw emailError;
+      if (ticketError) throw ticketError;
+
+      // Optional: Still send email notification to support
+      try {
+        await supabase.functions.invoke('send-bug-report', {
+          body: {
+            subject,
+            description,
+            screenshotUrl,
+            userEmail: email,
+          },
+        });
+      } catch (emailError) {
+        console.error("Email notification failed:", emailError);
+        // Don't fail the whole operation if email fails
+      }
+
+      const ticketId = ticketData.id.split('-')[0].toUpperCase();
 
       toast({
-        title: "Bug report submitted",
-        description: "We'll look into it as soon as possible. Thank you!",
+        title: "Ticket received",
+        description: `Reference ID: #${ticketId}. We'll get back to you soon!`,
       });
 
       // Reset form
-      setSubject("");
+      setEmail("");
+      setSubject("Bug");
       setDescription("");
       setScreenshot(null);
       onOpenChange(false);
@@ -126,15 +170,29 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject *</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
-              id="subject"
-              placeholder="Brief description of the issue"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              maxLength={100}
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="subject">Type *</Label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Bug">Bug</SelectItem>
+                <SelectItem value="Billing">Billing</SelectItem>
+                <SelectItem value="Feature Request">Feature Request</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
