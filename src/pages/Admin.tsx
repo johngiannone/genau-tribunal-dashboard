@@ -52,6 +52,8 @@ import { AutomatedBanPanel } from "@/components/admin/AutomatedBanPanel";
 import { AdminUserDetail } from "@/components/admin/AdminUserDetail";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
+import { useIsRoot } from "@/hooks/useIsRoot";
 
 interface UserData {
   user_id: string;
@@ -72,6 +74,7 @@ interface UserData {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { isRoot } = useIsRoot();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusChangeDialog, setStatusChangeDialog] = useState<{
@@ -295,6 +298,7 @@ const Admin = () => {
                 <TabsTrigger value="reports">Cost Reports</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
                 <TabsTrigger value="emails">Email History</TabsTrigger>
+                {isRoot && <TabsTrigger value="monetization">Monetization</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="users">
@@ -565,6 +569,12 @@ const Admin = () => {
       <TabsContent value="emails">
         <EmailLogsPanel />
       </TabsContent>
+
+      {isRoot && (
+        <TabsContent value="monetization">
+          <MonetizationAnalytics />
+        </TabsContent>
+      )}
     </Tabs>
           </div>
         </div>
