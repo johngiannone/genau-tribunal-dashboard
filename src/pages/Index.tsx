@@ -500,7 +500,7 @@ const Index = () => {
     }
   };
 
-  const handleSendMessage = async (userPrompt: string, fileUrl?: string, emailWhenReady?: boolean) => {
+  const handleSendMessage = async (userPrompt: string, fileUrl?: string, emailWhenReady?: boolean, turboMode?: boolean) => {
     if (!session?.user) {
       navigate("/auth");
       return;
@@ -532,10 +532,10 @@ const Index = () => {
     }
 
     // If recommendations disabled or no recommendation, proceed normally
-    await executeAudit(userPrompt, fileUrl, null, emailWhenReady);
+    await executeAudit(userPrompt, fileUrl, null, emailWhenReady, turboMode);
   };
 
-  const executeAudit = async (userPrompt: string, fileUrl?: string, temporaryCouncil?: any, emailWhenReady?: boolean) => {
+  const executeAudit = async (userPrompt: string, fileUrl?: string, temporaryCouncil?: any, emailWhenReady?: boolean, turboMode?: boolean) => {
 
     // Create conversation if this is the first message
     let conversationId = currentConversationId;
@@ -586,7 +586,8 @@ const Index = () => {
           conversationId: conversationId,
           councilConfig: temporaryCouncil || councilConfig || null,
           councilSource: councilSource,
-          notifyByEmail: emailWhenReady || false
+          notifyByEmail: emailWhenReady || false,
+          turboMode: turboMode || false
         },
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`
@@ -776,7 +777,7 @@ const Index = () => {
               }
             };
             
-            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil);
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil, false, false);
             setPendingPrompt(null);
             setRecommendation(null);
           }
@@ -784,7 +785,7 @@ const Index = () => {
         onDecline={async () => {
           setShowRecommendationModal(false);
           if (pendingPrompt) {
-            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null);
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null, false, false);
             setPendingPrompt(null);
             setRecommendation(null);
           }
@@ -973,14 +974,14 @@ const Index = () => {
               slot_5: { id: recommendation.recommendedDrafters.length > 4 ? recommendation.recommendedDrafters[4] : null, name: recommendation.recommendedDrafters.length > 4 ? recommendation.recommendedDrafters[4] : null },
               auditor: { id: recommendation.recommendedAuditor, name: recommendation.recommendedAuditor }
             };
-            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil);
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, tempCouncil, false, false);
             setPendingPrompt(null);
           }
         }}
         onDecline={async () => {
           setShowRecommendationModal(false);
           if (pendingPrompt) {
-            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null);
+            await executeAudit(pendingPrompt.prompt, pendingPrompt.fileUrl, null, false, false);
             setPendingPrompt(null);
           }
         }}

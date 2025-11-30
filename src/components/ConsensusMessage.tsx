@@ -403,6 +403,16 @@ export const ConsensusMessage = ({
   return (
     <>
       <div className="space-y-8 animate-fadeIn">
+        {/* Turbo Mode Badge */}
+        {isTurboMode && (
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold">
+              <Zap className="w-4 h-4" />
+              ⚡ Turbo Active
+            </div>
+          </div>
+        )}
+
         {/* User Prompt - Dark bubble with white text */}
         <div className="flex justify-end">
           <div className="max-w-3xl bg-[#1D1D1F] text-white px-6 py-4 rounded-2xl shadow-sm">
@@ -568,21 +578,45 @@ export const ConsensusMessage = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           if (!isPro) {
                             setShowUpgradeModal(true);
                             return;
                           }
-                          if (synthesisResponse) {
+                          if (synthesisResponse && userPrompt && modelAResponse && modelBResponse) {
+                            // Fetch user's branding settings if they have Agency tier
+                            let brandingOptions;
+                            try {
+                              const { data: { user } } = await supabase.auth.getUser();
+                              if (user) {
+                                const { data: branding } = await supabase
+                                  .from('user_branding')
+                                  .select('*')
+                                  .eq('user_id', user.id)
+                                  .maybeSingle();
+                                
+                                if (branding) {
+                                  brandingOptions = {
+                                    logoUrl: branding.logo_url || undefined,
+                                    reportTitle: branding.report_title || undefined,
+                                    reportFooter: branding.report_footer || undefined,
+                                    primaryColor: branding.primary_color || undefined,
+                                  };
+                                }
+                              }
+                            } catch (err) {
+                              console.error("Failed to fetch branding:", err);
+                            }
+
                             exportVerdictToPDF({
-                              verdict: synthesisResponse,
-                              confidence: confidenceScore,
-                              userPrompt: userPrompt,
-                              drafts: [
-                                { agentName: agentNameA || modelAName, role: modelAName, content: modelAResponse || '' },
-                                { agentName: agentNameB || modelBName, role: modelBName, content: modelBResponse || '' }
-                              ],
-                              timestamp: new Date().toLocaleString()
+                              userPrompt,
+                              synthesis: synthesisResponse,
+                              confidenceScore,
+                              modelA: modelAName,
+                              modelB: modelBName,
+                              draftA: modelAResponse,
+                              draftB: modelBResponse,
+                              branding: brandingOptions,
                             });
                             toast({ title: "PDF report downloaded" });
                           }

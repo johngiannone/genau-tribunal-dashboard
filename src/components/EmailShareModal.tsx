@@ -44,17 +44,16 @@ export const EmailShareModal = ({
 
   const generatePDFBase64 = (): string => {
     const doc = exportVerdictToPDF({
-      verdict,
-      confidence,
       userPrompt,
-      drafts: [
-        { agentName: agentNameA || modelAName || "Model A", role: modelAName || "Model A", content: modelAResponse || "" },
-        { agentName: agentNameB || modelBName || "Model B", role: modelBName || "Model B", content: modelBResponse || "" },
-      ],
-      timestamp: new Date().toLocaleString(),
+      synthesis: verdict,
+      confidenceScore: confidence,
+      modelA: modelAName || "Model A",
+      modelB: modelBName || "Model B",
+      draftA: modelAResponse || "",
+      draftB: modelBResponse || "",
     }, true);
     
-    return doc;
+    return doc || "";
   };
 
   const handleSend = async () => {
