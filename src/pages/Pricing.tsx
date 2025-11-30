@@ -40,7 +40,7 @@ const Pricing = () => {
       <div className="min-h-screen flex items-center justify-center pb-32 pt-20 px-6">
         <div className="w-full max-w-7xl">
           {/* Hero Section - Centered */}
-          <div className="relative z-10 text-center mb-16">
+          <div id="pricing-hero" className="relative z-10 text-center mb-16 animate-fadeIn">
             <h1 className="text-6xl md:text-7xl font-black text-[#111111] tracking-tight leading-[1.05] mb-6">
               {t('pricing.title')}
             </h1>
@@ -50,18 +50,22 @@ const Pricing = () => {
           </div>
 
           {/* Pricing Section */}
-          <div className="relative z-10">
+          <div id="pricing-cards" className="relative z-10 scroll-mt-20">
             <PricingSection mode="public" currency={currency} />
           </div>
 
           {/* Footer CTA */}
-          <div className="relative z-10 text-center pt-16">
+          <div id="pricing-cta" className="relative z-10 text-center pt-16 animate-fadeIn">
             <p className="text-gray-500 mb-6 text-lg">
               {t('pricing.ready')}
             </p>
             <Button
               size="lg"
-              onClick={() => navigate(`/${lang || 'en'}/auth`)}
+              onClick={() => {
+                // Smooth scroll to top before navigation
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => navigate(`/${lang || 'en'}/auth`), 300);
+              }}
               className="h-14 px-10 rounded-full bg-[#111111] text-white hover:bg-[#000000] shadow-lg hover:shadow-xl transition-all"
             >
               {t('pricing.createAccount')}

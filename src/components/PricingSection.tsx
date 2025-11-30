@@ -203,7 +203,16 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
         {plans.map((plan, index) => (
-          <PricingCard key={index} {...plan} mode={mode} />
+          <div 
+            key={index}
+            className="animate-slideUp opacity-0"
+            style={{ 
+              animationDelay: `${index * 0.1}s`,
+              animationFillMode: 'forwards'
+            }}
+          >
+            <PricingCard {...plan} mode={mode} />
+          </div>
         ))}
       </div>
 
