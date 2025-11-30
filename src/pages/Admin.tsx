@@ -50,6 +50,7 @@ import { FingerprintAnalyticsPanel } from "@/components/FingerprintAnalyticsPane
 import { DisposableEmailStatsPanel } from "@/components/admin/DisposableEmailStatsPanel";
 import { AutomatedBanPanel } from "@/components/admin/AutomatedBanPanel";
 import { AdminUserDetail } from "@/components/admin/AdminUserDetail";
+import { UserDeletionAuditLog } from "@/components/admin/UserDeletionAuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -341,6 +342,7 @@ const Admin = () => {
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="billing">Billing Dashboard</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
+                <TabsTrigger value="deletion-audit">Deletion Audit</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
                 <TabsTrigger value="forecast">Forecast</TabsTrigger>
@@ -636,6 +638,10 @@ const Admin = () => {
 
       <TabsContent value="logs">
         <ActivityLogTable />
+      </TabsContent>
+
+      <TabsContent value="deletion-audit">
+        <UserDeletionAuditLog />
       </TabsContent>
 
       <TabsContent value="stats">
