@@ -7,6 +7,18 @@ interface ExpertMarketplaceBannerProps {
 }
 
 export const ExpertMarketplaceBanner = ({ onClose }: ExpertMarketplaceBannerProps) => {
+  const handleExpertClick = async () => {
+    // Log click for analytics
+    const { supabase } = await import("@/integrations/supabase/client");
+    await supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'expert_marketplace_clicked',
+        description: 'User clicked Expert Marketplace link',
+        metadata: { source: 'verdict_banner' }
+      }
+    });
+  };
+
   return (
     <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between animate-fadeIn">
       <div className="flex items-center gap-3">
@@ -22,6 +34,7 @@ export const ExpertMarketplaceBanner = ({ onClose }: ExpertMarketplaceBannerProp
           target="_blank" 
           rel="noopener noreferrer"
           className="hover:opacity-80 transition-opacity"
+          onClick={handleExpertClick}
         >
           <Button size="sm" variant="outline">Find Expert</Button>
         </a>
