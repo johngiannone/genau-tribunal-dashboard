@@ -50,6 +50,27 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_specializations: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          id: string
+          subject_type: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          subject_type: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          subject_type?: string
+        }
+        Relationships: []
+      }
       ai_models: {
         Row: {
           id: string
@@ -838,6 +859,7 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          assigned_to: string | null
           created_at: string
           description: string
           email: string
@@ -850,6 +872,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          assigned_to?: string | null
           created_at?: string
           description: string
           email: string
@@ -862,6 +885,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          assigned_to?: string | null
           created_at?: string
           description?: string
           email?: string
@@ -873,7 +897,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assigned_to_profiles_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
