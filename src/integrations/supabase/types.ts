@@ -19,6 +19,7 @@ export type Database = {
           activity_type: Database["public"]["Enums"]["activity_type"]
           created_at: string
           description: string
+          estimated_cost: number | null
           id: string
           ip_address: string | null
           metadata: Json | null
@@ -29,6 +30,7 @@ export type Database = {
           activity_type: Database["public"]["Enums"]["activity_type"]
           created_at?: string
           description: string
+          estimated_cost?: number | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
@@ -39,6 +41,7 @@ export type Database = {
           activity_type?: Database["public"]["Enums"]["activity_type"]
           created_at?: string
           description?: string
+          estimated_cost?: number | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
