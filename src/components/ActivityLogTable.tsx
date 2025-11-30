@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
@@ -24,6 +24,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Loader2, Activity, Search, Filter, X, CalendarIcon, Download, FileJson, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -53,8 +60,62 @@ export const ActivityLogTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<{
+    userIds: string[];
+    descriptions: string[];
+    ipAddresses: string[];
+  }>({ userIds: [], descriptions: [], ipAddresses: [] });
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Fetch suggestions when search query changes
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSuggestions({ userIds: [], descriptions: [], ipAddresses: [] });
+        return;
+      }
+
+      try {
+        const searchTerm = searchQuery.trim();
+        
+        // Fetch matching user IDs
+        const { data: userIdData } = await supabase
+          .from('activity_logs')
+          .select('user_id')
+          .ilike('user_id', `%${searchTerm}%`)
+          .limit(5);
+
+        // Fetch matching descriptions
+        const { data: descData } = await supabase
+          .from('activity_logs')
+          .select('description')
+          .ilike('description', `%${searchTerm}%`)
+          .limit(5);
+
+        // Fetch matching IP addresses
+        const { data: ipData } = await supabase
+          .from('activity_logs')
+          .select('ip_address')
+          .not('ip_address', 'is', null)
+          .ilike('ip_address', `%${searchTerm}%`)
+          .limit(5);
+
+        setSuggestions({
+          userIds: [...new Set(userIdData?.map(d => d.user_id) || [])],
+          descriptions: [...new Set(descData?.map(d => d.description) || [])],
+          ipAddresses: [...new Set(ipData?.map(d => d.ip_address).filter(Boolean) || [])],
+        });
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+      }
+    };
+
+    const debounce = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
 
   useEffect(() => {
     setCurrentPage(1); // Reset to first page when filters change
@@ -325,19 +386,97 @@ export const ActivityLogTable = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Search Input */}
+          {/* Search Input with Autocomplete */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#86868B]">Search</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#86868B]" />
-              <Input
-                type="text"
-                placeholder="Description or IP address..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 rounded-xl border-[#E5E5EA] focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
-              />
-            </div>
+            <Popover open={showSuggestions && searchQuery.length >= 2} onOpenChange={setShowSuggestions}>
+              <PopoverTrigger asChild>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#86868B] z-10" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="User ID, description, or IP..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(e.target.value.length >= 2);
+                    }}
+                    onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
+                    className="pl-10 h-11 rounded-xl border-[#E5E5EA] focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                  />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-[--radix-popover-trigger-width] p-0" 
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <Command>
+                  <CommandList>
+                    {(suggestions.userIds.length === 0 && 
+                      suggestions.descriptions.length === 0 && 
+                      suggestions.ipAddresses.length === 0) ? (
+                      <CommandEmpty>No suggestions found</CommandEmpty>
+                    ) : (
+                      <>
+                        {suggestions.userIds.length > 0 && (
+                          <CommandGroup heading="User IDs">
+                            {suggestions.userIds.map((userId) => (
+                              <CommandItem
+                                key={userId}
+                                value={userId}
+                                onSelect={(value) => {
+                                  setSearchQuery(value);
+                                  setShowSuggestions(false);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <span className="font-mono text-xs">{userId.slice(0, 16)}...</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {suggestions.descriptions.length > 0 && (
+                          <CommandGroup heading="Descriptions">
+                            {suggestions.descriptions.map((desc, idx) => (
+                              <CommandItem
+                                key={`desc-${idx}`}
+                                value={desc}
+                                onSelect={(value) => {
+                                  setSearchQuery(value);
+                                  setShowSuggestions(false);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <span className="text-sm truncate">{desc}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {suggestions.ipAddresses.length > 0 && (
+                          <CommandGroup heading="IP Addresses">
+                            {suggestions.ipAddresses.map((ip) => (
+                              <CommandItem
+                                key={ip}
+                                value={ip}
+                                onSelect={(value) => {
+                                  setSearchQuery(value);
+                                  setShowSuggestions(false);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <span className="font-mono text-xs">{ip}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Activity Type Filter */}
