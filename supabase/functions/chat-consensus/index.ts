@@ -635,6 +635,24 @@ serve(async (req) => {
       throw new Error("Missing OPENROUTER_API_KEY")
     }
 
+    // 🚀 QUERY ROUTER: Analyze intent and create execution plan
+    let queryPlan: any = null
+    try {
+      console.log("Calling query-router to analyze intent...")
+      const routerResponse = await adminSupabase.functions.invoke('query-router', {
+        body: { prompt }
+      })
+      
+      if (routerResponse.error) {
+        console.warn("Query router failed, using full council:", routerResponse.error)
+      } else {
+        queryPlan = routerResponse.data?.plan
+        console.log("Query plan received:", JSON.stringify(queryPlan, null, 2))
+      }
+    } catch (routerError) {
+      console.warn("Query router error, falling back to full council:", routerError)
+    }
+
     // Dynamically extract drafter and auditor slots from council config
     // ⚡ TURBO MODE: Override with high-speed Groq models
     const turboConfig = {
@@ -681,7 +699,42 @@ serve(async (req) => {
     ) || allSlots[allSlots.length - 1] // Default to last slot
     
     // All other slots are drafters
-    const drafterSlots = allSlots.filter(slot => slot.slotKey !== auditorSlot.slotKey)
+    let drafterSlots = allSlots.filter(slot => slot.slotKey !== auditorSlot.slotKey)
+    
+    // 🎯 INTELLIGENT FILTERING: Use query plan to select relevant agents
+    if (queryPlan && queryPlan.agentsNeeded && Array.isArray(queryPlan.agentsNeeded)) {
+      const requiredAgents = queryPlan.agentsNeeded.map((a: string) => a.toLowerCase())
+      console.log(`Query plan requires agents: ${requiredAgents.join(', ')}`)
+      
+      // Map agent names to slots based on role keywords
+      const agentRoleMap: Record<string, string[]> = {
+        'chairman': ['chairman', 'gpt', 'openai'],
+        'critic': ['critic', 'claude', 'anthropic'],
+        'architect': ['architect', 'qwen', 'coder', 'code'],
+        'reporter': ['reporter', 'grok', 'search'],
+        'speedster': ['speedster', 'llama', 'fast']
+      }
+      
+      // Filter drafters to only those matching the required agent types
+      const filteredSlots = drafterSlots.filter(slot => {
+        const slotRoleLower = (slot.role || '').toLowerCase()
+        const slotNameLower = (slot.name || '').toLowerCase()
+        
+        return requiredAgents.some((agentType: string) => {
+          const keywords = agentRoleMap[agentType] || [agentType]
+          return keywords.some(keyword => 
+            slotRoleLower.includes(keyword) || slotNameLower.includes(keyword)
+          )
+        })
+      })
+      
+      if (filteredSlots.length >= 2) {
+        drafterSlots = filteredSlots
+        console.log(`✨ Optimized: Using ${filteredSlots.length} targeted agents instead of ${allSlots.length - 1}`)
+      } else {
+        console.log(`⚠️ Not enough matching agents (${filteredSlots.length}), using full council`)
+      }
+    }
     
     console.log(`Council: ${drafterSlots.length} drafters + 1 auditor`)
     console.log("Drafters:", drafterSlots.map(s => s.name).join(", "))
@@ -1182,7 +1235,7 @@ serve(async (req) => {
     // Run threshold checks in background
     checkCostThresholds().catch(err => console.error("Background threshold check error:", err))
 
-    // 9. Save to training dataset with council source for A/B testing
+    // 9. Save to training dataset with council source and structured query for A/B testing
     let trainingDatasetId = null
     try {
       const { data: trainingData, error: trainingError } = await adminSupabase
@@ -1197,14 +1250,15 @@ serve(async (req) => {
           verdict_model: auditorSlot.id,
           verdict_response: verdictContent,
           model_config: councilConfig,
-          council_source: councilSource || 'default'
+          council_source: councilSource || 'default',
+          structured_query: queryPlan || {}
         })
         .select()
         .maybeSingle()
 
       if (!trainingError && trainingData) {
         trainingDatasetId = trainingData.id
-        console.log('Training data saved')
+        console.log('Training data saved with structured query')
       }
     } catch (err) {
       console.error('Training data error:', err)
