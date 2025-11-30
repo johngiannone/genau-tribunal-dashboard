@@ -1,0 +1,37 @@
+{
+  "landing": {
+    "hero": "Chiedi una volta. Ottieni il consenso.",
+    "subtitle": "Esecuzione di più modelli di IA in parallelo per un audit di precisione."
+  },
+  "pricing": {
+    "title": "Il Consiglio ti aspetta",
+    "subtitle": "Scegli il tuo percorso verso un consenso illimitato. Ottieni audit di IA di precisione da più modelli che lavorano in parallelo.",
+    "personal": "Personale",
+    "business": "Azienda",
+    "perMonth": "/mese",
+    "getStarted": "Inizia",
+    "enterprise": "Enterprise",
+    "enterpriseDescription": "Hai bisogno di SSO o distribuzione on-premise?",
+    "contactSales": "Contatta le vendite",
+    "ready": "Pronto per iniziare?",
+    "createAccount": "Crea un account gratuito",
+    "backToLogin": "Torna al login"
+  },
+  "auth": {
+    "signIn": "Accedi",
+    "signUp": "Registrati",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "noAccount": "Non hai un account?",
+    "hasAccount": "Hai già un account?",
+    "viewPricing": "Vedi opzioni di abbonamento"
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica"
+  }
+}

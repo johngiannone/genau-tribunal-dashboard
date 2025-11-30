@@ -44,6 +44,8 @@ serve(async (req) => {
       locale = 'en-gb';
     } else if (countryCode === 'FR') {
       locale = 'fr';
+    } else if (countryCode === 'IT') {
+      locale = 'it';
     }
 
     // Determine redirect path
@@ -51,7 +53,7 @@ serve(async (req) => {
     
     // Check if path already has language prefix
     const pathSegments = currentPath.split('/').filter(Boolean);
-    const hasLangPrefix = ['en', 'en-gb', 'de', 'fr'].includes(pathSegments[0]);
+    const hasLangPrefix = ['en', 'en-gb', 'de', 'fr', 'it'].includes(pathSegments[0]);
     
     if (hasLangPrefix && pathSegments[0] === locale) {
       // Already on correct locale path
