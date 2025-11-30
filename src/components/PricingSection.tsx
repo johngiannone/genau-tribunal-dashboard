@@ -22,54 +22,6 @@ const FALLBACK_RATES: Record<Currency, number> = {
   EUR: 0.92,
 };
 
-const personalPlans = [
-  {
-    name: "The Observer",
-    price: 0,
-    description: "For curious individuals",
-    features: ["3 Audits per day", "Basic Council Access", "Standard Support"],
-    stripeLink: "#",
-    isPrimary: false,
-  },
-  {
-    name: "The Professional",
-    price: 29,
-    description: "For researchers & coders",
-    features: ["200 Audits per month", "50 File Uploads/mo", "Full Council Access", "Priority Processing"],
-    stripeLink: "https://stripe.com/pro",
-    isPopular: true,
-    isPrimary: true,
-  },
-  {
-    name: "The Power User",
-    price: 99,
-    description: "For power users",
-    features: ["800 Audits per month", "Unlimited File Uploads", "2M Context Window", "Large PDF Support", "Dedicated Support"],
-    stripeLink: "https://stripe.com/max",
-    isPrimary: false,
-  },
-];
-
-const businessPlans = [
-  {
-    name: "Team",
-    price: 149,
-    description: "For growing teams",
-    features: ["5 Team Seats", "1,500 Shared Audits/mo", "Shared Audit History", "Collaborative Workspace", "Team Analytics"],
-    stripeLink: "https://stripe.com/team",
-    isPrimary: false,
-  },
-  {
-    name: "Agency",
-    price: 499,
-    description: "For agencies & studios",
-    features: ["20 Team Seats", "5,000 Shared Audits/mo", "Whitelabeled Reports", "Custom Branding", "Priority Support"],
-    stripeLink: "https://stripe.com/agency",
-    isPopular: true,
-    isPrimary: true,
-  },
-];
-
 interface PricingSectionProps {
   mode?: "public" | "authenticated";
   currency?: Currency;
@@ -87,6 +39,81 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
   const convertPrice = (priceUSD: number) => {
     return Math.round(priceUSD * rates[currency]);
   };
+  
+  const personalPlans = [
+    {
+      name: t('pricing.observerName'),
+      price: 0,
+      description: t('pricing.observerDescription'),
+      features: [
+        t('pricing.observerFeature1'),
+        t('pricing.observerFeature2'),
+        t('pricing.observerFeature3')
+      ],
+      stripeLink: "#",
+      isPrimary: false,
+    },
+    {
+      name: t('pricing.professionalName'),
+      price: 29,
+      description: t('pricing.professionalDescription'),
+      features: [
+        t('pricing.professionalFeature1'),
+        t('pricing.professionalFeature2'),
+        t('pricing.professionalFeature3'),
+        t('pricing.professionalFeature4')
+      ],
+      stripeLink: "https://stripe.com/pro",
+      isPopular: true,
+      isPrimary: true,
+    },
+    {
+      name: t('pricing.powerUserName'),
+      price: 99,
+      description: t('pricing.powerUserDescription'),
+      features: [
+        t('pricing.powerUserFeature1'),
+        t('pricing.powerUserFeature2'),
+        t('pricing.powerUserFeature3'),
+        t('pricing.powerUserFeature4'),
+        t('pricing.powerUserFeature5')
+      ],
+      stripeLink: "https://stripe.com/max",
+      isPrimary: false,
+    },
+  ];
+
+  const businessPlans = [
+    {
+      name: t('pricing.teamName'),
+      price: 149,
+      description: t('pricing.teamDescription'),
+      features: [
+        t('pricing.teamFeature1'),
+        t('pricing.teamFeature2'),
+        t('pricing.teamFeature3'),
+        t('pricing.teamFeature4'),
+        t('pricing.teamFeature5')
+      ],
+      stripeLink: "https://stripe.com/team",
+      isPrimary: false,
+    },
+    {
+      name: t('pricing.agencyName'),
+      price: 499,
+      description: t('pricing.agencyDescription'),
+      features: [
+        t('pricing.agencyFeature1'),
+        t('pricing.agencyFeature2'),
+        t('pricing.agencyFeature3'),
+        t('pricing.agencyFeature4'),
+        t('pricing.agencyFeature5')
+      ],
+      stripeLink: "https://stripe.com/agency",
+      isPopular: true,
+      isPrimary: true,
+    },
+  ];
   
   // Add currency symbol and format plans
   const formatPlans = (plans: typeof personalPlans) => {
@@ -122,7 +149,7 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
       {exchangeRates && (
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <RefreshCw className="w-3 h-3" />
-          <span>Live exchange rates updated hourly</span>
+          <span>{t('pricing.liveRates')}</span>
         </div>
       )}
       

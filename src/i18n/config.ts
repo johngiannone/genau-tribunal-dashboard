@@ -7,6 +7,9 @@ import fr from './locales/fr.json';
 import it from './locales/it.json';
 import es from './locales/es.json';
 
+// Load saved locale from localStorage if available
+const savedLocale = localStorage.getItem('user_locale');
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -19,12 +22,13 @@ i18n
       es: { translation: es },
       'en-gb': { translation: en }, // UK uses English translations
     },
+    lng: savedLocale || undefined, // Use saved locale if available
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false,
     },
     detection: {
-      order: ['path', 'cookie', 'localStorage', 'navigator'],
+      order: ['localStorage', 'path', 'cookie', 'navigator'],
       lookupFromPathIndex: 0,
       caches: ['localStorage', 'cookie'],
       cookieMinutes: 10080, // 1 week
