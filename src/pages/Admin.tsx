@@ -308,10 +308,10 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="flex">
+      <div className="flex gap-6">
         {/* Main Content Area */}
         <div className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
+          <div className="max-w-6xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Button

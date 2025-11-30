@@ -91,7 +91,7 @@ export const LiveActivityFeed = () => {
           // Only add if it matches the current filter
           if (selectedFilter === 'all' || newActivity.activity_type === selectedFilter) {
             setActivities((current) => 
-              [newActivity, ...current].slice(0, 5)
+              [newActivity, ...current].slice(0, 10)
             );
           }
         }
@@ -122,7 +122,7 @@ export const LiveActivityFeed = () => {
       return;
     }
 
-    setActivities((data || []).slice(0, 5));
+    setActivities((data || []).slice(0, 10));
   };
 
   const fetchActivityCounts = async () => {
