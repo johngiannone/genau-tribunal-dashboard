@@ -38,7 +38,7 @@ const GeoRouter = ({ children }: { children: React.ReactNode }) => {
     const handleGeoRouting = async () => {
       // Skip if already has language prefix
       const pathSegments = location.pathname.split('/').filter(Boolean);
-      if (['en', 'en-gb', 'de', 'fr', 'it'].includes(pathSegments[0])) {
+      if (['en', 'en-gb', 'de', 'fr', 'it', 'es'].includes(pathSegments[0])) {
         i18n.changeLanguage(pathSegments[0]);
         return;
       }
