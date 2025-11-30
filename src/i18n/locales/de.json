@@ -58,7 +58,27 @@
     "startFreeTrial": "Kostenlose Testversion starten",
     "copyright": "© 2025 Consensus. Alle Rechte vorbehalten.",
     "documentation": "Dokumentation",
-    "support": "Support"
+    "support": "Support",
+    "testimonialsTitle": "Vertrauen von führenden Unternehmen",
+    "testimonial1Quote": "Consensus optimiert unsere Qualitätssicherung erheblich. Der Multi-Modell-Ansatz erkennt Fehler, die ein einzelnes KI-System übersehen würde.",
+    "testimonial1Author": "Dr. Klaus Müller",
+    "testimonial1Role": "Leiter Entwicklung",
+    "testimonial1Company": "Bosch Engineering GmbH",
+    "testimonial2Quote": "Für präzise technische Dokumentation ist Consensus unverzichtbar. Die Konsens-Methode garantiert höchste Genauigkeit bei komplexen Spezifikationen.",
+    "testimonial2Author": "Anna Schmidt",
+    "testimonial2Role": "Technical Lead",
+    "testimonial2Company": "Siemens Digital Industries",
+    "testimonial3Quote": "Wir nutzen Consensus für Normkonformitätsprüfungen. Das spart uns wöchentlich 15 Stunden manuelle Überprüfung bei besserer Qualität.",
+    "testimonial3Author": "Thomas Weber",
+    "testimonial3Role": "Qualitätsmanager",
+    "testimonial3Company": "Volkswagen AG",
+    "useCaseTitle": "Praxisbeispiele",
+    "useCase1Title": "Technische Dokumentation",
+    "useCase1Description": "Ingenieurteams validieren komplexe Spezifikationen mit 99% Genauigkeit durch KI-Konsens",
+    "useCase2Title": "Compliance-Prüfung",
+    "useCase2Description": "Automobilhersteller nutzen Consensus für normgerechte Dokumentation nach ISO-Standards",
+    "useCase3Title": "Forschung & Entwicklung",
+    "useCase3Description": "F&E-Abteilungen analysieren Patentdokumente und technische Literatur zuverlässig"
   },
   "pricing": {
     "title": "Der Rat wartet",
@@ -106,7 +126,9 @@
     "agencyFeature2": "5.000 gemeinsame Prüfungen/Monat",
     "agencyFeature3": "Whitelabel-Berichte",
     "agencyFeature4": "Individuelles Branding",
-    "agencyFeature5": "Prioritäts-Support"
+    "agencyFeature5": "Prioritäts-Support",
+    "pricingExample": "Beispiel: Ein Ingenieurbüro mit 180 Prüfungen/Monat zahlt 29€/Monat zzgl. MwSt.",
+    "savingsNote": "Sparen Sie 20% bei jährlicher Abrechnung"
   },
   "auth": {
     "signIn": "Anmelden",

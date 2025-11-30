@@ -58,7 +58,27 @@
     "startFreeTrial": "Commencer l'essai gratuit",
     "copyright": "© 2025 Consensus. Tous droits réservés.",
     "documentation": "Documentation",
-    "support": "Assistance"
+    "support": "Assistance",
+    "testimonialsTitle": "La confiance des leaders du marché",
+    "testimonial1Quote": "Consensus révolutionne notre approche créative. Le consensus multi-IA nous donne la confiance nécessaire pour innover tout en préservant l'excellence.",
+    "testimonial1Author": "Marie Dubois",
+    "testimonial1Role": "Directrice Création",
+    "testimonial1Company": "LVMH Maison",
+    "testimonial2Quote": "Pour nos campagnes internationales, Consensus valide nos concepts créatifs avec une précision remarquable. Un outil indispensable pour la cohérence de marque.",
+    "testimonial2Author": "Laurent Petit",
+    "testimonial2Role": "Directeur Stratégie",
+    "testimonial2Company": "Publicis Groupe",
+    "testimonial3Quote": "L'analyse multi-modèles nous aide à perfectionner nos messages tout en gardant l'authenticité française qui fait notre signature.",
+    "testimonial3Author": "Sophie Martin",
+    "testimonial3Role": "Brand Manager",
+    "testimonial3Company": "Chanel Paris",
+    "useCaseTitle": "Applications concrètes",
+    "useCase1Title": "Création de contenu",
+    "useCase1Description": "Les agences créatives valident leurs concepts avec plusieurs IA pour garantir l'originalité",
+    "useCase2Title": "Stratégie de marque",
+    "useCase2Description": "Les maisons de luxe utilisent Consensus pour maintenir la cohérence de leur image internationale",
+    "useCase3Title": "Communication multilingue",
+    "useCase3Description": "Les entreprises vérifient leurs messages marketing dans toutes les langues avec précision"
   },
   "pricing": {
     "title": "Le Conseil vous attend",
@@ -106,7 +126,9 @@
     "agencyFeature2": "5 000 audits partagés/mois",
     "agencyFeature3": "Rapports en marque blanche",
     "agencyFeature4": "Marque personnalisée",
-    "agencyFeature5": "Assistance prioritaire"
+    "agencyFeature5": "Assistance prioritaire",
+    "pricingExample": "Exemple : Une agence créative avec 180 audits/mois paie 29€/mois TTC",
+    "savingsNote": "Économisez 20% avec la facturation annuelle"
   },
   "auth": {
     "signIn": "Se connecter",

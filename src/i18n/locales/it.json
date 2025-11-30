@@ -58,7 +58,27 @@
     "startFreeTrial": "Inizia la prova gratuita",
     "copyright": "© 2025 Consensus. Tutti i diritti riservati.",
     "documentation": "Documentazione",
-    "support": "Supporto"
+    "support": "Supporto",
+    "testimonialsTitle": "La fiducia dei leader del design",
+    "testimonial1Quote": "Consensus ci aiuta a validare le nostre scelte creative mantenendo l'estetica italiana che ci contraddistingue. Un equilibrio perfetto tra innovazione e tradizione.",
+    "testimonial1Author": "Alessandro Rossi",
+    "testimonial1Role": "Direttore Creativo",
+    "testimonial1Company": "Armani Design Studio",
+    "testimonial2Quote": "Per la nostra agenzia, Consensus è essenziale. Verifichiamo concept visivi e narrative con precisione assoluta prima di presentarli ai clienti.",
+    "testimonial2Author": "Giulia Bianchi",
+    "testimonial2Role": "Creative Director",
+    "testimonial2Company": "Studio Fuksas",
+    "testimonial3Quote": "L'analisi multi-modello ci permette di esplorare soluzioni di design innovative con la sicurezza di risultati eccellenti.",
+    "testimonial3Author": "Marco Ferrari",
+    "testimonial3Role": "Lead Designer",
+    "testimonial3Company": "Pininfarina",
+    "useCaseTitle": "Applicazioni pratiche",
+    "useCase1Title": "Design industriale",
+    "useCase1Description": "Gli studi di design validano concept e specifiche tecniche con consenso IA multi-modello",
+    "useCase2Title": "Moda e lifestyle",
+    "useCase2Description": "I brand di moda utilizzano Consensus per trend analysis e collezioni stagionali",
+    "useCase3Title": "Architettura",
+    "useCase3Description": "Gli studi di architettura verificano conformità normative e sostenibilità dei progetti"
   },
   "pricing": {
     "title": "Il Consiglio ti aspetta",
@@ -106,7 +126,9 @@
     "agencyFeature2": "5.000 audit condivisi/mese",
     "agencyFeature3": "Report in white label",
     "agencyFeature4": "Branding personalizzato",
-    "agencyFeature5": "Supporto prioritario"
+    "agencyFeature5": "Supporto prioritario",
+    "pricingExample": "Esempio: Uno studio di design con 170 audit/mese paga 29€/mese IVA inclusa",
+    "savingsNote": "Risparmia il 20% con fatturazione annuale"
   },
   "auth": {
     "signIn": "Accedi",
