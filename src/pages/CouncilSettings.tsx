@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Settings2, Sparkles } from "lucide-react";
 import { ModelMarketModal } from "@/components/ModelMarketModal";
 import { Session } from "@supabase/supabase-js";
+import { getRecommendedModels, type Industry } from "@/lib/industryRecommendations";
 
 interface SlotConfig {
   id: string;
@@ -39,6 +40,8 @@ const CouncilSettings = () => {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [industry, setIndustry] = useState<Industry | null>(null);
+  const [recommendedModels, setRecommendedModels] = useState<string[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -63,6 +66,7 @@ const CouncilSettings = () => {
   useEffect(() => {
     if (session?.user) {
       fetchCouncilConfig();
+      fetchOrganizationIndustry();
     }
   }, [session]);
 
@@ -114,6 +118,31 @@ const CouncilSettings = () => {
 
     setCouncilConfig(mergedConfig);
     setLoading(false);
+  };
+
+  const fetchOrganizationIndustry = async () => {
+    if (!session?.user) return;
+
+    // Fetch user's organization
+    const { data: usage } = await supabase
+      .from("user_usage")
+      .select("organization_id")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    if (!usage?.organization_id) return;
+
+    // Fetch organization industry
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("industry")
+      .eq("id", usage.organization_id)
+      .maybeSingle();
+
+    if (org?.industry) {
+      setIndustry(org.industry as Industry);
+      setRecommendedModels(getRecommendedModels(org.industry as Industry));
+    }
   };
 
   const handleSlotClick = (slot: string) => {
@@ -200,6 +229,23 @@ const CouncilSettings = () => {
               Select the AI models that will analyze your queries. Each slot represents
               a different perspective in the consensus engine.
             </p>
+            {industry && recommendedModels.length > 0 && (
+              <Card className="mt-6 max-w-2xl mx-auto bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-left">
+                      <p className="font-semibold text-blue-900 capitalize">
+                        Recommended for {industry} Industry
+                      </p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        We've pre-selected AI models optimized for your industry. Look for the "Recommended" badge in the Model Marketplace.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Council Slots Grid */}
@@ -271,6 +317,7 @@ const CouncilSettings = () => {
         onOpenChange={setIsModalOpen}
         onModelSelect={(modelId, modelName) => handleModelSelect(modelId, modelName || modelId)}
         currentModel={selectedSlot ? councilConfig[selectedSlot as keyof CouncilConfig].id : undefined}
+        industryRecommendedModels={recommendedModels}
       />
     </div>
   );

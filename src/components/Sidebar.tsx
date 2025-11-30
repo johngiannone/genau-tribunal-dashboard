@@ -1,4 +1,4 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard, Folder, FolderPlus } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard, Folder, FolderPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -441,7 +441,16 @@ export const Sidebar = ({
                 <CreditCard className="w-5 h-5 mx-auto" />
               </button>
             )}
-            <button 
+            {canAccessBilling && (
+              <button 
+                onClick={() => navigate("/team")}
+                className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
+                title="Team"
+              >
+                <Users className="w-5 h-5 mx-auto" />
+              </button>
+            )}
+            <button
               onClick={() => navigate("/settings")}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Settings"

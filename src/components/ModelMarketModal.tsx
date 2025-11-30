@@ -27,6 +27,7 @@ interface ModelMarketModalProps {
   onOpenChange: (open: boolean) => void;
   onModelSelect: (modelId: string, modelName?: string) => void | Promise<void>;
   currentModel?: string;
+  industryRecommendedModels?: string[];
 }
 
 export const ModelMarketModal = ({
@@ -34,6 +35,7 @@ export const ModelMarketModal = ({
   onOpenChange,
   onModelSelect,
   currentModel,
+  industryRecommendedModels = [],
 }: ModelMarketModalProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -290,6 +292,7 @@ export const ModelMarketModal = ({
                   model={model}
                   isSelected={currentModel === model.id}
                   isFavorite={favoriteModels.includes(model.id)}
+                  isIndustryRecommended={industryRecommendedModels.includes(model.id)}
                   onClick={() => handleModelClick(model)}
                   onToggleFavorite={(e) => toggleFavorite(model.id, e)}
                 />
@@ -433,6 +436,7 @@ export const ModelMarketModal = ({
                           model={model}
                           isSelected={currentModel === model.id}
                           isFavorite={favoriteModels.includes(model.id)}
+                          isIndustryRecommended={industryRecommendedModels.includes(model.id)}
                           onClick={() => handleModelClick(model)}
                           onToggleFavorite={(e) => toggleFavorite(model.id, e)}
                         />
@@ -476,11 +480,12 @@ interface ModelCardProps {
   model: Model;
   isSelected: boolean;
   isFavorite: boolean;
+  isIndustryRecommended: boolean;
   onClick: () => void;
   onToggleFavorite: (e: React.MouseEvent) => void;
 }
 
-const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }: ModelCardProps) => {
+const ModelCard = ({ model, isSelected, isFavorite, isIndustryRecommended, onClick, onToggleFavorite }: ModelCardProps) => {
   const priceDisplay = model.isFree
     ? "FREE"
     : `$${model.avgCostPer1M < 1 ? model.avgCostPer1M.toFixed(3) : model.avgCostPer1M.toFixed(2)} / 1M`;
@@ -582,8 +587,13 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
           {/* Model Name - Bold and Primary */}
           <div>
             <h3 className="text-base font-bold text-gray-900 leading-tight mb-1">{model.name}</h3>
-            {(model.isPopular || model.isNew) && (
-              <div className="flex gap-1 mt-1">
+            {(model.isPopular || model.isNew || isIndustryRecommended) && (
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {isIndustryRecommended && (
+                  <Badge className="text-xs font-medium bg-blue-100 text-blue-700 border-blue-300">
+                    ⭐ Recommended
+                  </Badge>
+                )}
                 {model.isPopular && (
                   <Badge className="text-xs font-medium bg-orange-100 text-orange-700 border-orange-300">
                     🔥 Popular
