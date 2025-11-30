@@ -61,6 +61,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
 import { useIsRoot } from "@/hooks/useIsRoot";
+import RegionalPaymentAnalytics from "@/components/admin/RegionalPaymentAnalytics";
 
 interface UserData {
   user_id: string;
@@ -347,6 +348,7 @@ const Admin = () => {
               <TabsList className="bg-[#F9FAFB] border border-[#E5E5EA]">
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="billing">Billing Dashboard</TabsTrigger>
+                <TabsTrigger value="regional">Regional Analytics</TabsTrigger>
                 <TabsTrigger value="providers">Providers</TabsTrigger>
                 <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
@@ -643,6 +645,10 @@ const Admin = () => {
           
           <BillingTransactionsPanel />
         </div>
+      </TabsContent>
+
+      <TabsContent value="regional">
+        <RegionalPaymentAnalytics />
       </TabsContent>
 
               <TabsContent value="providers">
