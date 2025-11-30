@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 
 const languages = [
-  { code: 'en', label: 'English', flag: '🇺🇸', currency: 'USD' },
+  { code: 'en', label: 'English (US)', flag: '🇺🇸', currency: 'USD' },
   { code: 'en-gb', label: 'English (UK)', flag: '🇬🇧', currency: 'GBP' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪', currency: 'EUR' },
   { code: 'fr', label: 'Français', flag: '🇫🇷', currency: 'EUR' },
@@ -42,19 +42,27 @@ export const LanguageSwitcher = () => {
   const currentLang = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   return (
-    <div className="flex items-center gap-2">
-      {languages.map((lang) => (
-        <Button
-          key={lang.code}
-          variant={currentLang.code === lang.code ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handleLanguageChange(lang.code)}
-          className="gap-2"
-        >
-          <span className="text-lg">{lang.flag}</span>
-          <span className="hidden sm:inline">{lang.label}</span>
-        </Button>
-      ))}
+    <div className="flex flex-wrap items-center justify-center gap-6">
+      {languages.map((lang) => {
+        const isActive = currentLang.code === lang.code;
+        return (
+          <button
+            key={lang.code}
+            onClick={() => handleLanguageChange(lang.code)}
+            className={`
+              text-sm font-medium transition-all duration-200
+              flex items-center gap-2
+              ${isActive 
+                ? 'bg-blue-600 text-white rounded-full px-4 py-1.5' 
+                : 'text-gray-500 hover:text-black'
+              }
+            `}
+          >
+            <span className="text-base">{lang.flag}</span>
+            <span className="hidden sm:inline">{lang.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 };
