@@ -543,6 +543,56 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_knowledge_base: {
+        Row: {
+          description: string | null
+          document_type: string | null
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          organization_id: string
+          uploaded_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          description?: string | null
+          document_type?: string | null
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          organization_id: string
+          uploaded_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          description?: string | null
+          document_type?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          organization_id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_knowledge_base_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string | null
