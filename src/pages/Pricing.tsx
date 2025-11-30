@@ -77,6 +77,16 @@ const Pricing = () => {
           {t('pricing.createAccount')}
         </Button>
       </div>
+
+      {/* Footer with Language Switcher */}
+      <div className="relative z-10 border-t border-[#E5E5EA] py-8">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col items-center gap-6">
+          <LanguageSwitcher />
+          <p className="text-sm text-gray-400">
+            © 2025 Consensus. {t('landing.copyright').replace('© 2025 Consensus. ', '')}
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
