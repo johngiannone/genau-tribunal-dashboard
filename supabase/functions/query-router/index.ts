@@ -8,14 +8,9 @@ const corsHeaders = {
 }
 
 interface QueryPlan {
-  intent: string
-  requiresSearch: boolean
-  requiresCode: boolean
-  requiresAnalysis: boolean
-  requiresCreative: boolean
-  agentsNeeded: string[]
-  priority: 'high' | 'medium' | 'low'
-  estimatedComplexity: 'simple' | 'moderate' | 'complex'
+  primary_intent: string
+  required_agents: string[]
+  search_queries: string[]
 }
 
 serve(async (req) => {
@@ -55,30 +50,27 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a query routing system. Analyze the user's query and return a JSON object defining execution requirements.
+            content: `You are a query router. Your goal is to convert user text into a JSON command.
+Do not output any conversational text. Only output valid JSON.
 
-Output strict JSON with this structure:
+Schema:
 {
-  "intent": "brief description of what user wants",
-  "requiresSearch": boolean (true if needs web search or current info),
-  "requiresCode": boolean (true if involves programming/technical implementation),
-  "requiresAnalysis": boolean (true if needs data analysis or comparison),
-  "requiresCreative": boolean (true if needs creative writing or ideation),
-  "agentsNeeded": ["architect", "critic", "speedster"] (select relevant agents),
-  "priority": "high|medium|low" (based on complexity),
-  "estimatedComplexity": "simple|moderate|complex"
+  "primary_intent": string,
+  "required_agents": ["chairman" | "critic" | "architect" | "reporter"],
+  "search_queries": string[]
 }
 
 Rules:
-- requiresSearch: true for "latest", "current", "recent", "today", "news", factual lookups
-- requiresCode: true for "implement", "code", "function", "API", "debug", technical tasks
-- requiresAnalysis: true for "compare", "analyze", "evaluate", "pros/cons"
-- requiresCreative: true for "write", "create story", "brainstorm", "generate ideas"
-- agentsNeeded: ["chairman", "critic", "architect", "reporter", "speedster"] - pick 2-5 based on query type
-- priority: high for urgent/time-sensitive, medium for standard, low for exploratory
-- estimatedComplexity: simple (straightforward answer), moderate (requires reasoning), complex (multi-step/deep analysis)
+- primary_intent: One sentence describing what the user wants
+- required_agents: Select 2-4 agents from: "chairman", "critic", "architect", "reporter", "speedster"
+  * chairman: General reasoning and synthesis
+  * critic: Evaluation and quality assessment
+  * architect: Technical implementation and code
+  * reporter: Research and factual information
+  * speedster: Quick responses and simple queries
+- search_queries: Array of search terms if the query needs external information (empty array if not)
 
-Return ONLY valid JSON, no markdown, no explanation.`
+Return ONLY valid JSON matching the schema above.`
           },
           {
             role: "user",
