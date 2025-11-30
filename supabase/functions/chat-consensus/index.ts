@@ -95,6 +95,121 @@ async function getProviderConfig(adminSupabase: any): Promise<any> {
   }
 }
 
+// A/B Testing: Fetch active routing experiment and assign strategy
+async function getRoutingStrategy(adminSupabase: any): Promise<{ 
+  strategyId: string; 
+  trafficSplit: any;
+  experimentId: string | null;
+} | null> {
+  try {
+    const { data: experiments, error } = await adminSupabase
+      .from('routing_experiments')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (error || !experiments) {
+      console.log('No active routing experiments, using default strategy')
+      return null
+    }
+    
+    // Randomly assign strategy based on traffic split
+    const trafficSplit = experiments.traffic_split as Record<string, number>
+    const rand = Math.random() * 100
+    let cumulative = 0
+    let assignedStrategy = 'pure_cost' // default
+    
+    for (const [strategyId, percentage] of Object.entries(trafficSplit)) {
+      cumulative += percentage
+      if (rand <= cumulative) {
+        assignedStrategy = strategyId
+        break
+      }
+    }
+    
+    console.log(`A/B Testing: Assigned strategy "${assignedStrategy}" (experiment: ${experiments.name})`)
+    
+    return {
+      strategyId: assignedStrategy,
+      trafficSplit,
+      experimentId: experiments.id
+    }
+  } catch (err) {
+    console.error('Error fetching routing experiment:', err)
+    return null
+  }
+}
+
+// Calculate provider metrics from recent activity logs
+async function getProviderMetrics(adminSupabase: any): Promise<any[]> {
+  try {
+    // Get activity logs from last 7 days with provider data
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    
+    const { data: logs, error } = await adminSupabase
+      .from('activity_logs')
+      .select('*')
+      .eq('activity_type', 'audit_completed')
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .not('metadata', 'is', null)
+    
+    if (error || !logs || logs.length === 0) {
+      console.log('No historical data for provider metrics')
+      return []
+    }
+    
+    // Aggregate metrics by provider
+    const providerStats = new Map<string, {
+      totalRequests: number;
+      successfulRequests: number;
+      totalLatency: number;
+      totalCost: number;
+    }>()
+    
+    logs.forEach((log: any) => {
+      const metadata = log.metadata || {}
+      const primaryProvider = metadata.primary_provider || 'openrouter'
+      const latency = metadata.avg_latency || 0
+      const cost = log.estimated_cost || 0
+      const isFallback = metadata.fallback_used === true
+      
+      if (!providerStats.has(primaryProvider)) {
+        providerStats.set(primaryProvider, {
+          totalRequests: 0,
+          successfulRequests: 0,
+          totalLatency: 0,
+          totalCost: 0
+        })
+      }
+      
+      const stats = providerStats.get(primaryProvider)!
+      stats.totalRequests += 1
+      stats.successfulRequests += isFallback ? 0 : 1
+      stats.totalLatency += latency
+      stats.totalCost += cost
+    })
+    
+    // Convert to metrics array
+    const metrics = Array.from(providerStats.entries()).map(([provider, stats]) => ({
+      provider,
+      avgLatency: stats.totalLatency / stats.totalRequests,
+      errorRate: ((stats.totalRequests - stats.successfulRequests) / stats.totalRequests) * 100,
+      totalRequests: stats.totalRequests,
+      successfulRequests: stats.successfulRequests,
+      avgCost: stats.totalCost / stats.totalRequests
+    }))
+    
+    console.log('Provider metrics calculated:', metrics)
+    return metrics
+  } catch (err) {
+    console.error('Error calculating provider metrics:', err)
+    return []
+  }
+}
+
 // Cost-aware provider selection based on ai_models pricing
 async function getCheapestProvider(modelId: string, adminSupabase: any): Promise<string | null> {
   try {
@@ -269,6 +384,12 @@ serve(async (req) => {
     // Fetch provider configuration early
     const providerConfig = await getProviderConfig(adminSupabase)
     console.log("Provider config loaded:", providerConfig)
+    
+    // A/B Testing: Get routing strategy and provider metrics
+    const routingExperiment = await getRoutingStrategy(adminSupabase)
+    const providerMetrics = await getProviderMetrics(adminSupabase)
+    const assignedStrategy = routingExperiment?.strategyId || 'pure_cost'
+    console.log(`Routing strategy assigned: ${assignedStrategy}`)
 
     // 2. Check if user is banned
     const { data: banCheck, error: banError } = await adminSupabase
@@ -951,7 +1072,10 @@ serve(async (req) => {
           conversation_id: conversationId,
           providers_used: providersUsed,
           primary_provider: providerConfig.primary_provider,
-          fallback_used: providersUsed.length > 1
+          fallback_used: providersUsed.length > 1,
+          routing_strategy: assignedStrategy,
+          experiment_id: routingExperiment?.experimentId || null,
+          avg_latency: drafts.reduce((sum, d) => sum + d.latency, 0) / drafts.length
         }
       })
     
