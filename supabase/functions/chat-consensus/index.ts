@@ -98,7 +98,7 @@ async function fetchWithFallback(
   messages: any[], 
   contentArray?: any[],
   providerConfig?: any
-): Promise<any> {
+): Promise<{ data: any; provider: string }> {
   // Determine which provider to use
   const config = providerConfig || {
     primary_provider: "openrouter",
@@ -143,7 +143,7 @@ async function fetchWithFallback(
     if (response.ok) {
       const data = await response.json()
       console.log(`✓ ${primaryProviderName} succeeded for ${modelId}`)
-      return data
+      return { data, provider: primaryProvider }
     }
     
     // If primary fails, throw to trigger fallback
@@ -195,7 +195,7 @@ async function fetchWithFallback(
       
       const data = await fallbackResponse.json()
       console.log(`✓ ${fallbackProviderName} succeeded for ${fallbackModelId}`)
-      return data
+      return { data, provider: fallbackProvider }
       
     } catch (fallbackError) {
       console.error(`${fallbackProviderName} fallback also failed:`, fallbackError)
@@ -609,7 +609,7 @@ serve(async (req) => {
       console.log("Brand document found:", brandDoc.file_name)
       
       try {
-        const brandData = await fetchWithFallback(
+        const brandResult = await fetchWithFallback(
           "google/gemini-pro-1.5",
           [{ role: "user", content: [] }],
           [
@@ -619,7 +619,7 @@ serve(async (req) => {
           providerConfig
         )
         
-        const brandGuidelines = brandData.choices?.[0]?.message?.content
+        const brandGuidelines = brandResult.data.choices?.[0]?.message?.content
         if (brandGuidelines) {
           brandContext = `\n\nBRAND GUIDELINES:\n${brandGuidelines}`
           console.log("Brand guidelines extracted successfully")
@@ -648,7 +648,7 @@ serve(async (req) => {
         
         for (const doc of orgDocs) {
           try {
-            const docData = await fetchWithFallback(
+            const docResult = await fetchWithFallback(
               "google/gemini-pro-1.5",
               [{ role: "user", content: [] }],
               [
@@ -658,7 +658,7 @@ serve(async (req) => {
               providerConfig
             )
             
-            const summary = docData.choices?.[0]?.message?.content
+            const summary = docResult.data.choices?.[0]?.message?.content
             if (summary) {
               knowledgeSummaries.push(`\n[${doc.file_name}]:\n${summary}`)
               console.log(`Processed knowledge doc: ${doc.file_name}`)
@@ -695,7 +695,7 @@ serve(async (req) => {
     if (fileUrl) {
       console.log("File detected, waking up The Librarian...")
       try {
-        const geminiData = await fetchWithFallback(
+        const geminiResult = await fetchWithFallback(
           "google/gemini-pro-1.5",
           [{ role: "user", content: [] }],
           [
@@ -705,7 +705,7 @@ serve(async (req) => {
           providerConfig
         )
         
-        librarianAnalysis = geminiData.choices?.[0]?.message?.content || "Could not read file."
+        librarianAnalysis = geminiResult.data.choices?.[0]?.message?.content || "Could not read file."
         context = `\n\nDOCUMENT CONTEXT:\n${librarianAnalysis}`
         console.log("Document processed successfully")
       } catch (fileError) {
@@ -724,7 +724,7 @@ serve(async (req) => {
       const startTime = Date.now()
       
       try {
-        const data = await fetchWithFallback(
+        const result = await fetchWithFallback(
           drafter.id,
           [
             { 
@@ -747,8 +747,9 @@ serve(async (req) => {
           name: drafter.name,
           modelId: drafter.id,
           slotKey: drafter.slotKey,
-          response: data.choices[0].message.content,
-          latency
+          response: result.data.choices[0].message.content,
+          latency,
+          provider: result.provider
         }
       } catch (err) {
         console.error(`Drafter ${drafter.name} failed:`, err)
@@ -774,7 +775,7 @@ serve(async (req) => {
       `Draft ${i + 1} (${d.name}):\n${d.response}`
     ).join('\n\n')
     
-    const verdictData = await fetchWithFallback(
+    const verdictResult = await fetchWithFallback(
       auditorSlot.id,
       [
         {
@@ -790,6 +791,8 @@ serve(async (req) => {
       providerConfig
     )
     const verdictLatency = Date.now() - startTimeVerdict
+    const verdictContent = verdictResult.data.choices[0].message.content
+    const verdictProvider = verdictResult.provider
     console.log("Synthesis complete")
 
     // 7. Update usage count and deduct credits
@@ -906,7 +909,12 @@ serve(async (req) => {
       console.log(`Analytics logged for ${analyticsEvents.length} models`)
     }
 
-    // Log cost estimate to activity logs
+    // Log cost estimate to activity logs with provider tracking
+    const providersUsed = [
+      ...drafts.map(d => d.provider),
+      verdictProvider
+    ].filter((v, i, a) => a.indexOf(v) === i) // unique providers
+    
     const { error: activityError } = await adminSupabase
       .from('activity_logs')
       .insert({
@@ -916,7 +924,10 @@ serve(async (req) => {
         metadata: {
           estimated_cost: estimatedCost,
           models_used: allModelIds,
-          conversation_id: conversationId
+          conversation_id: conversationId,
+          providers_used: providersUsed,
+          primary_provider: providerConfig.primary_provider,
+          fallback_used: providersUsed.length > 1
         }
       })
     
@@ -1036,7 +1047,7 @@ serve(async (req) => {
           draft_b_model: drafts[1]?.modelId || 'unknown',
           draft_b_response: drafts[1]?.response || '',
           verdict_model: auditorSlot.id,
-          verdict_response: verdictData.choices[0].message.content,
+          verdict_response: verdictContent,
           model_config: councilConfig,
           council_source: councilSource || 'default'
         })
@@ -1114,7 +1125,7 @@ serve(async (req) => {
           adminSupabase.functions.invoke('send-verdict-email', {
             body: {
               to: userEmail,
-              verdict: verdictData.choices[0].message.content,
+              verdict: verdictContent,
               prompt: prompt.substring(0, 200),
               confidence: 99
             }
@@ -1136,7 +1147,7 @@ serve(async (req) => {
           name: d.name,
           response: d.response
         })),
-        verdict: verdictData.choices[0].message.content,
+        verdict: verdictContent,
         librarianAnalysis: librarianAnalysis || null,
         remainingAudits: userUsage.is_premium ? -1 : Math.max(0, monthlyLimit - (userUsage.audits_this_month || 0) - 1),
         trainingDatasetId: trainingDatasetId,

@@ -54,6 +54,7 @@ import { UserDeletionAuditLog } from "@/components/admin/UserDeletionAuditLog";
 import { CostMetricsPanel } from "@/components/admin/CostMetricsPanel";
 import { SimpleCostForecastPanel } from "@/components/admin/SimpleCostForecastPanel";
 import { ProviderManagement } from "@/components/admin/ProviderManagement";
+import { ProviderCostComparison } from "@/components/admin/ProviderCostComparison";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -641,9 +642,12 @@ const Admin = () => {
         </div>
       </TabsContent>
 
-      <TabsContent value="providers">
-        <ProviderManagement />
-      </TabsContent>
+              <TabsContent value="providers">
+                <div className="space-y-6">
+                  <ProviderManagement />
+                  <ProviderCostComparison />
+                </div>
+              </TabsContent>
 
       <TabsContent value="logs">
         <ActivityLogTable />
