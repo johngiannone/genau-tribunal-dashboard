@@ -891,6 +891,7 @@ export type Database = {
           id: string
           model_config: Json
           prompt: string
+          structured_query: Json | null
           updated_at: string
           user_id: string | null
           verdict_model: string | null
@@ -910,6 +911,7 @@ export type Database = {
           id?: string
           model_config: Json
           prompt: string
+          structured_query?: Json | null
           updated_at?: string
           user_id?: string | null
           verdict_model?: string | null
@@ -929,6 +931,7 @@ export type Database = {
           id?: string
           model_config?: Json
           prompt?: string
+          structured_query?: Json | null
           updated_at?: string
           user_id?: string | null
           verdict_model?: string | null
