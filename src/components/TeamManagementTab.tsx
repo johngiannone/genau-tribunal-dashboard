@@ -116,6 +116,15 @@ export const TeamManagementTab = () => {
       },
     });
 
+    // Log team invite
+    await supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'team_member_invited',
+        description: `Invited ${inviteEmail} as ${inviteRole}`,
+        metadata: { email: inviteEmail, role: inviteRole, organization_id: organizationId }
+      }
+    });
+
     if (error) {
       toast({
         title: "Failed to send invite",

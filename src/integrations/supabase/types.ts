@@ -1022,6 +1022,11 @@ export type Database = {
         | "profile_update"
         | "file_upload"
         | "unauthorized_access"
+        | "turbo_mode_used"
+        | "expert_marketplace_clicked"
+        | "folder_created"
+        | "conversation_moved_to_folder"
+        | "team_member_invited"
       alert_type: "daily_threshold" | "audit_threshold" | "budget_forecast"
       app_role: "admin" | "user"
     }
@@ -1160,6 +1165,11 @@ export const Constants = {
         "profile_update",
         "file_upload",
         "unauthorized_access",
+        "turbo_mode_used",
+        "expert_marketplace_clicked",
+        "folder_created",
+        "conversation_moved_to_folder",
+        "team_member_invited",
       ],
       alert_type: ["daily_threshold", "audit_threshold", "budget_forecast"],
       app_role: ["admin", "user"],

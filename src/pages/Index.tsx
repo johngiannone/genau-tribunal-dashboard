@@ -563,6 +563,17 @@ const Index = () => {
     setIsProcessing(true);
 
     try {
+      // Log turbo mode usage
+      if (turboMode) {
+        await supabase.functions.invoke('log-activity', {
+          body: {
+            activity_type: 'turbo_mode_used',
+            description: 'User enabled Turbo Mode for faster processing',
+            metadata: { prompt_length: userPrompt.length }
+          }
+        });
+      }
+
       // Get current session token for authenticated request
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       

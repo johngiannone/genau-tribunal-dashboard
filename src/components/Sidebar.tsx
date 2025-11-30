@@ -1,4 +1,4 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard, Folder, FolderPlus } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard, Folder, FolderPlus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -49,39 +49,46 @@ interface SidebarProps {
   currentConversationId: string | null;
 }
 
-export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationId }: SidebarProps) => {
+export const Sidebar = ({
+  onNewSession,
+  onLoadConversation,
+  currentConversationId,
+}: SidebarProps) => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { isAdmin, canAccessBilling } = useUserRole();
+  const [deleteConversationId, setDeleteConversationId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { isAdmin, tier } = useUserRole();
   const { toast } = useToast();
+
+  const canAccessBilling = ['team', 'agency'].includes(tier || '') || isAdmin;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        fetchConversations();
+        fetchFolders();
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchConversations();
+        fetchFolders();
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (session?.user) {
-      fetchConversations();
-      fetchFolders();
-    }
-  }, [session]);
 
   const fetchConversations = async () => {
     if (!session?.user) return;
@@ -121,7 +128,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   const handleCreateFolder = async () => {
     if (!session?.user || !newFolderName.trim()) return;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('project_folders')
       .insert({
         user_id: session.user.id,
@@ -129,7 +136,9 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
         color: '#0071E3',
         icon: 'folder',
         position: folders.length
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error("Error creating folder:", error);
@@ -140,6 +149,15 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
       });
       return;
     }
+
+    // Log folder creation
+    await supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'folder_created',
+        description: `Created folder: ${data.name}`,
+        metadata: { folder_id: data.id, folder_name: data.name }
+      }
+    });
 
     setNewFolderName("");
     setCreateFolderOpen(false);
@@ -165,6 +183,16 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
       return;
     }
 
+    // Log conversation move
+    const folderName = folderId ? folders.find(f => f.id === folderId)?.name : "Unfiled";
+    await supabase.functions.invoke('log-activity', {
+      body: {
+        activity_type: 'conversation_moved_to_folder',
+        description: `Moved conversation to ${folderName}`,
+        metadata: { conversation_id: conversationId, folder_id: folderId, folder_name: folderName }
+      }
+    });
+
     fetchConversations();
     toast({
       title: "Conversation moved",
@@ -179,51 +207,20 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
+    if (diffMins < 1) return "just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const handleLogout = async () => {
-    // Calculate session duration
-    const sessionStart = localStorage.getItem('session_start');
-    const sessionDurationMs = sessionStart 
-      ? Date.now() - new Date(sessionStart).getTime()
-      : 0;
-    const sessionDurationMinutes = Math.round(sessionDurationMs / 60000);
-
-    // Log logout activity in background
-    supabase.functions.invoke('log-activity', {
-      body: {
-        activity_type: 'logout',
-        description: 'User signed out',
-        metadata: {
-          session_duration_minutes: sessionDurationMinutes,
-          session_duration_ms: sessionDurationMs
-        }
-      }
-    }).catch(err => console.error('Failed to log logout activity:', err));
-
-    // Clear session start timestamp
-    localStorage.removeItem('session_start');
-
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, conversationId: string) => {
-    e.stopPropagation(); // Prevent loading the conversation
-    setConversationToDelete(conversationId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!conversationToDelete) return;
+  const handleDeleteConversation = async () => {
+    if (!deleteConversationId) return;
 
     const { error } = await supabase
-      .from('conversations')
+      .from("conversations")
       .delete()
-      .eq('id', conversationToDelete);
+      .eq("id", deleteConversationId);
 
     if (error) {
       console.error("Error deleting conversation:", error);
@@ -235,106 +232,52 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
       return;
     }
 
-    // If the deleted conversation was the current one, clear the view
-    if (currentConversationId === conversationToDelete) {
+    if (currentConversationId === deleteConversationId) {
       onNewSession();
     }
 
-    // Refresh conversations list
     fetchConversations();
-    
+    setShowDeleteDialog(false);
+    setDeleteConversationId(null);
     toast({
       title: "Conversation deleted",
     });
+  };
 
-    setDeleteDialogOpen(false);
-    setConversationToDelete(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   return (
     <>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this conversation and all its messages. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Folder</DialogTitle>
-            <DialogDescription>
-              Organize your conversations into folders
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="folder-name">Folder Name</Label>
-              <Input
-                id="folder-name"
-                placeholder="Enter folder name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCreateFolder();
-                  }
-                }}
-              />
+      <div className="w-[280px] bg-[#F5F5F7] border-r border-[#E5E5EA] flex flex-col h-screen">
+        {/* Header */}
+        <div className="p-6 border-b border-[#E5E5EA]">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0071E3] to-[#0055B8] flex items-center justify-center">
+              <Cpu className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-[#1D1D1F]">Genau</h1>
+              <p className="text-xs text-[#86868B]">AI Auditor</p>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateFolderOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
-              Create Folder
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <aside className="w-72 h-screen bg-[#F9FAFB] border-r border-[#E5E5EA] flex flex-col">
-        {/* Header with Logo */}
-        <div className="p-8 border-b border-[#E5E5EA]">
-          <h1 className="text-3xl font-bold text-[#111111] tracking-tight">
-            Consensus
-          </h1>
-          <p className="text-sm text-[#86868B] mt-1">AI Council Platform</p>
-        </div>
-
-        {/* New Session Button */}
-        <div className="px-6 pt-6">
-          <Button 
-            variant="default"
+          <Button
             onClick={onNewSession}
-            className="w-full h-11 rounded-full font-semibold shadow-sm hover:shadow-md transition-all"
+            className="w-full bg-white hover:bg-[#F5F5F7] text-[#0071E3] border border-[#0071E3] rounded-xl transition-all shadow-none hover:shadow-sm"
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Audit
+            New Session
           </Button>
         </div>
 
-        {/* Session History */}
-        <ScrollArea className="flex-1 px-6 pt-6">
-          {/* Folders Section */}
+        {/* Folders Section */}
+        <ScrollArea className="flex-1">
           {folders.length > 0 && (
-            <div className="space-y-1 mb-6">
-              <div className="flex items-center justify-between px-3 mb-3">
+            <div className="px-3 pt-4 pb-2">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide">
                   Folders
                 </h3>
@@ -346,46 +289,42 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
                   <FolderPlus className="w-4 h-4 text-[#86868B]" />
                 </button>
               </div>
+
+              {/* All Sessions folder */}
               <button
                 onClick={() => setActiveFolderId(null)}
-                className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
+                className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all mb-1 ${
                   activeFolderId === null
                     ? 'bg-white shadow-sm border border-[#E5E5EA]'
-                    : 'hover:bg-white/50'
+                    : 'hover:bg-white'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-[#0071E3]" />
-                  <span className="text-sm font-medium text-[#111111]">All Sessions</span>
-                  <span className="ml-auto text-xs text-[#86868B]">
-                    {conversations.length}
-                  </span>
-                </div>
+                <Folder className="w-4 h-4 text-[#0071E3]" />
+                <span className="text-sm text-[#1D1D1F]">All Sessions</span>
               </button>
-              {folders.map((folder) => (
+
+              {folders.map(folder => (
                 <button
                   key={folder.id}
                   onClick={() => setActiveFolderId(folder.id)}
-                  className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
+                  className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all mb-1 ${
                     activeFolderId === folder.id
                       ? 'bg-white shadow-sm border border-[#E5E5EA]'
-                      : 'hover:bg-white/50'
+                      : 'hover:bg-white'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Folder className="w-4 h-4" style={{ color: folder.color }} />
-                    <span className="text-sm font-medium text-[#111111]">{folder.name}</span>
-                    <span className="ml-auto text-xs text-[#86868B]">
-                      {conversations.filter(c => c.folder_id === folder.id).length}
-                    </span>
-                  </div>
+                  <Folder className="w-4 h-4" style={{ color: folder.color }} />
+                  <span className="text-sm text-[#1D1D1F] truncate flex-1">{folder.name}</span>
+                  <span className="text-xs text-[#86868B]">
+                    {conversations.filter(c => c.folder_id === folder.id).length}
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
-          <div className="space-y-1">
-            <div className="flex items-center justify-between px-3 mb-3">
+          <div className="space-y-1 px-3 pb-3">
+            <div className="flex items-center justify-between mb-3 mt-4">
               <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide">
                 {activeFolderId ? 'Sessions in Folder' : 'Recent Sessions'}
               </h3>
@@ -408,48 +347,50 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
                   className={`w-full rounded-xl transition-all group relative ${
                     currentConversationId === conversation.id 
                       ? 'bg-white shadow-sm border border-[#E5E5EA]' 
-                      : 'hover:bg-white/50'
+                      : 'hover:bg-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 px-3 py-3">
-                    <button
-                      onClick={() => onLoadConversation(conversation.id)}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <Cpu className="w-4 h-4 text-[#0071E3] flex-shrink-0" />
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm text-[#111111] truncate font-medium">
-                          {conversation.title}
-                        </p>
-                        <span className="text-xs text-[#86868B]">
-                          {formatTime(conversation.updated_at)}
-                        </span>
-                      </div>
-                    </button>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                      {folders.length > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const nextFolderId = conversation.folder_id 
-                              ? null 
-                              : folders[0]?.id || null;
-                            handleMoveToFolder(conversation.id, nextFolderId);
-                          }}
-                          className="p-1.5 hover:bg-[#0071E3]/10 rounded-lg transition-all"
-                          title={conversation.folder_id ? "Remove from folder" : "Move to folder"}
-                        >
-                          <Folder className="w-4 h-4 text-[#0071E3]" />
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => handleDeleteClick(e, conversation.id)}
-                        className="p-1.5 hover:bg-destructive/10 rounded-lg transition-all"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </button>
+                  <button
+                    onClick={() => onLoadConversation(conversation.id)}
+                    className="w-full text-left px-4 py-3 flex items-start justify-between gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#1D1D1F] truncate">
+                        {conversation.title}
+                      </p>
+                      <p className="text-xs text-[#86868B] mt-1">
+                        {formatTime(conversation.updated_at)}
+                      </p>
                     </div>
+                  </button>
+
+                  <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <select
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleMoveToFolder(conversation.id, e.target.value || null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      value={conversation.folder_id || ''}
+                      className="text-xs bg-white border border-[#E5E5EA] rounded px-1 py-0.5"
+                      title="Move to folder"
+                    >
+                      <option value="">Unfiled</option>
+                      {folders.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConversationId(conversation.id);
+                        setShowDeleteDialog(true);
+                      }}
+                      className="p-1 rounded hover:bg-[#FF3B30]/10 transition-colors"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="w-3 h-3 text-[#FF3B30]" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -457,10 +398,10 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
           </div>
         </ScrollArea>
 
-        {/* Settings at Bottom */}
-        <div className="p-6 border-t border-[#E5E5EA] space-y-3">
-          {session?.user && (
-            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white border border-[#E5E5EA]">
+        {/* Footer */}
+        <div className="p-4 border-t border-[#E5E5EA] space-y-2">
+          {session?.user?.email && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl mb-2">
               <User className="w-4 h-4 text-[#86868B] flex-shrink-0" />
               <span className="text-sm text-[#111111] truncate flex-1">
                 {session.user.email}
@@ -493,6 +434,15 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             </button>
             {canAccessBilling && (
               <button 
+                onClick={() => navigate("/monetization-analytics")}
+                className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
+                title="Monetization"
+              >
+                <TrendingUp className="w-5 h-5 mx-auto" />
+              </button>
+            )}
+            {canAccessBilling && (
+              <button 
                 onClick={() => navigate("/settings/billing")}
                 className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
                 title="Billing"
@@ -509,14 +459,61 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
             </button>
             <button 
               onClick={handleLogout}
-              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
+              className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#FF3B30]"
               title="Logout"
             >
               <LogOut className="w-5 h-5 mx-auto" />
             </button>
           </div>
         </div>
-      </aside>
+      </div>
+
+      {/* Create Folder Dialog */}
+      <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogDescription>
+              Organize your sessions into folders
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="folderName">Folder Name</Label>
+              <Input
+                id="folderName"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Enter folder name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateFolderOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFolder}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this conversation. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConversation}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
