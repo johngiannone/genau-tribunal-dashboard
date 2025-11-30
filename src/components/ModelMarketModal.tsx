@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
@@ -89,7 +89,7 @@ export const ModelMarketModal = ({
     return model;
   });
 
-  // Fetch user's favorite models from Supabase
+  // Fetch user's favorite models and usage history from Supabase
   useEffect(() => {
     if (!open) return;
     
@@ -113,6 +113,61 @@ export const ModelMarketModal = ({
 
     fetchFavorites();
   }, [open]);
+
+  // Fetch user's model usage history for recommendations
+  const { data: modelUsageHistory } = useQuery({
+    queryKey: ['model-usage-history'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('training_dataset')
+        .select('draft_a_model, draft_b_model, verdict_model, human_rating')
+        .eq('user_id', user.id)
+        .not('draft_a_model', 'is', null);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: open,
+  });
+
+  // Calculate recommended models based on usage frequency and ratings
+  const recommendedModelIds = useMemo(() => {
+    if (!modelUsageHistory || modelUsageHistory.length === 0) return [];
+
+    const modelStats: Record<string, { count: number; totalRating: number; ratingCount: number }> = {};
+
+    modelUsageHistory.forEach(entry => {
+      const models = [entry.draft_a_model, entry.draft_b_model, entry.verdict_model].filter(Boolean);
+      models.forEach(modelId => {
+        if (!modelStats[modelId]) {
+          modelStats[modelId] = { count: 0, totalRating: 0, ratingCount: 0 };
+        }
+        modelStats[modelId].count += 1;
+        if (entry.human_rating) {
+          modelStats[modelId].totalRating += entry.human_rating;
+          modelStats[modelId].ratingCount += 1;
+        }
+      });
+    });
+
+    // Sort by usage frequency and average rating
+    const sorted = Object.entries(modelStats)
+      .map(([modelId, stats]) => ({
+        modelId,
+        score: stats.count * 10 + (stats.ratingCount > 0 ? (stats.totalRating / stats.ratingCount) * 5 : 0)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(item => item.modelId);
+
+    return sorted;
+  }, [modelUsageHistory]);
+
+  const recommendedModels = modelsWithLivePrices.filter(m => recommendedModelIds.includes(m.id));
 
   const filteredByCategory = activeCategory === "favorites" 
     ? modelsWithLivePrices.filter(m => favoriteModels.includes(m.id))
@@ -220,6 +275,28 @@ export const ModelMarketModal = ({
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Recommended for You Section */}
+        {recommendedModels.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="text-blue-500">✨</span>
+              Recommended for You
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {recommendedModels.map((model) => (
+                <ModelCard
+                  key={model.id}
+                  model={model}
+                  isSelected={currentModel === model.id}
+                  isFavorite={favoriteModels.includes(model.id)}
+                  onClick={() => handleModelClick(model)}
+                  onToggleFavorite={(e) => toggleFavorite(model.id, e)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filter Pills */}
         <div className="flex gap-2 flex-wrap">
