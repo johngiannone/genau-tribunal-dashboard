@@ -404,27 +404,15 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
     if (model.isFree) {
       return { label: "Free", className: "bg-green-100 text-green-700 border-green-300" };
     } else if (model.avgCostPer1M < 1) {
-      return { label: "$", className: "bg-green-100 text-green-700 border-green-300" };
+      return { label: "Budget", className: "bg-green-100 text-green-700 border-green-300" };
     } else if (model.avgCostPer1M < 10) {
-      return { label: "$$", className: "bg-yellow-100 text-yellow-700 border-yellow-300" };
+      return { label: "Standard", className: "bg-yellow-100 text-yellow-700 border-yellow-300" };
     } else {
-      return { label: "$$$", className: "bg-red-100 text-red-700 border-red-300" };
+      return { label: "Premium", className: "bg-red-100 text-red-700 border-red-300" };
     }
   };
 
   const costTier = getCostTierBadge();
-
-  // Provider icon mapping
-  const getProviderIcon = (provider: string) => {
-    const providerLower = provider.toLowerCase();
-    if (providerLower.includes("openai")) return "🤖";
-    if (providerLower.includes("anthropic")) return "🧠";
-    if (providerLower.includes("google")) return "🔍";
-    if (providerLower.includes("meta")) return "📘";
-    if (providerLower.includes("mistral")) return "🌪️";
-    if (providerLower.includes("cohere")) return "💬";
-    return "⚡";
-  };
 
   return (
     <TooltipProvider>
@@ -436,11 +424,6 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
         }`}
         onClick={onClick}
       >
-        {/* Provider Icon - Top Left */}
-        <div className="absolute top-3 left-3 text-xl">
-          {getProviderIcon(model.provider)}
-        </div>
-
         {/* Favorite Star Button - Top Right */}
         <button
           onClick={onToggleFavorite}
@@ -466,7 +449,7 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
           </div>
         )}
 
-        <div className="space-y-2.5 pt-8">
+        <div className="space-y-2.5 pt-2">
           {/* Provider & Cost Tier Row */}
           <div className="flex items-center justify-between gap-2">
             <Badge variant="outline" className="text-xs font-normal text-gray-600 border-gray-300">
