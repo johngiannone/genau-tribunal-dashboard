@@ -743,6 +743,30 @@ export type Database = {
         }
         Relationships: []
       }
+      query_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          prompt_hash: string
+          structured_json: Json
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          prompt_hash: string
+          structured_json: Json
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          prompt_hash?: string
+          structured_json?: Json
+        }
+        Relationships: []
+      }
       routing_experiments: {
         Row: {
           created_at: string
@@ -879,6 +903,7 @@ export type Database = {
       }
       training_dataset: {
         Row: {
+          cache_hit: boolean | null
           council_source: string | null
           created_at: string
           draft_a_model: string | null
@@ -899,6 +924,7 @@ export type Database = {
           verdict_response: string | null
         }
         Insert: {
+          cache_hit?: boolean | null
           council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
@@ -919,6 +945,7 @@ export type Database = {
           verdict_response?: string | null
         }
         Update: {
+          cache_hit?: boolean | null
           council_source?: string | null
           created_at?: string
           draft_a_model?: string | null
@@ -1135,6 +1162,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_expired_cache: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
