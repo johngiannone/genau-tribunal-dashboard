@@ -514,7 +514,7 @@ export const ConsensusMessage = ({
                 <div>
                   <h3 className="text-xl font-bold text-[#111111] mb-5">Key Findings</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Consensus/Conflict Card */}
+                    {/* Agreement/Conflict Card */}
                     {modelAResponse && modelBResponse && (
                       <div className={`border rounded-xl p-6 ${
                         modelAResponse.substring(0, 100) === modelBResponse.substring(0, 100)
@@ -526,7 +526,7 @@ export const ConsensusMessage = ({
                             <>
                               <CheckCircle className="w-7 h-7 text-green-600 flex-shrink-0 mt-0.5" />
                               <div>
-                                <h4 className="font-bold text-[#111111] mb-2 text-base">Consensus Reached</h4>
+                                <h4 className="font-bold text-[#111111] mb-2 text-base">Models Aligned</h4>
                                 <p className="text-sm text-[#111111]/70 leading-relaxed">Models demonstrated strong alignment on key recommendations and analysis.</p>
                               </div>
                             </>

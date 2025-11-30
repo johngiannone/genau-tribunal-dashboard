@@ -119,7 +119,7 @@ export const EmailShareModal = ({
             Share Verdict via Email
           </DialogTitle>
           <DialogDescription>
-            Send this consensus report directly to someone's inbox with an optional message and PDF attachment.
+            Send this audit report directly to someone's inbox with an optional message and PDF attachment.
           </DialogDescription>
         </DialogHeader>
 

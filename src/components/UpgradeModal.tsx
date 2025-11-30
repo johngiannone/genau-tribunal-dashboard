@@ -20,7 +20,7 @@ export const UpgradeModal = ({ open, onOpenChange }: UpgradeModalProps) => {
             The Council Awaits
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground">
-            Choose your path to unlimited consensus
+            Choose your path to unlimited audits
           </DialogDescription>
         </DialogHeader>
         
