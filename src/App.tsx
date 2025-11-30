@@ -84,6 +84,11 @@ const AppContent = () => {
   // Track behavioral biometrics
   useBiometrics();
   
+  // Set document title to Genau branding
+  useEffect(() => {
+    document.title = "Genau - AI Auditing Platform";
+  }, []);
+  
   return (
     <BrowserRouter>
       <GeoRouter>
