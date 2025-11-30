@@ -6,6 +6,7 @@ const languages = [
   { code: 'en', label: 'English', flag: '🇺🇸', currency: 'USD' },
   { code: 'en-gb', label: 'English (UK)', flag: '🇬🇧', currency: 'GBP' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪', currency: 'EUR' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷', currency: 'EUR' },
 ];
 
 export const LanguageSwitcher = () => {
@@ -24,7 +25,7 @@ export const LanguageSwitcher = () => {
     const currentLang = pathSegments[0];
     
     // Remove old language prefix if exists
-    if (['en', 'en-gb', 'de'].includes(currentLang)) {
+    if (['en', 'en-gb', 'de', 'fr'].includes(currentLang)) {
       pathSegments.shift();
     }
     

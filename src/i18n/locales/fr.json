@@ -1,0 +1,37 @@
+{
+  "landing": {
+    "hero": "Demandez une fois. Obtenez le consensus.",
+    "subtitle": "Exécution de plusieurs modèles d'IA en parallèle pour un audit de précision."
+  },
+  "pricing": {
+    "title": "Le Conseil vous attend",
+    "subtitle": "Choisissez votre chemin vers un consensus illimité. Obtenez des audits d'IA de précision de plusieurs modèles fonctionnant en parallèle.",
+    "personal": "Personnel",
+    "business": "Entreprise",
+    "perMonth": "/mois",
+    "getStarted": "Commencer",
+    "enterprise": "Entreprise",
+    "enterpriseDescription": "Besoin de SSO ou de déploiement sur site ?",
+    "contactSales": "Contacter les ventes",
+    "ready": "Prêt à commencer ?",
+    "createAccount": "Créer un compte gratuit",
+    "backToLogin": "Retour à la connexion"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "viewPricing": "Voir les options d'adhésion"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier"
+  }
+}
