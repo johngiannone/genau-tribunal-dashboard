@@ -11,13 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Ticket, Mail, Calendar, ExternalLink } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Ticket, Mail, Calendar, ExternalLink, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
 export const SupportTicketsPanel = () => {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   const { data: tickets = [], refetch } = useQuery({
     queryKey: ["support-tickets", statusFilter],
@@ -35,6 +45,23 @@ export const SupportTicketsPanel = () => {
       if (error) throw error;
       return data || [];
     },
+  });
+
+  const { data: comments = [], refetch: refetchComments } = useQuery({
+    queryKey: ["ticket-comments", selectedTicket],
+    queryFn: async () => {
+      if (!selectedTicket) return [];
+
+      const { data, error } = await supabase
+        .from("ticket_comments")
+        .select("*")
+        .eq("ticket_id", selectedTicket)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedTicket,
   });
 
   const updateTicketStatus = async (ticketId: string, newStatus: string) => {
@@ -104,6 +131,54 @@ export const SupportTicketsPanel = () => {
         return "bg-green-100 text-green-800 border-green-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const handleAddReply = async () => {
+    if (!selectedTicket || !replyText.trim()) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: comment, error } = await supabase
+        .from("ticket_comments")
+        .insert({
+          ticket_id: selectedTicket,
+          user_id: user.id,
+          comment: replyText,
+          is_admin: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send email notification
+      supabase.functions.invoke('send-ticket-reply-email', {
+        body: {
+          ticketId: selectedTicket,
+          commentId: comment.id,
+          comment: replyText,
+          isAdminReply: true,
+        }
+      }).catch(err => {
+        console.error('Failed to send reply email:', err);
+      });
+
+      toast({
+        title: "Reply sent",
+        description: "User will be notified via email",
+      });
+
+      setReplyText("");
+      refetchComments();
+    } catch (error: any) {
+      toast({
+        title: "Failed to send reply",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -183,26 +258,109 @@ export const SupportTicketsPanel = () => {
                     )}
                   </div>
 
-                  <Select
-                    value={ticket.status}
-                    onValueChange={(value) => updateTicketStatus(ticket.id, value)}
-                  >
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedTicket(ticket.id)}
+                      className="h-8 text-xs"
+                    >
+                      <MessageSquare className="w-3 h-3 mr-1" />
+                      View Conversation
+                    </Button>
+                    <Select
+                      value={ticket.status}
+                      onValueChange={(value) => updateTicketStatus(ticket.id, value)}
+                    >
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+
+      {/* Conversation Dialog */}
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ticket Conversation</DialogTitle>
+            <DialogDescription>
+              {selectedTicket && tickets.find(t => t.id === selectedTicket)?.subject}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Original ticket */}
+            {selectedTicket && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge>Original Report</Badge>
+                  <span className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(tickets.find(t => t.id === selectedTicket)?.created_at || ''), { addSuffix: true })}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {tickets.find(t => t.id === selectedTicket)?.description}
+                </p>
+              </div>
+            )}
+
+            {/* Comments */}
+            {comments.map((comment) => (
+              <div
+                key={comment.id}
+                className={`border rounded-lg p-4 ${
+                  comment.is_admin
+                    ? 'bg-blue-50 border-blue-200 ml-8'
+                    : 'bg-white border-gray-200 mr-8'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant={comment.is_admin ? "default" : "secondary"}>
+                    {comment.is_admin ? 'Support Team' : 'User'}
+                  </Badge>
+                  <span className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {comment.comment}
+                </p>
+              </div>
+            ))}
+
+            {comments.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No replies yet</p>
+            )}
+          </div>
+
+          {/* Reply form */}
+          <div className="border-t pt-4">
+            <label className="text-sm font-medium mb-2 block">Add Reply</label>
+            <Textarea
+              placeholder="Type your reply to the user..."
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              rows={4}
+              className="mb-3"
+            />
+            <Button onClick={handleAddReply} disabled={!replyText.trim()}>
+              Send Reply
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
