@@ -57,6 +57,7 @@ export type Database = {
           last_updated: string
           name: string
           output_price: number
+          provider: string
         }
         Insert: {
           id: string
@@ -64,6 +65,7 @@ export type Database = {
           last_updated?: string
           name: string
           output_price: number
+          provider?: string
         }
         Update: {
           id?: string
@@ -71,6 +73,7 @@ export type Database = {
           last_updated?: string
           name?: string
           output_price?: number
+          provider?: string
         }
         Relationships: []
       }
