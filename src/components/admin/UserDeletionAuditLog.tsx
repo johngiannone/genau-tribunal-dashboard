@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, RotateCcw, Calendar, User, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime, formatDateTime } from "@/lib/intl-formatting";
 
 interface DeletionLogMetadata {
   action: 'user_deletion' | 'user_restoration';
@@ -204,7 +204,7 @@ export function UserDeletionAuditLog() {
                       </Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                      {formatRelativeTime(log.created_at, { style: 'short' })}
                     </span>
                   </div>
 
