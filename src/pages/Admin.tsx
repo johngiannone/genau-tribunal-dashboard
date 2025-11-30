@@ -51,6 +51,8 @@ import { DisposableEmailStatsPanel } from "@/components/admin/DisposableEmailSta
 import { AutomatedBanPanel } from "@/components/admin/AutomatedBanPanel";
 import { AdminUserDetail } from "@/components/admin/AdminUserDetail";
 import { UserDeletionAuditLog } from "@/components/admin/UserDeletionAuditLog";
+import { CostMetricsPanel } from "@/components/admin/CostMetricsPanel";
+import { SimpleCostForecastPanel } from "@/components/admin/SimpleCostForecastPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -344,6 +346,7 @@ const Admin = () => {
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="deletion-audit">Deletion Audit</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
+                <TabsTrigger value="cost">Cost Metrics</TabsTrigger>
                 <TabsTrigger value="pricing">AI Pricing</TabsTrigger>
                 <TabsTrigger value="forecast">Forecast</TabsTrigger>
                 <TabsTrigger value="alerts">Cost Alerts</TabsTrigger>
@@ -652,8 +655,15 @@ const Admin = () => {
         <PriceSyncPanel />
       </TabsContent>
 
+      <TabsContent value="cost">
+        <CostMetricsPanel />
+      </TabsContent>
+
       <TabsContent value="forecast">
-        <CostForecastPanel />
+        <div className="space-y-6">
+          <SimpleCostForecastPanel />
+          <CostForecastPanel />
+        </div>
       </TabsContent>
 
       <TabsContent value="alerts">

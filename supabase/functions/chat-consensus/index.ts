@@ -939,6 +939,7 @@ serve(async (req) => {
             description: `Completed audit: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`,
             ip_address: ipAddress,
             user_agent: userAgent,
+            estimated_cost: estimatedCost,
             metadata: {
               conversation_id: conversationId,
               council_config: councilConfig ? 'custom' : 'default',
