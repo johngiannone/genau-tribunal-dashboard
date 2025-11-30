@@ -7,6 +7,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { ModelRecommendationModal } from "@/components/ModelRecommendationModal";
 import { ModelMarketModal } from "@/components/ModelMarketModal";
 import { ABTestingNotificationBanner } from "@/components/ABTestingNotificationBanner";
+import { TeamSetupBanner } from "@/components/TeamSetupBanner";
 import CostCalculator from "@/components/CostCalculator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Zap, Pencil } from "lucide-react";
@@ -816,6 +817,9 @@ const Index = () => {
         {/* Chat Messages */}
         <ScrollArea className="flex-1">
           <div className="max-w-5xl mx-auto px-6 py-8 pb-32">
+            {/* Team Setup Banner */}
+            <TeamSetupBanner />
+            
             {/* Status Text */}
             {statusText && (
               <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-primary/10 backdrop-blur-sm border border-primary/30 text-primary px-4 py-2 rounded-full text-xs font-mono animate-pulse">

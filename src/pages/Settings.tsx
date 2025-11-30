@@ -272,6 +272,28 @@ const Settings = () => {
           </CardContent>
         </Card>
 
+        {/* Team Setup */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Team Workspace
+            </CardTitle>
+            <CardDescription>
+              Create or manage your team organization for collaborative audits
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/setup-team")}
+            >
+              Set Up Team
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Model Recommendations Preference */}
         <Card>
           <CardHeader>
