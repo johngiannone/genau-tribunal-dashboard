@@ -630,6 +630,7 @@ export type Database = {
         Row: {
           council_config: Json | null
           created_at: string
+          deleted_at: string | null
           email: string | null
           enable_model_recommendations: boolean | null
           favorite_models: Json | null
@@ -639,6 +640,7 @@ export type Database = {
         Insert: {
           council_config?: Json | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           enable_model_recommendations?: boolean | null
           favorite_models?: Json | null
@@ -648,6 +650,7 @@ export type Database = {
         Update: {
           council_config?: Json | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           enable_model_recommendations?: boolean | null
           favorite_models?: Json | null
@@ -1064,6 +1067,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_old_deleted_users: { Args: never; Returns: undefined }
+      restore_user: { Args: { target_user_id: string }; Returns: undefined }
+      soft_delete_user: { Args: { target_user_id: string }; Returns: undefined }
     }
     Enums: {
       account_status: "active" | "inactive" | "disabled"

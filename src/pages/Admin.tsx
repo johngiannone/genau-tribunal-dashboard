@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Shield, Loader2, ArrowLeft, Ban, Mail, Brain } from "lucide-react";
+import { Shield, Loader2, ArrowLeft, Ban, Mail, Brain, Trash2, RotateCcw } from "lucide-react";
 import { ActivityLogTable } from "@/components/ActivityLogTable";
 import { LiveActivityFeed } from "@/components/LiveActivityFeed";
 import { ActivityStatsDashboard } from "@/components/ActivityStatsDashboard";
@@ -70,6 +70,7 @@ interface UserData {
   banned_at: string | null;
   ban_reason: string | null;
   account_status: 'active' | 'inactive' | 'disabled';
+  deleted_at: string | null;
 }
 
 const Admin = () => {
@@ -88,6 +89,8 @@ const Admin = () => {
   const [statusChangeMessage, setStatusChangeMessage] = useState("");
   const [emailUser, setEmailUser] = useState<{ userId: string; email: string } | null>(null);
   const [selectedUser, setSelectedUser] = useState<{ userId: string; email: string } | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deleteDialogUser, setDeleteDialogUser] = useState<{ userId: string; email: string } | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -106,21 +109,22 @@ const Admin = () => {
       const usageRows = data || [];
       const userIds = usageRows.map((row: any) => row.user_id);
 
-      // Then fetch emails for those users from profiles
+      // Then fetch emails and deleted_at for those users from profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email')
+        .select('id, email, deleted_at')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
 
-      const emailByUserId = new Map<string, string | null>(
-        (profilesData || []).map((profile: any) => [profile.id, profile.email]),
+      const profileByUserId = new Map<string, any>(
+        (profilesData || []).map((profile: any) => [profile.id, profile]),
       );
 
       const usersWithEmail = usageRows.map((row: any) => ({
         ...row,
-        email: emailByUserId.get(row.user_id) || null,
+        email: profileByUserId.get(row.user_id)?.email || null,
+        deleted_at: profileByUserId.get(row.user_id)?.deleted_at || null,
       }));
 
       setUsers(usersWithEmail);
@@ -247,6 +251,52 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('soft_delete_user', {
+        target_user_id: userId
+      });
+
+      if (error) throw error;
+
+      toast.success("User deleted successfully. Can be restored within 30 days.");
+      setDeleteDialogUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error("Failed to delete user");
+    }
+  };
+
+  const handleRestoreUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('restore_user', {
+        target_user_id: userId
+      });
+
+      if (error) throw error;
+
+      toast.success("User restored successfully");
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error restoring user:', error);
+      toast.error(error.message || "Failed to restore user");
+    }
+  };
+
+  const getDaysUntilPurge = (deletedAt: string) => {
+    const deleted = new Date(deletedAt);
+    const purgeDate = new Date(deleted);
+    purgeDate.setDate(purgeDate.getDate() + 30);
+    const now = new Date();
+    const daysLeft = Math.ceil((purgeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysLeft;
+  };
+
+  const filteredUsers = showDeleted 
+    ? users.filter(u => u.deleted_at !== null)
+    : users.filter(u => u.deleted_at === null);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -303,6 +353,30 @@ const Admin = () => {
 
               <TabsContent value="users">
                 <div className="rounded-2xl border border-[#E5E5EA] bg-white overflow-hidden shadow-sm">
+                  <div className="p-4 border-b border-[#E5E5EA] flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant={!showDeleted ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowDeleted(false)}
+                      >
+                        Active Users ({users.filter(u => !u.deleted_at).length})
+                      </Button>
+                      <Button
+                        variant={showDeleted ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowDeleted(true)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Deleted Users ({users.filter(u => u.deleted_at).length})
+                      </Button>
+                    </div>
+                    {showDeleted && (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                        Users are permanently purged after 30 days
+                      </Badge>
+                    )}
+                  </div>
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F9FAFB]">
@@ -321,7 +395,7 @@ const Admin = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.user_id} className={user.is_banned ? "bg-red-50" : ""}>
                   <TableCell 
                     className="font-mono text-xs text-muted-foreground cursor-pointer hover:text-primary hover:underline"
@@ -333,38 +407,47 @@ const Admin = () => {
                     {user.email || 'No email'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={user.account_status}
-                        onValueChange={(value) => 
-                          handleStatusChange(user.user_id, value as 'active' | 'inactive' | 'disabled')
-                        }
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white z-50">
-                          <SelectItem value="active">
-                            <span className="text-green-600 font-medium">Active</span>
-                          </SelectItem>
-                          <SelectItem value="inactive">
-                            <span className="text-yellow-600 font-medium">Inactive</span>
-                          </SelectItem>
-                          <SelectItem value="disabled">
-                            <span className="text-red-600 font-medium">Disabled</span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setEmailUser({ userId: user.user_id, email: user.email || 'Unknown' })}
-                        className="h-8 w-8"
-                        title="Send status notification email"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {user.deleted_at ? (
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="destructive">Deleted</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {getDaysUntilPurge(user.deleted_at)} days until purge
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={user.account_status}
+                          onValueChange={(value) => 
+                            handleStatusChange(user.user_id, value as 'active' | 'inactive' | 'disabled')
+                          }
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white z-50">
+                            <SelectItem value="active">
+                              <span className="text-green-600 font-medium">Active</span>
+                            </SelectItem>
+                            <SelectItem value="inactive">
+                              <span className="text-yellow-600 font-medium">Inactive</span>
+                            </SelectItem>
+                            <SelectItem value="disabled">
+                              <span className="text-red-600 font-medium">Disabled</span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEmailUser({ userId: user.user_id, email: user.email || 'Unknown' })}
+                          className="h-8 w-8"
+                          title="Send status notification email"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {user.is_banned ? (
@@ -485,25 +568,47 @@ const Admin = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/admin/user/${user.user_id}`)}
-                        className="text-[#0071E3] border-[#0071E3] hover:bg-[#0071E3] hover:text-white"
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateUser(user.user_id, {
-                          audits_this_month: (user.audits_this_month || 0) + 50
-                        })}
-                      >
-                        +50 Audits
-                      </Button>
-                    </div>
+                    {user.deleted_at ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRestoreUser(user.user_id)}
+                          className="text-green-600 border-green-600 hover:bg-green-600 hover:text-white"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          Restore
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/admin/user/${user.user_id}`)}
+                          className="text-[#0071E3] border-[#0071E3] hover:bg-[#0071E3] hover:text-white"
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateUser(user.user_id, {
+                            audits_this_month: (user.audits_this_month || 0) + 50
+                          })}
+                        >
+                          +50 Audits
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteDialogUser({ userId: user.user_id, email: user.email || 'Unknown' })}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -703,6 +808,54 @@ const Admin = () => {
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
       />
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={deleteDialogUser !== null} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteDialogUser(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete User Account</DialogTitle>
+            <DialogDescription>
+              This will soft-delete the user. They can be restored within 30 days.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm text-[#86868B]">
+                User: <strong>{deleteDialogUser?.email}</strong>
+              </p>
+              <p className="text-sm text-[#86868B]">
+                ID: <strong className="font-mono">{deleteDialogUser?.userId}</strong>
+              </p>
+            </div>
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ The user's data will be retained for 30 days and can be restored during this period.
+                After 30 days, all data will be permanently purged.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogUser(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => deleteDialogUser && handleDeleteUser(deleteDialogUser.userId)}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
