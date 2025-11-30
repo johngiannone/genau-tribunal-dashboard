@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 const TOGETHER_API_KEY = Deno.env.get('TOGETHER_API_KEY')
+const BASTEN_API_KEY = Deno.env.get('BASTEN_API_KEY')
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -22,6 +23,10 @@ const PROVIDERS = {
   TOGETHER: {
     url: "https://api.together.xyz/v1/chat/completions",
     key: TOGETHER_API_KEY
+  },
+  BASTEN: {
+    url: "https://api.basten.ai/v1/chat/completions",
+    key: BASTEN_API_KEY
   }
 }
 
@@ -71,9 +76,8 @@ async function getProviderConfig(adminSupabase: any): Promise<any> {
     if (error) {
       console.warn("Failed to fetch provider config, using defaults:", error)
       return {
-        primary_provider: "openrouter",
+        provider_priority: ["openrouter", "together", "basten"],
         fallback_enabled: true,
-        fallback_provider: "together",
         auto_fallback: true,
         manual_override: false
       }
@@ -83,125 +87,104 @@ async function getProviderConfig(adminSupabase: any): Promise<any> {
   } catch (err) {
     console.error("Provider config fetch error:", err)
     return {
-      primary_provider: "openrouter",
+      provider_priority: ["openrouter", "together", "basten"],
       fallback_enabled: true,
-      fallback_provider: "together",
       auto_fallback: true,
       manual_override: false
     }
   }
 }
 
-// Smart fallback helper function
+// Smart cascading fallback helper function with 3-provider support
 async function fetchWithFallback(
   modelId: string, 
   messages: any[], 
   contentArray?: any[],
   providerConfig?: any
 ): Promise<{ data: any; provider: string }> {
-  // Determine which provider to use
+  // Determine provider priority
   const config = providerConfig || {
-    primary_provider: "openrouter",
+    provider_priority: ["openrouter", "together", "basten"],
     fallback_enabled: true,
-    fallback_provider: "together",
     auto_fallback: true,
     manual_override: false
   }
   
-  // If manual override is enabled, force use of fallback provider
-  const primaryProvider = config.manual_override 
-    ? config.fallback_provider 
-    : config.primary_provider
+  const providerPriority = config.provider_priority || ["openrouter", "together", "basten"]
+  const fallbackEnabled = config.fallback_enabled !== false && config.auto_fallback !== false
   
-  const fallbackProvider = primaryProvider === "openrouter" ? "together" : "openrouter"
-  const primaryProviderName = primaryProvider === "openrouter" ? "OpenRouter" : "Together AI"
-  const fallbackProviderName = fallbackProvider === "openrouter" ? "OpenRouter" : "Together AI"
+  const errors: Array<{ provider: string; error: any }> = []
   
-  // Attempt 1: Primary provider (or override)
-  try {
-    console.log(`Attempting ${primaryProviderName} for model: ${modelId}${config.manual_override ? ' (Manual Override Active)' : ''}`)
+  // Try each provider in priority order
+  for (let i = 0; i < providerPriority.length; i++) {
+    const providerKey = providerPriority[i]
+    const providerName = providerKey === "openrouter" ? "OpenRouter" 
+      : providerKey === "together" ? "Together AI"
+      : providerKey === "basten" ? "Basten"
+      : providerKey
     
-    const body: any = {
-      model: modelId,
-      messages: contentArray ? [
-        { role: messages[0].role, content: contentArray }
-      ] : messages
+    // Skip if fallback is disabled and this isn't the first provider
+    if (!fallbackEnabled && i > 0) {
+      console.log(`Fallback disabled, skipping ${providerName}`)
+      break
     }
     
-    const primaryProviderObj = primaryProvider === "openrouter" ? PROVIDERS.OPENROUTER : PROVIDERS.TOGETHER
-    const primaryModelId = primaryProvider === "together" ? (MODEL_ID_MAP[modelId] || modelId) : modelId
-    
-    const response = await fetch(primaryProviderObj.url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${primaryProviderObj.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...body, model: primaryModelId })
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      console.log(`✓ ${primaryProviderName} succeeded for ${modelId}`)
-      return { data, provider: primaryProvider }
-    }
-    
-    // If primary fails, throw to trigger fallback
-    const errorText = await response.text()
-    throw new Error(`${primaryProviderName} failed: ${response.status} - ${errorText}`)
-    
-  } catch (primaryError) {
-    // Check if fallback is enabled
-    if (!config.fallback_enabled || !config.auto_fallback) {
-      console.error(`${primaryProviderName} failed and fallback is disabled`)
-      throw primaryError
-    }
-    
-    console.warn(`⚠️ ${primaryProviderName} failed for ${modelId}, attempting fallback to ${fallbackProviderName}`)
-    console.error(`${primaryProviderName} error:`, primaryError)
-    
-    // Attempt 2: Fallback provider
-    const fallbackProviderObj = fallbackProvider === "openrouter" ? PROVIDERS.OPENROUTER : PROVIDERS.TOGETHER
-    if (!fallbackProviderObj.key) {
-      console.error(`${fallbackProviderName} API key not configured, cannot fallback`)
-      throw primaryError // Re-throw original error if fallback not available
+    const providerObj = PROVIDERS[providerKey.toUpperCase() as keyof typeof PROVIDERS]
+    if (!providerObj || !providerObj.key) {
+      console.warn(`${providerName} API key not configured, skipping`)
+      continue
     }
     
     try {
-      // Map the model ID if needed
-      const fallbackModelId = fallbackProvider === "together" ? (MODEL_ID_MAP[modelId] || modelId) : modelId
-      console.log(`Fallback: Using ${fallbackProviderName} model: ${fallbackModelId}`)
+      const attemptLabel = i === 0 ? "Primary" : `Fallback ${i}`
+      console.log(`[${attemptLabel}] Attempting ${providerName} for model: ${modelId}`)
       
-      const fallbackBody: any = {
-        model: fallbackModelId,
+      // Map model ID if needed (Together/Basten might need different IDs)
+      const mappedModelId = (providerKey === "together" || providerKey === "basten") 
+        ? (MODEL_ID_MAP[modelId] || modelId) 
+        : modelId
+      
+      const body: any = {
+        model: mappedModelId,
         messages: contentArray ? [
           { role: messages[0].role, content: contentArray }
         ] : messages
       }
       
-      const fallbackResponse = await fetch(fallbackProviderObj.url, {
+      const response = await fetch(providerObj.url, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${fallbackProviderObj.key}`,
+          "Authorization": `Bearer ${providerObj.key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(fallbackBody)
+        body: JSON.stringify(body)
       })
       
-      if (!fallbackResponse.ok) {
-        const errorText = await fallbackResponse.text()
-        throw new Error(`${fallbackProviderName} also failed: ${fallbackResponse.status} - ${errorText}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log(`✓ ${providerName} succeeded for ${modelId}`)
+        return { data, provider: providerKey }
       }
       
-      const data = await fallbackResponse.json()
-      console.log(`✓ ${fallbackProviderName} succeeded for ${fallbackModelId}`)
-      return { data, provider: fallbackProvider }
+      const errorText = await response.text()
+      throw new Error(`${response.status} - ${errorText}`)
       
-    } catch (fallbackError) {
-      console.error(`${fallbackProviderName} fallback also failed:`, fallbackError)
-      throw new Error(`Both providers failed. ${primaryProviderName}: ${primaryError}. ${fallbackProviderName}: ${fallbackError}`)
+    } catch (error) {
+      errors.push({ provider: providerName, error })
+      console.error(`✗ ${providerName} failed:`, error)
+      
+      // If this is the last provider, throw combined error
+      if (i === providerPriority.length - 1) {
+        const errorSummary = errors.map(e => `${e.provider}: ${e.error}`).join("; ")
+        throw new Error(`All providers failed. ${errorSummary}`)
+      }
+      
+      console.warn(`⚠️ Attempting next provider in priority list...`)
     }
   }
+  
+  // If we get here, no providers were available
+  throw new Error("No providers available or configured")
 }
 
 serve(async (req) => {
