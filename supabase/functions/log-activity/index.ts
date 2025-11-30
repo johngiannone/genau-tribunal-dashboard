@@ -43,17 +43,23 @@ Deno.serve(async (req) => {
     
     const userAgent = req.headers.get('user-agent') || null
     
+    // Capture country from cookie for Stripe routing
+    const cookies = req.headers.get('cookie') || '';
+    const countryCookie = cookies.split(';').find(c => c.trim().startsWith('user_country='));
+    const userCountry = countryCookie ? countryCookie.split('=')[1].trim() : null;
+    
     // Capture additional headers for Phase 1: Enhanced Header Collection
     const referer = req.headers.get('referer') || null
     const origin = req.headers.get('origin') || null
     const acceptLanguage = req.headers.get('accept-language') || null
     
-    // Enrich metadata with additional headers
+    // Enrich metadata with additional headers and country
     const enrichedMetadata = {
       ...metadata,
       referer,
       origin,
       acceptLanguage,
+      country: userCountry, // Add country for Stripe routing
     }
 
     // Insert activity log with enriched metadata

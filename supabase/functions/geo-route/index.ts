@@ -18,10 +18,16 @@ serve(async (req) => {
     if (userLocaleCookie) {
       const userLocale = userLocaleCookie.split('=')[1];
       console.log(`User has manual locale preference: ${userLocale}`);
+      
+      // Also return stored country if available
+      const userCountryCookie = cookies.split(';').find(c => c.trim().startsWith('user_country='));
+      const storedCountry = userCountryCookie ? userCountryCookie.split('=')[1] : null;
+      
       return new Response(
         JSON.stringify({ 
           redirect: null, 
           locale: userLocale,
+          country: storedCountry,
           reason: 'user_preference' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -58,14 +64,21 @@ serve(async (req) => {
     const hasLangPrefix = ['en', 'en-gb', 'de', 'fr', 'it', 'es'].includes(pathSegments[0]);
     
     if (hasLangPrefix && pathSegments[0] === locale) {
-      // Already on correct locale path
+      // Already on correct locale path - set country cookie and return
+      const responseHeaders = {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Set-Cookie': `user_country=${countryCode}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`,
+      };
+      
       return new Response(
         JSON.stringify({ 
           redirect: null, 
           locale,
+          country: countryCode,
           reason: 'already_correct' 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: responseHeaders, status: 200 }
       );
     }
 
@@ -78,14 +91,21 @@ serve(async (req) => {
       redirectPath += `/${pathSegments.join('/')}`;
     }
 
+    // Set country cookie for Stripe routing
+    const responseHeaders = {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+      'Set-Cookie': `user_country=${countryCode}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`,
+    };
+
     return new Response(
       JSON.stringify({ 
         redirect: redirectPath, 
         locale,
-        countryCode,
+        country: countryCode,
         reason: 'geo_routing' 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { headers: responseHeaders, status: 200 }
     );
   } catch (error) {
     console.error('Error in geo-route:', error);

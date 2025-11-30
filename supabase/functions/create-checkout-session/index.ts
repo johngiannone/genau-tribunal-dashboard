@@ -39,7 +39,19 @@ serve(async (req) => {
     }
 
     // Detect user's country for region-specific Stripe routing
-    const userCountry = country || req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || 'US';
+    // Priority: 1. Explicit country param, 2. Cookie, 3. Headers, 4. Default to US
+    let userCountry = country;
+    
+    if (!userCountry) {
+      const cookies = req.headers.get('cookie') || '';
+      const countryCookie = cookies.split(';').find(c => c.trim().startsWith('user_country='));
+      userCountry = countryCookie ? countryCookie.split('=')[1].trim() : null;
+    }
+    
+    if (!userCountry) {
+      userCountry = req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || 'US';
+    }
+    
     console.log(`User country detected: ${userCountry}`);
 
     // Determine Stripe account and currency based on region

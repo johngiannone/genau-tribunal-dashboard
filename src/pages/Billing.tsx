@@ -167,6 +167,7 @@ export default function Billing() {
     setCheckoutLoading(true);
     
     try {
+      // Cookie is automatically sent with request, but we can explicitly pass it for clarity
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: { amount }
       });
