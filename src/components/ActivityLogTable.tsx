@@ -32,10 +32,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Loader2, Activity, Search, Filter, X, CalendarIcon, Download, FileJson, FileText, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { formatRelativeTime, formatDateTime } from "@/lib/intl-formatting";
 
 interface ActivityLog {
   id: string;
@@ -576,7 +577,10 @@ export const ActivityLogTable = () => {
               logs.map((log) => (
                 <TableRow key={log.id} className="hover:bg-[#F9FAFB]/50">
                   <TableCell className="text-sm text-[#86868B]">
-                    {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                    <div className="space-y-0.5">
+                      <div>{formatRelativeTime(log.created_at, { style: 'short' })}</div>
+                      <div className="text-xs opacity-70">{formatDateTime(log.created_at, { dateStyle: 'short', timeStyle: 'short' })}</div>
+                    </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs text-[#86868B]">
                     {log.user_id.slice(0, 8)}...

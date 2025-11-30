@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Shield, Ban, Check } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/lib/intl-formatting";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -299,7 +299,7 @@ export const SecurityLogsPanel = () => {
                       </TableCell>
                       <TableCell className="text-sm">
                         {user.banned_at
-                          ? formatDistanceToNow(new Date(user.banned_at), { addSuffix: true })
+                          ? formatRelativeTime(user.banned_at, { style: 'short' })
                           : "Unknown"}
                       </TableCell>
                       <TableCell>
@@ -371,7 +371,7 @@ export const SecurityLogsPanel = () => {
                         </TableCell>
                         <TableCell className="text-sm">
                           {user.suspended_until
-                            ? formatDistanceToNow(new Date(user.suspended_until), { addSuffix: true })
+                            ? formatRelativeTime(user.suspended_until, { style: 'short' })
                             : "Unknown"}
                         </TableCell>
                         <TableCell>
@@ -435,7 +435,7 @@ export const SecurityLogsPanel = () => {
                   {logs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-xs">
-                        {formatDistanceToNow(new Date(log.flagged_at), { addSuffix: true })}
+                        {formatRelativeTime(log.flagged_at, { style: 'short' })}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {log.user_id.substring(0, 8)}...

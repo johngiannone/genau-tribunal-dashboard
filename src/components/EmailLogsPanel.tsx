@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, Mail, CheckCircle, XCircle, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/lib/intl-formatting";
 
 interface EmailLog {
   id: string;
@@ -238,7 +238,7 @@ export const EmailLogsPanel = () => {
                     }
                   </TableCell>
                   <TableCell className="text-sm text-[#86868B]">
-                    {formatDistanceToNow(new Date(log.sent_at), { addSuffix: true })}
+                    {formatRelativeTime(log.sent_at, { style: 'short' })}
                   </TableCell>
                 </TableRow>
               ))

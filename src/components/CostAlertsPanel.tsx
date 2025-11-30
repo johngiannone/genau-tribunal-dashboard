@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, DollarSign, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime, formatCurrency } from "@/lib/intl-formatting";
 
 interface CostAlert {
   id: string;
@@ -130,7 +130,7 @@ export const CostAlertsPanel = () => {
                     </Badge>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-3 h-3" />
-                      {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
+                      {formatRelativeTime(alert.created_at, { style: 'short' })}
                     </div>
                   </div>
                   
@@ -143,20 +143,20 @@ export const CostAlertsPanel = () => {
                       <DollarSign className="w-3 h-3" />
                       <span className="text-muted-foreground">Cost:</span>{' '}
                       <span className="font-semibold text-red-600">
-                        ${alert.estimated_cost.toFixed(4)}
+                        {formatCurrency(alert.estimated_cost, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-muted-foreground">Threshold:</span>{' '}
                       <span className="font-semibold">
-                        ${alert.threshold.toFixed(4)}
+                        {formatCurrency(alert.threshold, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </span>
                     </div>
                   </div>
 
                   {alert.notified_via_email && (
                     <div className="text-xs text-green-600 flex items-center gap-1">
-                      ✓ Email sent {alert.email_sent_at && `(${formatDistanceToNow(new Date(alert.email_sent_at), { addSuffix: true })})`}
+                      ✓ Email sent {alert.email_sent_at && `(${formatRelativeTime(alert.email_sent_at, { style: 'short' })})`}
                     </div>
                   )}
                 </div>

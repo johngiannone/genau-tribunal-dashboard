@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Activity, User, FileUp, Settings, LogIn, LogOut, ShieldAlert } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatRelativeTime } from "@/lib/intl-formatting";
 
 interface ActivityLog {
   id: string;
@@ -246,7 +246,7 @@ export const LiveActivityFeed = () => {
                     {activity.activity_type.replace('_', ' ')}
                   </Badge>
                   <span className="text-xs text-[#86868B]">
-                    {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                    {formatRelativeTime(activity.created_at, { style: 'short' })}
                   </span>
                 </div>
               </div>

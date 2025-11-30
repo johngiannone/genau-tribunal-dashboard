@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShieldAlert, ShieldCheck, Trash2, TrashIcon, Globe } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { formatRelativeTime, formatDateTime } from "@/lib/intl-formatting";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   AlertDialog,
@@ -306,7 +306,7 @@ export const BlockedIPsPanel = () => {
                         {ip.country_code || 'Unknown'}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDistanceToNow(new Date(ip.blocked_at), { addSuffix: true })}
+                        {formatRelativeTime(ip.blocked_at, { style: 'short' })}
                       </TableCell>
                       <TableCell>
                         {ip.is_permanent ? (
@@ -372,11 +372,11 @@ export const BlockedIPsPanel = () => {
                         {ip.ip_address}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDistanceToNow(new Date(ip.blocked_at), { addSuffix: true })}
+                        {formatRelativeTime(ip.blocked_at, { style: 'short' })}
                       </TableCell>
                       <TableCell className="text-sm">
                         {ip.block_expires_at
-                          ? formatDistanceToNow(new Date(ip.block_expires_at), { addSuffix: true })
+                          ? formatRelativeTime(ip.block_expires_at, { style: 'short' })
                           : "N/A"}
                       </TableCell>
                       <TableCell className="max-w-xs">
