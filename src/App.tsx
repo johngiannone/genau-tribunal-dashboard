@@ -43,6 +43,18 @@ const GeoRouter = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
+      // Check for user locale cookie to respect manual selection
+      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+      
+      if (cookies.user_locale) {
+        console.log('User has manually set locale, skipping geo-routing:', cookies.user_locale);
+        return;
+      }
+
       try {
         const { data, error } = await supabase.functions.invoke('geo-route', {
           body: { currentPath: location.pathname }
