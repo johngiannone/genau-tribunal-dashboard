@@ -53,6 +53,7 @@ import { AdminUserDetail } from "@/components/admin/AdminUserDetail";
 import { UserDeletionAuditLog } from "@/components/admin/UserDeletionAuditLog";
 import { CostMetricsPanel } from "@/components/admin/CostMetricsPanel";
 import { SimpleCostForecastPanel } from "@/components/admin/SimpleCostForecastPanel";
+import { ProviderManagement } from "@/components/admin/ProviderManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -343,6 +344,7 @@ const Admin = () => {
               <TabsList className="bg-[#F9FAFB] border border-[#E5E5EA]">
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="billing">Billing Dashboard</TabsTrigger>
+                <TabsTrigger value="providers">Providers</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="deletion-audit">Deletion Audit</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -637,6 +639,10 @@ const Admin = () => {
           
           <BillingTransactionsPanel />
         </div>
+      </TabsContent>
+
+      <TabsContent value="providers">
+        <ProviderManagement />
       </TabsContent>
 
       <TabsContent value="logs">

@@ -59,15 +59,67 @@ const MODEL_ID_MAP: Record<string, string> = {
   "x-ai/grok-beta": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
 }
 
+// Fetch provider configuration from database
+async function getProviderConfig(adminSupabase: any): Promise<any> {
+  try {
+    const { data, error } = await adminSupabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'ai_provider_config')
+      .single()
+    
+    if (error) {
+      console.warn("Failed to fetch provider config, using defaults:", error)
+      return {
+        primary_provider: "openrouter",
+        fallback_enabled: true,
+        fallback_provider: "together",
+        auto_fallback: true,
+        manual_override: false
+      }
+    }
+    
+    return data.value
+  } catch (err) {
+    console.error("Provider config fetch error:", err)
+    return {
+      primary_provider: "openrouter",
+      fallback_enabled: true,
+      fallback_provider: "together",
+      auto_fallback: true,
+      manual_override: false
+    }
+  }
+}
+
 // Smart fallback helper function
 async function fetchWithFallback(
   modelId: string, 
   messages: any[], 
-  contentArray?: any[]
+  contentArray?: any[],
+  providerConfig?: any
 ): Promise<any> {
-  // Attempt 1: Primary provider (OpenRouter)
+  // Determine which provider to use
+  const config = providerConfig || {
+    primary_provider: "openrouter",
+    fallback_enabled: true,
+    fallback_provider: "together",
+    auto_fallback: true,
+    manual_override: false
+  }
+  
+  // If manual override is enabled, force use of fallback provider
+  const primaryProvider = config.manual_override 
+    ? config.fallback_provider 
+    : config.primary_provider
+  
+  const fallbackProvider = primaryProvider === "openrouter" ? "together" : "openrouter"
+  const primaryProviderName = primaryProvider === "openrouter" ? "OpenRouter" : "Together AI"
+  const fallbackProviderName = fallbackProvider === "openrouter" ? "OpenRouter" : "Together AI"
+  
+  // Attempt 1: Primary provider (or override)
   try {
-    console.log(`Attempting OpenRouter for model: ${modelId}`)
+    console.log(`Attempting ${primaryProviderName} for model: ${modelId}${config.manual_override ? ' (Manual Override Active)' : ''}`)
     
     const body: any = {
       model: modelId,
@@ -76,68 +128,78 @@ async function fetchWithFallback(
       ] : messages
     }
     
-    const response = await fetch(PROVIDERS.OPENROUTER.url, {
+    const primaryProviderObj = primaryProvider === "openrouter" ? PROVIDERS.OPENROUTER : PROVIDERS.TOGETHER
+    const primaryModelId = primaryProvider === "together" ? (MODEL_ID_MAP[modelId] || modelId) : modelId
+    
+    const response = await fetch(primaryProviderObj.url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${PROVIDERS.OPENROUTER.key}`,
+        "Authorization": `Bearer ${primaryProviderObj.key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({ ...body, model: primaryModelId })
     })
     
     if (response.ok) {
       const data = await response.json()
-      console.log(`✓ OpenRouter succeeded for ${modelId}`)
+      console.log(`✓ ${primaryProviderName} succeeded for ${modelId}`)
       return data
     }
     
-    // If OpenRouter fails, throw to trigger fallback
+    // If primary fails, throw to trigger fallback
     const errorText = await response.text()
-    throw new Error(`OpenRouter failed: ${response.status} - ${errorText}`)
+    throw new Error(`${primaryProviderName} failed: ${response.status} - ${errorText}`)
     
-  } catch (openRouterError) {
-    console.warn(`⚠️ OpenRouter failed for ${modelId}, attempting fallback to Together AI`)
-    console.error("OpenRouter error:", openRouterError)
+  } catch (primaryError) {
+    // Check if fallback is enabled
+    if (!config.fallback_enabled || !config.auto_fallback) {
+      console.error(`${primaryProviderName} failed and fallback is disabled`)
+      throw primaryError
+    }
     
-    // Attempt 2: Fallback provider (Together AI)
-    if (!PROVIDERS.TOGETHER.key) {
-      console.error("Together AI API key not configured, cannot fallback")
-      throw openRouterError // Re-throw original error if fallback not available
+    console.warn(`⚠️ ${primaryProviderName} failed for ${modelId}, attempting fallback to ${fallbackProviderName}`)
+    console.error(`${primaryProviderName} error:`, primaryError)
+    
+    // Attempt 2: Fallback provider
+    const fallbackProviderObj = fallbackProvider === "openrouter" ? PROVIDERS.OPENROUTER : PROVIDERS.TOGETHER
+    if (!fallbackProviderObj.key) {
+      console.error(`${fallbackProviderName} API key not configured, cannot fallback`)
+      throw primaryError // Re-throw original error if fallback not available
     }
     
     try {
-      // Map the model ID to Together AI equivalent
-      const togetherModelId = MODEL_ID_MAP[modelId] || modelId
-      console.log(`Fallback: Using Together AI model: ${togetherModelId}`)
+      // Map the model ID if needed
+      const fallbackModelId = fallbackProvider === "together" ? (MODEL_ID_MAP[modelId] || modelId) : modelId
+      console.log(`Fallback: Using ${fallbackProviderName} model: ${fallbackModelId}`)
       
-      const body: any = {
-        model: togetherModelId,
+      const fallbackBody: any = {
+        model: fallbackModelId,
         messages: contentArray ? [
           { role: messages[0].role, content: contentArray }
         ] : messages
       }
       
-      const fallbackResponse = await fetch(PROVIDERS.TOGETHER.url, {
+      const fallbackResponse = await fetch(fallbackProviderObj.url, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${PROVIDERS.TOGETHER.key}`,
+          "Authorization": `Bearer ${fallbackProviderObj.key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(fallbackBody)
       })
       
       if (!fallbackResponse.ok) {
         const errorText = await fallbackResponse.text()
-        throw new Error(`Together AI also failed: ${fallbackResponse.status} - ${errorText}`)
+        throw new Error(`${fallbackProviderName} also failed: ${fallbackResponse.status} - ${errorText}`)
       }
       
       const data = await fallbackResponse.json()
-      console.log(`✓ Together AI succeeded for ${togetherModelId}`)
+      console.log(`✓ ${fallbackProviderName} succeeded for ${fallbackModelId}`)
       return data
       
-    } catch (togetherError) {
-      console.error("Together AI fallback also failed:", togetherError)
-      throw new Error(`Both providers failed. OpenRouter: ${openRouterError}. Together: ${togetherError}`)
+    } catch (fallbackError) {
+      console.error(`${fallbackProviderName} fallback also failed:`, fallbackError)
+      throw new Error(`Both providers failed. ${primaryProviderName}: ${primaryError}. ${fallbackProviderName}: ${fallbackError}`)
     }
   }
 }
@@ -181,6 +243,10 @@ serve(async (req) => {
 
     // Create admin client for database operations
     const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    
+    // Fetch provider configuration early
+    const providerConfig = await getProviderConfig(adminSupabase)
+    console.log("Provider config loaded:", providerConfig)
 
     // 2. Check if user is banned
     const { data: banCheck, error: banError } = await adminSupabase
@@ -549,7 +615,8 @@ serve(async (req) => {
           [
             { type: "text", text: "Extract the key brand guidelines, tone rules, style requirements, and any specific instructions from this document. Summarize in clear bullet points." },
             { type: "image_url", image_url: { url: brandDoc.file_url } }
-          ]
+          ],
+          providerConfig
         )
         
         const brandGuidelines = brandData.choices?.[0]?.message?.content
@@ -587,7 +654,8 @@ serve(async (req) => {
               [
                 { type: "text", text: `Extract key information, rules, guidelines, and requirements from this ${doc.document_type || 'document'}. Focus on actionable insights. Summarize concisely.` },
                 { type: "image_url", image_url: { url: doc.file_url } }
-              ]
+              ],
+              providerConfig
             )
             
             const summary = docData.choices?.[0]?.message?.content
@@ -633,7 +701,8 @@ serve(async (req) => {
           [
             { type: "text", text: "Analyze this document deeply. Extract key facts, dates, and sums. " + prompt },
             { type: "image_url", image_url: { url: fileUrl } }
-          ]
+          ],
+          providerConfig
         )
         
         librarianAnalysis = geminiData.choices?.[0]?.message?.content || "Could not read file."
@@ -666,7 +735,9 @@ serve(async (req) => {
               role: "user", 
               content: safePrompt + context + brandContext + orgKnowledgeContext
             }
-          ]
+          ],
+          undefined,
+          providerConfig
         )
         
         const latency = Date.now() - startTime
@@ -714,7 +785,9 @@ serve(async (req) => {
           role: "user",
           content: `User Query: ${safePrompt}\n${context}\n${brandContext}\n${orgKnowledgeContext}\n\n${draftsText}`
         }
-      ]
+      ],
+      undefined,
+      providerConfig
     )
     const verdictLatency = Date.now() - startTimeVerdict
     console.log("Synthesis complete")
