@@ -19,30 +19,29 @@ const Pricing = () => {
     'USD';
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background patterns */}
-      <div className="geometric-grid" />
-      <div className="geometric-mesh" />
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Subtle Background Gradient */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-50/30 via-transparent to-transparent pointer-events-none" />
 
       {/* Header */}
-      <div className="relative z-10 border-b border-border/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="relative z-10 border-b border-[#E5E5EA] bg-white/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/${lang || 'en'}/auth`)}
-            className="gap-2"
+            className="gap-2 text-gray-500 hover:text-[#111111]"
           >
             <ArrowLeft className="w-4 h-4" />
             {t('pricing.backToLogin')}
           </Button>
 
           <div className="flex items-center gap-2">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 backdrop-blur-sm border border-primary/30">
-              <Brain className="w-4 h-4 text-primary" />
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0071E3]/10">
+              <Brain className="w-4 h-4 text-[#0071E3]" />
             </div>
-            <span className="font-mono font-bold text-foreground">
-              Consensus Engine
+            <span className="font-bold text-[#111111] tracking-tight">
+              Consensus
             </span>
           </div>
 
@@ -51,11 +50,11 @@ const Pricing = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative z-10 text-center py-12 px-4">
-        <h1 className="text-5xl font-mono font-bold gradient-text mb-4">
+      <div className="relative z-10 text-center py-16 px-6">
+        <h1 className="text-5xl md:text-6xl font-bold text-[#111111] tracking-tight mb-4">
           {t('pricing.title')}
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
           {t('pricing.subtitle')}
         </p>
       </div>
@@ -66,14 +65,14 @@ const Pricing = () => {
       </div>
 
       {/* Footer CTA */}
-      <div className="relative z-10 text-center py-12 px-4">
-        <p className="text-muted-foreground mb-4">
+      <div className="relative z-10 text-center py-16 px-6">
+        <p className="text-gray-500 mb-6 text-lg">
           {t('pricing.ready')}
         </p>
         <Button
           size="lg"
           onClick={() => navigate(`/${lang || 'en'}/auth`)}
-          className="gap-2"
+          className="h-14 px-10 rounded-full bg-[#111111] text-white hover:bg-[#000000] shadow-lg hover:shadow-xl transition-all"
         >
           {t('pricing.createAccount')}
         </Button>
