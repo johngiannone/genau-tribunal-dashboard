@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Switch } from "./ui/switch";
-import { Label } from "./ui/label";
 import { PricingCard } from "./PricingCard";
 import { Mail, RefreshCw } from "lucide-react";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
@@ -145,33 +143,54 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 py-8">
+      {/* Header */}
+      <div className="text-center space-y-3">
+        <h1 className="text-4xl md:text-5xl font-bold text-[#111111] tracking-tight">
+          {t('pricing.title')}
+        </h1>
+        <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+          {t('pricing.subtitle')}
+        </p>
+      </div>
+
       {/* Exchange Rate Info */}
       {exchangeRates && (
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
           <RefreshCw className="w-3 h-3" />
           <span>{t('pricing.liveRates')}</span>
         </div>
       )}
       
-      {/* Toggle Switch */}
-      <div className="flex items-center justify-center gap-4">
-        <Label 
-          htmlFor="plan-toggle" 
-          className={`font-mono text-sm cursor-pointer ${!isBusiness ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          {t('pricing.personal')}
-        </Label>
-        <Switch
-          id="plan-toggle"
-          checked={isBusiness}
-          onCheckedChange={setIsBusiness}
-        />
-        <Label 
-          htmlFor="plan-toggle" 
-          className={`font-mono text-sm cursor-pointer ${isBusiness ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          {t('pricing.business')}
-        </Label>
+      {/* iOS-Style Segmented Control */}
+      <div className="flex items-center justify-center">
+        <div className="relative inline-flex items-center bg-[#F5F5F7] rounded-full p-1">
+          <button
+            onClick={() => setIsBusiness(false)}
+            className={`relative z-10 px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+              !isBusiness 
+                ? 'text-[#111111]' 
+                : 'text-gray-500'
+            }`}
+          >
+            {t('pricing.personal')}
+          </button>
+          <button
+            onClick={() => setIsBusiness(true)}
+            className={`relative z-10 px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+              isBusiness 
+                ? 'text-[#111111]' 
+                : 'text-gray-500'
+            }`}
+          >
+            {t('pricing.business')}
+          </button>
+          {/* Sliding Background */}
+          <div 
+            className={`absolute top-1 bottom-1 bg-white rounded-full shadow-sm transition-all duration-200 ease-in-out ${
+              isBusiness ? 'left-[calc(50%-4px)] right-1' : 'left-1 right-[calc(50%-4px)]'
+            }`}
+          />
+        </div>
       </div>
       
       {/* VAT Notice for EU */}
@@ -189,21 +208,21 @@ export const PricingSection = ({ mode = "authenticated", currency = "USD" }: Pri
       </div>
 
       {/* Pricing Example Note */}
-      <div className="text-center text-sm text-muted-foreground px-4">
+      <div className="text-center text-sm text-gray-500 px-4">
         <p>{t('pricing.pricingExample')}</p>
-        <p className="mt-2 text-primary font-medium">{t('pricing.savingsNote')}</p>
+        <p className="mt-2 text-[#0071E3] font-medium">{t('pricing.savingsNote')}</p>
       </div>
 
       {/* Enterprise Banner */}
-      <div className="relative rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-8 text-center mx-4">
+      <div className="relative rounded-2xl border border-[#E5E5EA] bg-white p-8 text-center mx-4 shadow-sm">
         <div className="space-y-4">
-          <h3 className="text-2xl font-mono font-bold text-foreground">{t('pricing.enterprise')}</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-bold text-[#111111]">{t('pricing.enterprise')}</h3>
+          <p className="text-gray-500">
             {t('pricing.enterpriseDescription')}
           </p>
           <a
             href="mailto:sales@genau.io"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-mono"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0071E3] text-white rounded-full hover:bg-[#0077ED] transition-all shadow-lg hover:shadow-xl font-medium"
           >
             <Mail className="w-4 h-4" />
             {t('pricing.contactSales')}
