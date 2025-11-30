@@ -56,6 +56,7 @@ import { SimpleCostForecastPanel } from "@/components/admin/SimpleCostForecastPa
 import { ProviderManagement } from "@/components/admin/ProviderManagement";
 import { ProviderCostComparison } from "@/components/admin/ProviderCostComparison";
 import { CostSavingsMonitor } from "@/components/admin/CostSavingsMonitor";
+import { ABTestingRoutingDashboard } from "@/components/admin/ABTestingRoutingDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MonetizationAnalytics } from "@/pages/MonetizationAnalytics";
@@ -347,6 +348,7 @@ const Admin = () => {
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="billing">Billing Dashboard</TabsTrigger>
                 <TabsTrigger value="providers">Providers</TabsTrigger>
+                <TabsTrigger value="ab-testing">A/B Testing</TabsTrigger>
                 <TabsTrigger value="logs">Activity Logs</TabsTrigger>
                 <TabsTrigger value="deletion-audit">Deletion Audit</TabsTrigger>
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -649,6 +651,10 @@ const Admin = () => {
                   <ProviderManagement />
                   <ProviderCostComparison />
                 </div>
+              </TabsContent>
+
+              <TabsContent value="ab-testing">
+                <ABTestingRoutingDashboard />
               </TabsContent>
 
       <TabsContent value="logs">

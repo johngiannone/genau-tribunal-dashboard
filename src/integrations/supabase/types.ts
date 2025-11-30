@@ -743,6 +743,48 @@ export type Database = {
         }
         Relationships: []
       }
+      routing_experiments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string
+          status: string
+          strategies: Json
+          traffic_split: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string
+          status?: string
+          strategies: Json
+          traffic_split: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          strategies?: Json
+          traffic_split?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       security_logs: {
         Row: {
           flag_category: string
