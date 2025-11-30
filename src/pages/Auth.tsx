@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain } from "lucide-react";
 import { isDisposableEmail, getDisposableEmailError } from "@/lib/disposableEmailDomains";
+import { useTranslation } from "react-i18next";
 
 const Auth = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,8 +26,8 @@ const Auth = () => {
       // Check for disposable email domains
       if (isDisposableEmail(email)) {
         toast({
-          title: "Invalid Email Address",
-          description: getDisposableEmailError(),
+          title: t("auth.invalidEmail"),
+          description: t("auth.invalidEmailDesc"),
           variant: "destructive",
         });
         setLoading(false);
@@ -40,8 +42,8 @@ const Auth = () => {
         // Continue with signup even if check fails (fail open for better UX)
       } else if (ipCheckData?.blocked) {
         toast({
-          title: "Account Creation Restricted",
-          description: ipCheckData.message || "Unable to create account from your current location.",
+          title: t("auth.accountRestricted"),
+          description: ipCheckData.message || t("auth.accountRestrictedDesc"),
           variant: "destructive",
         });
         setLoading(false);
@@ -55,9 +57,10 @@ const Auth = () => {
         console.error('Error checking VPN/proxy:', vpnCheckError);
         // Continue with signup even if check fails
       } else if (vpnCheckData?.suspicious) {
+        const type = vpnCheckData.is_vpn ? 'VPN' : vpnCheckData.is_proxy ? 'proxy' : 'suspicious network';
         toast({
-          title: "Suspicious Connection Detected",
-          description: `We detected that you may be using a ${vpnCheckData.is_vpn ? 'VPN' : vpnCheckData.is_proxy ? 'proxy' : 'suspicious network'}. Account creation from VPNs and proxies is restricted for security reasons.`,
+          title: t("auth.suspiciousConnection"),
+          description: t("auth.suspiciousConnectionDesc", { type }),
           variant: "destructive",
         });
         setLoading(false);
@@ -76,12 +79,12 @@ const Auth = () => {
       if (error) throw error;
 
       toast({
-        title: "Success!",
-        description: "Account created successfully. You can now sign in.",
+        title: t("auth.success"),
+        description: t("auth.accountCreated"),
       });
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("auth.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -119,8 +122,8 @@ const Auth = () => {
             const minutes = Math.ceil((suspendedUntil.getTime() - Date.now()) / 60000);
             await supabase.auth.signOut();
             toast({
-              title: "Account Suspended",
-              description: `Your account is temporarily suspended due to repeated unauthorized access attempts. Try again in ${minutes} minutes.`,
+              title: t("auth.accountSuspended"),
+              description: t("auth.accountSuspendedDesc", { minutes }),
               variant: "destructive",
             });
             setLoading(false);
@@ -132,8 +135,8 @@ const Auth = () => {
         if (usageData.account_status === 'disabled') {
           await supabase.auth.signOut();
           toast({
-            title: "Account Disabled",
-            description: "Your account has been disabled. Please contact support.",
+            title: t("auth.accountDisabled"),
+            description: t("auth.accountDisabledDesc"),
             variant: "destructive",
           });
           setLoading(false);
@@ -158,7 +161,7 @@ const Auth = () => {
       navigate("/app");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("auth.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -176,10 +179,10 @@ const Auth = () => {
             <Brain className="w-10 h-10 text-primary" />
           </div>
           <h1 className="text-4xl font-bold text-[#111111] mb-3 tracking-tight">
-            Welcome to Consensus
+            {t("auth.welcome")}
           </h1>
           <p className="text-[#86868B] text-base">
-            Multi-model AI analysis for precision decisions
+            {t("auth.subtitle")}
           </p>
         </div>
 
@@ -191,13 +194,13 @@ const Auth = () => {
                 value="signin" 
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                Sign In
+                {t("auth.signIn")}
               </TabsTrigger>
               <TabsTrigger 
                 value="signup"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                Sign Up
+                {t("auth.signUp")}
               </TabsTrigger>
             </TabsList>
 
@@ -205,12 +208,12 @@ const Auth = () => {
               <form onSubmit={handleSignIn} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email" className="text-sm font-semibold text-[#111111]">
-                    Email Address
+                    {t("auth.email")}
                   </Label>
                   <Input
                     id="signin-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -220,12 +223,12 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-password" className="text-sm font-semibold text-[#111111]">
-                    Password
+                    {t("auth.password")}
                   </Label>
                   <Input
                     id="signin-password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("auth.passwordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -238,7 +241,7 @@ const Auth = () => {
                   className="w-full h-12 rounded-full text-base font-semibold shadow-lg hover:shadow-xl transition-all"
                   disabled={loading}
                 >
-                  {loading ? "Signing in..." : "Sign In"}
+                  {loading ? t("auth.signingIn") : t("auth.signIn")}
                 </Button>
               </form>
             </TabsContent>
@@ -247,12 +250,12 @@ const Auth = () => {
               <form onSubmit={handleSignUp} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-sm font-semibold text-[#111111]">
-                    Email Address
+                    {t("auth.email")}
                   </Label>
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -262,12 +265,12 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password" className="text-sm font-semibold text-[#111111]">
-                    Password
+                    {t("auth.password")}
                   </Label>
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Minimum 6 characters"
+                    placeholder={t("auth.passwordMinLength")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -281,10 +284,10 @@ const Auth = () => {
                   className="w-full h-12 rounded-full text-base font-semibold shadow-lg hover:shadow-xl transition-all"
                   disabled={loading}
                 >
-                  {loading ? "Creating account..." : "Create Account"}
+                  {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
                 </Button>
                 <p className="text-sm text-[#86868B] text-center">
-                  Start with 3 free monthly audits
+                  {t("auth.freeAudits")}
                 </p>
               </form>
             </TabsContent>
@@ -297,7 +300,7 @@ const Auth = () => {
                 size="sm"
                 className="text-[#0071E3] hover:text-[#0071E3]/80 text-sm font-medium"
               >
-                View Membership Options →
+                {t("auth.viewMembership")}
               </Button>
             </Link>
           </div>
