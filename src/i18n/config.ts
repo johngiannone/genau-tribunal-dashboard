@@ -5,6 +5,7 @@ import en from './locales/en.json';
 import de from './locales/de.json';
 import fr from './locales/fr.json';
 import it from './locales/it.json';
+import es from './locales/es.json';
 
 i18n
   .use(LanguageDetector)
@@ -15,6 +16,7 @@ i18n
       de: { translation: de },
       fr: { translation: fr },
       it: { translation: it },
+      es: { translation: es },
       'en-gb': { translation: en }, // UK uses English translations
     },
     fallbackLng: 'en',

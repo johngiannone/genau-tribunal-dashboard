@@ -10,6 +10,7 @@ const getCurrentLocale = (): string => {
   if (locale === 'de') return 'de-DE';
   if (locale === 'fr') return 'fr-FR';
   if (locale === 'it') return 'it-IT';
+  if (locale === 'es') return 'es-ES';
   return 'en-US';
 };
 
@@ -18,7 +19,7 @@ const getCurrentLocale = (): string => {
  */
 export const getCurrencyForLocale = (locale?: string): string => {
   const currentLocale = locale || getCurrentLocale();
-  if (currentLocale.startsWith('de') || currentLocale.startsWith('fr') || currentLocale.startsWith('it')) return 'EUR';
+  if (currentLocale.startsWith('de') || currentLocale.startsWith('fr') || currentLocale.startsWith('it') || currentLocale.startsWith('es')) return 'EUR';
   if (currentLocale === 'en-GB') return 'GBP';
   return 'USD';
 };
