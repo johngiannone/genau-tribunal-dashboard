@@ -13,7 +13,6 @@ import Settings from "./pages/Settings";
 import CouncilSettings from "./pages/CouncilSettings";
 import Pricing from "./pages/Pricing";
 import Analytics from "./pages/Analytics";
-import { MonetizationAnalytics } from "./pages/MonetizationAnalytics";
 import Vault from "./pages/Vault";
 import Admin from "./pages/Admin";
 import AdminUserDetail from "./pages/AdminUserDetail";
@@ -41,7 +40,6 @@ const AppContent = () => {
           <Route path="/settings/council" element={<CouncilSettings />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/monetization-analytics" element={<MonetizationAnalytics />} />
           <Route path="/vault" element={<Vault />} />
           <Route 
             path="/admin" 
