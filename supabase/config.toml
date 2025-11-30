@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.query-router]
 verify_jwt = false
 
+[functions.web-search]
+verify_jwt = false
+
 [functions.refine-verdict]
 verify_jwt = true
 
