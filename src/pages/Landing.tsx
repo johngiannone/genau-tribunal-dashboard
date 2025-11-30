@@ -69,7 +69,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-black tracking-tight text-foreground">Consensus</span>
+            <span className="text-xl font-black tracking-tight text-foreground">Genau</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">

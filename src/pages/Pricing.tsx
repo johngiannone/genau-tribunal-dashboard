@@ -99,7 +99,7 @@ const Pricing = () => {
               <Brain className="w-4 h-4 text-[#0071E3]" />
             </div>
             <span className="font-bold text-[#111111] tracking-tight">
-              Consensus
+              Genau
             </span>
           </div>
           
