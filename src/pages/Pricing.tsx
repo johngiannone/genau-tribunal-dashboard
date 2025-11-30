@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { PricingSection } from "@/components/PricingSection";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ArrowLeft, Brain } from "lucide-react";
+import { ArrowLeft, Brain, ArrowUp } from "lucide-react";
+import { useState, useEffect } from "react";
 
 type Currency = 'USD' | 'GBP' | 'EUR';
 
@@ -11,12 +12,27 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { lang } = useParams();
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   // Determine currency based on language/region
   const currency: Currency = 
     lang === 'en-gb' ? 'GBP' :
     (lang === 'de' || lang === 'fr' || lang === 'it' || lang === 'es') ? 'EUR' : 
     'USD';
+
+  // Show scroll-to-top button after scrolling 400px
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -91,6 +107,19 @@ const Pricing = () => {
           <LanguageSwitcher />
         </div>
       </div>
+
+      {/* Floating Scroll to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-24 right-6 z-40 w-12 h-12 rounded-full bg-[#111111] text-white shadow-lg hover:shadow-xl hover:bg-[#000000] transition-all duration-300 flex items-center justify-center ${
+          showScrollTop 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 translate-y-8 pointer-events-none'
+        }`}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
     </div>
   );
 };
