@@ -547,6 +547,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          industry: string | null
           max_members: number | null
           name: string
           owner_id: string
@@ -556,6 +557,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          industry?: string | null
           max_members?: number | null
           name: string
           owner_id: string
@@ -565,6 +567,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          industry?: string | null
           max_members?: number | null
           name?: string
           owner_id?: string
