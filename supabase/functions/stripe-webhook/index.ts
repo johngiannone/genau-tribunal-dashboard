@@ -2,35 +2,69 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
 serve(async (req) => {
   const signature = req.headers.get('Stripe-Signature');
-  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
-  if (!signature || !webhookSecret) {
-    console.error('Missing signature or webhook secret');
-    return new Response('Webhook signature or secret missing', { status: 400 });
+  if (!signature) {
+    console.error('Missing signature');
+    return new Response('Webhook signature missing', { status: 400 });
   }
 
   try {
     const body = await req.text();
     
-    // Verify webhook signature
-    const event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      webhookSecret,
-      undefined,
-      cryptoProvider
-    );
+    // Determine which Stripe account this webhook is from by trying both secrets
+    let event: Stripe.Event | null = null;
+    let usedStripeKey: string | null = null;
+    
+    // Try UK/EU webhook secret first
+    const webhookSecretUK = Deno.env.get('STRIPE_WEBHOOK_SECRET_UK');
+    if (webhookSecretUK) {
+      try {
+        const stripeUK = new Stripe(Deno.env.get('STRIPE_SECRET_KEY_UK') || '', {
+          apiVersion: '2023-10-16',
+          httpClient: Stripe.createFetchHttpClient(),
+        });
+        event = await stripeUK.webhooks.constructEventAsync(
+          body,
+          signature,
+          webhookSecretUK,
+          undefined,
+          cryptoProvider
+        );
+        usedStripeKey = 'UK';
+        console.log('Webhook verified with UK/EU Stripe account');
+      } catch (err) {
+        console.log('Not a UK/EU webhook, trying US account...');
+      }
+    }
+    
+    // If UK verification failed, try US webhook secret
+    if (!event) {
+      const webhookSecretUS = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+      if (!webhookSecretUS) {
+        console.error('Missing US webhook secret');
+        return new Response('Webhook secret missing', { status: 400 });
+      }
+      
+      const stripeUS = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+        apiVersion: '2023-10-16',
+        httpClient: Stripe.createFetchHttpClient(),
+      });
+      event = await stripeUS.webhooks.constructEventAsync(
+        body,
+        signature,
+        webhookSecretUS,
+        undefined,
+        cryptoProvider
+      );
+      usedStripeKey = 'US';
+      console.log('Webhook verified with US Stripe account');
+    }
 
-    console.log('Webhook event received:', event.type);
+    console.log(`Webhook event received (${usedStripeKey}):`, event.type);
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',

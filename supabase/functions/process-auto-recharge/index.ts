@@ -68,11 +68,38 @@ serve(async (req) => {
       );
     }
 
-    // 4. Create Stripe Checkout Session
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const rechargeAmount = billing.auto_recharge_amount;
+    // 4. Detect user region for Stripe routing
+    // Try to get country from recent activity logs
+    const { data: recentActivity } = await supabaseClient
+      .from('activity_logs')
+      .select('metadata')
+      .eq('user_id', user_id)
+      .not('metadata->country', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-    console.log(`Creating Stripe checkout for $${rechargeAmount}`);
+    const userCountry = recentActivity?.metadata?.country || 'US';
+    console.log(`User country for auto-recharge: ${userCountry}`);
+
+    // Determine Stripe account and currency based on region
+    const isEuropeanRegion = ['DE', 'GB', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry);
+    
+    let stripeKey: string;
+    let currency: string;
+    
+    if (isEuropeanRegion) {
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'eur';
+      console.log('Using UK/EU Stripe account with EUR currency');
+    } else {
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'usd';
+      console.log('Using US Stripe account with USD currency');
+    }
+
+    const rechargeAmount = billing.auto_recharge_amount;
+    console.log(`Creating Stripe checkout for ${currency === 'eur' ? '€' : '$'}${rechargeAmount}`);
 
     // Get user email for Stripe
     const { data: { user }, error: userError } = await supabaseClient.auth.admin.getUserById(user_id);
@@ -94,7 +121,7 @@ serve(async (req) => {
       },
       body: new URLSearchParams({
         'payment_method_types[]': 'card',
-        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][currency]': currency,
         'line_items[0][price_data][product_data][name]': 'Credit Top-Up (Auto-Recharge)',
         'line_items[0][price_data][unit_amount]': String(Math.round(rechargeAmount * 100)),
         'line_items[0][quantity]': '1',
@@ -105,7 +132,9 @@ serve(async (req) => {
         'customer_email': user.email,
         'metadata[user_id]': user_id,
         'metadata[amount]': String(rechargeAmount),
+        'metadata[currency]': currency,
         'metadata[type]': 'auto_recharge',
+        'metadata[country]': userCountry,
       }),
     });
 

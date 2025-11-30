@@ -29,7 +29,7 @@ serve(async (req) => {
       );
     }
 
-    const { amount } = await req.json();
+    const { amount, country } = await req.json();
 
     if (!amount || amount <= 0) {
       return new Response(
@@ -38,9 +38,27 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Creating checkout session for user ${user.id}, amount: $${amount}`);
+    // Detect user's country for region-specific Stripe routing
+    const userCountry = country || req.headers.get('cf-ipcountry') || req.headers.get('x-vercel-ip-country') || 'US';
+    console.log(`User country detected: ${userCountry}`);
 
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+    // Determine Stripe account and currency based on region
+    const isEuropeanRegion = ['DE', 'GB', 'FR', 'IT', 'ES', 'AT', 'BE', 'NL', 'SE', 'NO', 'DK', 'FI', 'IE', 'PT', 'GR', 'CH', 'PL', 'CZ', 'RO', 'HU'].includes(userCountry);
+    
+    let stripeKey: string;
+    let currency: string;
+    
+    if (isEuropeanRegion) {
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY_UK') || Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'eur';
+      console.log('Using UK/EU Stripe account with EUR currency');
+    } else {
+      stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+      currency = 'usd';
+      console.log('Using US Stripe account with USD currency');
+    }
+
+    console.log(`Creating checkout session for user ${user.id}, amount: ${amount} ${currency.toUpperCase()}`);
     
     // Get current origin for redirect URLs
     const origin = req.headers.get('origin') || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || '';
@@ -54,19 +72,21 @@ serve(async (req) => {
       },
       body: new URLSearchParams({
         'payment_method_types[]': 'card',
-        'line_items[0][price_data][currency]': 'usd',
-        'line_items[0][price_data][product_data][name]': `Genau Credits - $${amount}`,
+        'line_items[0][price_data][currency]': currency,
+        'line_items[0][price_data][product_data][name]': `Genau Credits - ${currency === 'eur' ? '€' : '$'}${amount}`,
         'line_items[0][price_data][product_data][description]': 'AI Consensus Engine Credits',
         'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
         'line_items[0][quantity]': '1',
         'mode': 'payment',
-        'success_url': `${origin}/settings/billing?purchase=success&amount=${amount}`,
+        'success_url': `${origin}/settings/billing?purchase=success&amount=${amount}&currency=${currency}`,
         'cancel_url': `${origin}/settings/billing?purchase=cancelled`,
         'client_reference_id': user.id,
         'customer_email': user.email || '',
         'metadata[user_id]': user.id,
         'metadata[amount]': String(amount),
+        'metadata[currency]': currency,
         'metadata[type]': 'manual_purchase',
+        'metadata[country]': userCountry,
       }),
     });
 
