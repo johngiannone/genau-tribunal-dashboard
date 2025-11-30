@@ -1,8 +1,23 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { PricingCard } from "./PricingCard";
 import { Mail } from "lucide-react";
+
+type Currency = 'USD' | 'GBP' | 'EUR';
+
+const CURRENCY_SYMBOLS: Record<Currency, string> = {
+  USD: '$',
+  GBP: '£',
+  EUR: '€',
+};
+
+const CURRENCY_RATES: Record<Currency, number> = {
+  USD: 1,
+  GBP: 0.79,
+  EUR: 0.92,
+};
 
 const personalPlans = [
   {
@@ -54,11 +69,28 @@ const businessPlans = [
 
 interface PricingSectionProps {
   mode?: "public" | "authenticated";
+  currency?: Currency;
 }
 
-export const PricingSection = ({ mode = "authenticated" }: PricingSectionProps) => {
+export const PricingSection = ({ mode = "authenticated", currency = "USD" }: PricingSectionProps) => {
+  const { t, i18n } = useTranslation();
   const [isBusiness, setIsBusiness] = useState(false);
-  const plans = isBusiness ? businessPlans : personalPlans;
+  
+  // Convert prices to selected currency
+  const convertPrice = (priceUSD: number) => {
+    return Math.round(priceUSD * CURRENCY_RATES[currency]);
+  };
+  
+  // Add currency symbol and format plans
+  const formatPlans = (plans: typeof personalPlans) => {
+    return plans.map(plan => ({
+      ...plan,
+      price: convertPrice(plan.price),
+      pricePrefix: CURRENCY_SYMBOLS[currency],
+    }));
+  };
+  
+  const plans = isBusiness ? formatPlans(businessPlans) : formatPlans(personalPlans);
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 py-8">
@@ -68,7 +100,7 @@ export const PricingSection = ({ mode = "authenticated" }: PricingSectionProps) 
           htmlFor="plan-toggle" 
           className={`font-mono text-sm cursor-pointer ${!isBusiness ? 'text-primary' : 'text-muted-foreground'}`}
         >
-          Personal
+          {t('pricing.personal')}
         </Label>
         <Switch
           id="plan-toggle"
@@ -79,9 +111,16 @@ export const PricingSection = ({ mode = "authenticated" }: PricingSectionProps) 
           htmlFor="plan-toggle" 
           className={`font-mono text-sm cursor-pointer ${isBusiness ? 'text-primary' : 'text-muted-foreground'}`}
         >
-          Business
+          {t('pricing.business')}
         </Label>
       </div>
+      
+      {/* VAT Notice for EU */}
+      {currency === 'EUR' && (
+        <p className="text-center text-sm text-muted-foreground">
+          {t('pricing.vatIncluded')}
+        </p>
+      )}
 
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4">
@@ -93,16 +132,16 @@ export const PricingSection = ({ mode = "authenticated" }: PricingSectionProps) 
       {/* Enterprise Banner */}
       <div className="relative rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-8 text-center mx-4">
         <div className="space-y-4">
-          <h3 className="text-2xl font-mono font-bold text-foreground">Enterprise</h3>
+          <h3 className="text-2xl font-mono font-bold text-foreground">{t('pricing.enterprise')}</h3>
           <p className="text-muted-foreground">
-            Need SSO or On-Premise Deployment?
+            {t('pricing.enterpriseDescription')}
           </p>
           <a
             href="mailto:sales@genau.io"
             className="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-mono"
           >
             <Mail className="w-4 h-4" />
-            Contact Sales
+            {t('pricing.contactSales')}
           </a>
         </div>
       </div>

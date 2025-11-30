@@ -1,0 +1,38 @@
+{
+  "landing": {
+    "hero": "Einmal fragen. Konsens erhalten.",
+    "subtitle": "Mehrere KI-Modelle parallel für präzise Prüfungen."
+  },
+  "pricing": {
+    "title": "Der Rat wartet",
+    "subtitle": "Wählen Sie Ihren Weg zu unbegrenztem Konsens. Erhalten Sie präzise KI-Audits von mehreren parallel arbeitenden Modellen.",
+    "personal": "Persönlich",
+    "business": "Geschäftlich",
+    "perMonth": "/Monat",
+    "getStarted": "Jetzt starten",
+    "enterprise": "Unternehmen",
+    "enterpriseDescription": "Benötigen Sie SSO oder On-Premise-Bereitstellung?",
+    "contactSales": "Vertrieb kontaktieren",
+    "ready": "Bereit anzufangen?",
+    "createAccount": "Kostenloses Konto erstellen",
+    "backToLogin": "Zurück zur Anmeldung",
+    "vatIncluded": "MwSt. inklusive"
+  },
+  "auth": {
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "forgotPassword": "Passwort vergessen?",
+    "noAccount": "Noch kein Konto?",
+    "hasAccount": "Bereits ein Konto?",
+    "viewPricing": "Mitgliedschaftsoptionen anzeigen"
+  },
+  "common": {
+    "loading": "Laden...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten"
+  }
+}

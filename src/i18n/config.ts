@@ -1,0 +1,28 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import en from './locales/en.json';
+import de from './locales/de.json';
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: en },
+      de: { translation: de },
+      'en-gb': { translation: en }, // UK uses English translations
+    },
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+    detection: {
+      order: ['path', 'cookie', 'localStorage', 'navigator'],
+      lookupFromPathIndex: 0,
+      caches: ['localStorage', 'cookie'],
+      cookieMinutes: 10080, // 1 week
+    },
+  });
+
+export default i18n;

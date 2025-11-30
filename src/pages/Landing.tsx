@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { lang } = useParams();
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const { scrollY } = useScroll();
@@ -65,8 +69,8 @@ const Landing = () => {
             <span className="text-xl font-semibold text-foreground">Consensus</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
-            <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
+            <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              {t('pricing.title')}
             </Link>
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Features
@@ -75,11 +79,14 @@ const Landing = () => {
               Demo
             </a>
           </nav>
-          <Link to="/auth">
-            <Button variant="outline" className="rounded-full border-border hover:border-foreground transition-colors">
-              Sign In
-            </Button>
-          </Link>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Link to={`/${lang || 'en'}/auth`}>
+              <Button variant="outline" className="rounded-full border-border hover:border-foreground transition-colors">
+                {t('auth.signIn')}
+              </Button>
+            </Link>
+          </div>
         </div>
       </motion.header>
 
@@ -91,24 +98,22 @@ const Landing = () => {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-[#111111] tracking-tight leading-[1.05] mb-8 bg-gradient-to-b from-[#111111] to-[#666666] bg-clip-text text-transparent">
-            Ask once.
-            <br />
-            Get the consensus.
+            {t('landing.hero')}
           </h1>
           <p className="text-xl md:text-2xl text-[#86868B] max-w-3xl mx-auto mb-12 leading-[1.6]">
-            Running multiple AI models in parallel for precision analysis. Get synthesized answers from the world's best AI systems.
+            {t('landing.subtitle')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/auth">
+            <Link to={`/${lang || 'en'}/auth`}>
               <Button 
                 size="lg" 
                 className="rounded-full h-14 px-10 text-base shadow-lg hover:shadow-primary/20 transition-all duration-300"
               >
-                Get Started
+                {t('pricing.getStarted')}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/pricing">
+            <Link to={`/${lang || 'en'}/pricing`}>
               <Button 
                 variant="outline" 
                 size="lg" 
@@ -659,7 +664,7 @@ const Landing = () => {
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of users leveraging multi-model AI consensus for better decisions.
           </p>
-          <Link to="/auth">
+          <Link to={`/${lang || 'en'}/auth`}>
             <Button 
               size="lg" 
               className="rounded-full h-14 px-10 text-base shadow-lg hover:shadow-primary/20 transition-all duration-300"
@@ -679,8 +684,8 @@ const Landing = () => {
               <Sparkles className="w-5 h-5 text-primary" />
               <span className="text-sm text-muted-foreground">© 2025 Consensus. All rights reserved.</span>
             </div>
-            <div className="flex items-center gap-8">
-              <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <div className="flex items-center gap-6">
+              <Link to={`/${lang || 'en'}/pricing`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Pricing
               </Link>
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -689,6 +694,7 @@ const Landing = () => {
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Support
               </a>
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
