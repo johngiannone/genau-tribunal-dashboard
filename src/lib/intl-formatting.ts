@@ -5,8 +5,11 @@ import i18n from '@/i18n/config';
  */
 const getCurrentLocale = (): string => {
   const locale = i18n.language || 'en';
-  // Map en-gb to proper locale code
-  return locale === 'en-gb' ? 'en-GB' : locale === 'de' ? 'de-DE' : 'en-US';
+  // Map language codes to proper locale codes
+  if (locale === 'en-gb') return 'en-GB';
+  if (locale === 'de') return 'de-DE';
+  if (locale === 'fr') return 'fr-FR';
+  return 'en-US';
 };
 
 /**
@@ -14,7 +17,7 @@ const getCurrentLocale = (): string => {
  */
 export const getCurrencyForLocale = (locale?: string): string => {
   const currentLocale = locale || getCurrentLocale();
-  if (currentLocale.startsWith('de')) return 'EUR';
+  if (currentLocale.startsWith('de') || currentLocale.startsWith('fr')) return 'EUR';
   if (currentLocale === 'en-GB') return 'GBP';
   return 'USD';
 };
