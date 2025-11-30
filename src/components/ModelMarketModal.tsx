@@ -13,6 +13,15 @@ import { fetchOpenRouterModels, filterModelsByCategory, sortModels, Model } from
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Provider logos
+import openaiLogo from "@/assets/logos/openai.svg";
+import anthropicLogo from "@/assets/logos/anthropic.png";
+import googleLogo from "@/assets/logos/google.svg";
+import metaLogo from "@/assets/logos/meta.png";
+import mistralLogo from "@/assets/logos/mistral.png";
+import cohereLogo from "@/assets/logos/cohere.png";
+import xaiLogo from "@/assets/logos/xai.png";
+
 interface ModelMarketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -414,6 +423,21 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
 
   const costTier = getCostTierBadge();
 
+  // Provider logo mapping
+  const getProviderLogo = (provider: string) => {
+    const providerLower = provider.toLowerCase();
+    if (providerLower.includes("openai")) return openaiLogo;
+    if (providerLower.includes("anthropic")) return anthropicLogo;
+    if (providerLower.includes("google")) return googleLogo;
+    if (providerLower.includes("meta")) return metaLogo;
+    if (providerLower.includes("mistral")) return mistralLogo;
+    if (providerLower.includes("cohere")) return cohereLogo;
+    if (providerLower.includes("xai") || providerLower.includes("x-ai") || providerLower.includes("grok")) return xaiLogo;
+    return null; // No logo for unknown providers
+  };
+
+  const providerLogo = getProviderLogo(model.provider);
+
   return (
     <TooltipProvider>
       <div
@@ -424,6 +448,17 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
         }`}
         onClick={onClick}
       >
+        {/* Provider Logo - Top Left */}
+        {providerLogo && (
+          <div className="absolute top-3 left-3 w-6 h-6 flex items-center justify-center">
+            <img 
+              src={providerLogo} 
+              alt={`${model.provider} logo`}
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
+
         {/* Favorite Star Button - Top Right */}
         <button
           onClick={onToggleFavorite}
@@ -449,7 +484,7 @@ const ModelCard = ({ model, isSelected, isFavorite, onClick, onToggleFavorite }:
           </div>
         )}
 
-        <div className="space-y-2.5 pt-2">
+        <div className="space-y-2.5 pt-8">
           {/* Provider & Cost Tier Row */}
           <div className="flex items-center justify-between gap-2">
             <Badge variant="outline" className="text-xs font-normal text-gray-600 border-gray-300">
