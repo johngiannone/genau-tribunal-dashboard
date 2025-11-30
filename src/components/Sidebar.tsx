@@ -1,4 +1,4 @@
-import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard } from "lucide-react";
+import { Plus, Cpu, Settings, LogOut, User, BarChart2, Database, Shield, Trash2, CreditCard, Folder, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -11,6 +11,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -22,6 +32,15 @@ interface Conversation {
   id: string;
   title: string;
   updated_at: string;
+  folder_id: string | null;
+}
+
+interface ProjectFolder {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  position: number;
 }
 
 interface SidebarProps {
@@ -35,6 +54,10 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const [folders, setFolders] = useState<ProjectFolder[]>([]);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isAdmin, canAccessBilling } = useUserRole();
   const { toast } = useToast();
@@ -56,6 +79,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
   useEffect(() => {
     if (session?.user) {
       fetchConversations();
+      fetchFolders();
     }
   }, [session]);
 
@@ -64,7 +88,7 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
 
     const { data, error } = await supabase
       .from('conversations')
-      .select('id, title, updated_at')
+      .select('id, title, updated_at, folder_id')
       .eq('user_id', session.user.id)
       .order('updated_at', { ascending: false })
       .limit(10);
@@ -75,6 +99,76 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
     }
 
     setConversations(data || []);
+  };
+
+  const fetchFolders = async () => {
+    if (!session?.user) return;
+
+    const { data, error } = await supabase
+      .from('project_folders')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('position', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching folders:", error);
+      return;
+    }
+
+    setFolders(data || []);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!session?.user || !newFolderName.trim()) return;
+
+    const { error } = await supabase
+      .from('project_folders')
+      .insert({
+        user_id: session.user.id,
+        name: newFolderName,
+        color: '#0071E3',
+        icon: 'folder',
+        position: folders.length
+      });
+
+    if (error) {
+      console.error("Error creating folder:", error);
+      toast({
+        title: "Failed to create folder",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setNewFolderName("");
+    setCreateFolderOpen(false);
+    fetchFolders();
+    toast({
+      title: "Folder created",
+    });
+  };
+
+  const handleMoveToFolder = async (conversationId: string, folderId: string | null) => {
+    const { error } = await supabase
+      .from('conversations')
+      .update({ folder_id: folderId })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error("Error moving conversation:", error);
+      toast({
+        title: "Failed to move conversation",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    fetchConversations();
+    toast({
+      title: "Conversation moved",
+    });
   };
 
   const formatTime = (timestamp: string) => {
@@ -179,6 +273,41 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Folder</DialogTitle>
+            <DialogDescription>
+              Organize your conversations into folders
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folder-name">Folder Name</Label>
+              <Input
+                id="folder-name"
+                placeholder="Enter folder name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCreateFolder();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateFolderOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+              Create Folder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <aside className="w-72 h-screen bg-[#F9FAFB] border-r border-[#E5E5EA] flex flex-col">
         {/* Header with Logo */}
         <div className="p-8 border-b border-[#E5E5EA]">
@@ -202,14 +331,78 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
 
         {/* Session History */}
         <ScrollArea className="flex-1 px-6 pt-6">
+          {/* Folders Section */}
+          {folders.length > 0 && (
+            <div className="space-y-1 mb-6">
+              <div className="flex items-center justify-between px-3 mb-3">
+                <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide">
+                  Folders
+                </h3>
+                <button
+                  onClick={() => setCreateFolderOpen(true)}
+                  className="p-1 hover:bg-white rounded-lg transition-all"
+                  title="Create folder"
+                >
+                  <FolderPlus className="w-4 h-4 text-[#86868B]" />
+                </button>
+              </div>
+              <button
+                onClick={() => setActiveFolderId(null)}
+                className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
+                  activeFolderId === null
+                    ? 'bg-white shadow-sm border border-[#E5E5EA]'
+                    : 'hover:bg-white/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-[#0071E3]" />
+                  <span className="text-sm font-medium text-[#111111]">All Sessions</span>
+                  <span className="ml-auto text-xs text-[#86868B]">
+                    {conversations.length}
+                  </span>
+                </div>
+              </button>
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  onClick={() => setActiveFolderId(folder.id)}
+                  className={`w-full text-left px-3 py-2 rounded-xl transition-all ${
+                    activeFolderId === folder.id
+                      ? 'bg-white shadow-sm border border-[#E5E5EA]'
+                      : 'hover:bg-white/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4" style={{ color: folder.color }} />
+                    <span className="text-sm font-medium text-[#111111]">{folder.name}</span>
+                    <span className="ml-auto text-xs text-[#86868B]">
+                      {conversations.filter(c => c.folder_id === folder.id).length}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-1">
-            <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide mb-3 px-3">
-              Recent Sessions
-            </h3>
-            {conversations.length === 0 ? (
+            <div className="flex items-center justify-between px-3 mb-3">
+              <h3 className="text-xs font-semibold text-[#86868B] uppercase tracking-wide">
+                {activeFolderId ? 'Sessions in Folder' : 'Recent Sessions'}
+              </h3>
+              {folders.length === 0 && (
+                <button
+                  onClick={() => setCreateFolderOpen(true)}
+                  className="p-1 hover:bg-white rounded-lg transition-all"
+                  title="Create folder"
+                >
+                  <FolderPlus className="w-4 h-4 text-[#86868B]" />
+                </button>
+              )}
+            </div>
+            {conversations.filter(c => activeFolderId ? c.folder_id === activeFolderId : true).length === 0 ? (
               <p className="text-sm text-[#86868B] px-3 py-4">No sessions yet</p>
             ) : (
-              conversations.map((conversation) => (
+              conversations.filter(c => activeFolderId ? c.folder_id === activeFolderId : true).map((conversation) => (
                 <div
                   key={conversation.id}
                   className={`w-full rounded-xl transition-all group relative ${
@@ -233,13 +426,30 @@ export const Sidebar = ({ onNewSession, onLoadConversation, currentConversationI
                         </span>
                       </div>
                     </button>
-                    <button
-                      onClick={(e) => handleDeleteClick(e, conversation.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-destructive/10 rounded-lg transition-all"
-                      title="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                      {folders.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const nextFolderId = conversation.folder_id 
+                              ? null 
+                              : folders[0]?.id || null;
+                            handleMoveToFolder(conversation.id, nextFolderId);
+                          }}
+                          className="p-1.5 hover:bg-[#0071E3]/10 rounded-lg transition-all"
+                          title={conversation.folder_id ? "Remove from folder" : "Move to folder"}
+                        >
+                          <Folder className="w-4 h-4 text-[#0071E3]" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => handleDeleteClick(e, conversation.id)}
+                        className="p-1.5 hover:bg-destructive/10 rounded-lg transition-all"
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
