@@ -178,6 +178,31 @@ export default function Tickets() {
     }
   };
 
+  const handleMarkAsResolved = async (ticketId: string) => {
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ status: "resolved" })
+        .eq("id", ticketId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ticket marked as resolved",
+        description: "Thank you for confirming the issue is fixed",
+      });
+
+      // Refetch tickets to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Failed to update ticket",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -288,14 +313,26 @@ export default function Tickets() {
                           </div>
                         )}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedTicket(ticket.id)}
-                      >
-                        <MessageSquare className="w-3 h-3 mr-1" />
-                        View Conversation
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {(ticket.status === 'open' || ticket.status === 'in_progress') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkAsResolved(ticket.id)}
+                            className="text-green-600 border-green-600 hover:bg-green-50"
+                          >
+                            Mark as Resolved
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedTicket(ticket.id)}
+                        >
+                          <MessageSquare className="w-3 h-3 mr-1" />
+                          View Conversation
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
