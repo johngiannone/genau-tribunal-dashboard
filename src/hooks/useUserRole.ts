@@ -52,6 +52,7 @@ export const useUserRole = () => {
 
   const canAccessBilling = isAdmin || tier === 'team' || tier === 'agency';
   const canAccessAdmin = isAdmin;
+  const canCreateTeam = isAdmin || tier === 'team' || tier === 'agency';
 
-  return { isAdmin, tier, loading, canAccessBilling, canAccessAdmin };
+  return { isAdmin, tier, loading, canAccessBilling, canAccessAdmin, canCreateTeam };
 };
