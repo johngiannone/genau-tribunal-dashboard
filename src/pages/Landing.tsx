@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye } from "lucide-react";
+import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye, AlertTriangle, ShieldCheck, MessageSquare, Network } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -130,6 +130,88 @@ const Landing = () => {
                 {t('landing.viewPricing')}
               </Button>
             </Link>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* The Single-Model Trap Section */}
+      <section className="max-w-7xl mx-auto px-6 py-24 -mt-24 relative z-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="bg-white border border-[#E5E5EA] rounded-3xl shadow-lg p-12"
+        >
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
+              Don't Let AI Hallucinations Cost You.
+            </h2>
+            <p className="text-lg text-[#86868B] max-w-3xl mx-auto leading-relaxed">
+              Consumer reports warn that chatbots like ChatGPT and Gemini can give risky, incomplete advice on critical issues. One model isn't enough.
+            </p>
+          </div>
+
+          {/* Comparison Visual */}
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            {/* Left Side - The Risk */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-red-50 to-red-100/50 border-2 border-red-200 rounded-2xl p-8 text-center"
+            >
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center">
+                    <MessageSquare className="w-10 h-10 text-red-600" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-[#111111] mb-2">Single Point of Failure</h3>
+              <p className="text-sm text-[#86868B]">
+                One model means one perspective—and one chance to get it wrong. No checks, no balance.
+              </p>
+            </motion.div>
+
+            {/* Right Side - The Solution */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-br from-green-50 to-green-100/50 border-2 border-green-200 rounded-2xl p-8 text-center"
+            >
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center">
+                    <Network className="w-10 h-10 text-green-600" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                    <ShieldCheck className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-[#111111] mb-2">Consensus & Audit</h3>
+              <p className="text-sm text-[#86868B]">
+                Multiple models cross-check each other. Every answer is verified, audited, and scored for confidence.
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Source Citation */}
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#F5F5F7] border border-[#E5E5EA] rounded-full">
+              <Shield className="w-4 h-4 text-[#86868B]" />
+              <p className="text-xs text-[#86868B] font-medium">
+                Based on 2025 research from Which? Consumer Insight
+              </p>
+            </div>
           </div>
         </motion.div>
       </section>
