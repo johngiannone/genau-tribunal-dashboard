@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.analyze-security-risks]
 verify_jwt = false
+
+[functions.export-user-data]
+verify_jwt = true
