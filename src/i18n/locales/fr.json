@@ -166,5 +166,32 @@
     "cancel": "Annuler",
     "delete": "Supprimer",
     "edit": "Modifier"
+  },
+  "teamUpgrade": {
+    "title": "Fonctionnalités d'équipe",
+    "unlockTitle": "Débloquer la collaboration d'équipe",
+    "unlockDescription": "Vous avez été invité à voir les fonctionnalités d'équipe. Passez à Team ou Agency pour créer votre propre organisation.",
+    "benefitCollaborationTitle": "Collaboration d'équipe",
+    "benefitCollaborationDesc": "Invitez jusqu'à 5 membres (Team) ou 20 membres (Agency) à collaborer sur les audits",
+    "benefitHistoryTitle": "Historique d'audit partagé",
+    "benefitHistoryDesc": "Accédez à un historique d'audit unifié pour toute votre équipe",
+    "benefitKnowledgeTitle": "Base de connaissances organisationnelle",
+    "benefitKnowledgeDesc": "Téléchargez des documents spécifiques à votre secteur pour des audits contextuels",
+    "benefitReportsTitle": "Rapports en marque blanche",
+    "benefitReportsDesc": "Le niveau Agency inclut une personnalisation de marque pour des livrables clients professionnels",
+    "teamPlan": "Équipe",
+    "agencyPlan": "Agence",
+    "perMonth": "/mois",
+    "teamSeats5": "5 places d'équipe",
+    "teamSeats20": "20 places d'équipe",
+    "sharedAudits1500": "1 500 audits partagés/mois",
+    "sharedAudits5000": "5 000 audits partagés/mois",
+    "sharedHistory": "Historique d'audit partagé",
+    "knowledgeBase": "Base de connaissances organisationnelle",
+    "whitelabelReports": "Rapports en marque blanche",
+    "prioritySupport": "Assistance prioritaire",
+    "viewAllPlans": "Voir tous les forfaits",
+    "continueCurrentPlan": "Continuer avec le forfait actuel",
+    "invitationNote": "Déjà invité à une équipe ? Consultez vos e-mails pour un lien d'invitation."
   }
 }

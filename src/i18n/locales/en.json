@@ -166,5 +166,32 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit"
+  },
+  "teamUpgrade": {
+    "title": "Team Features",
+    "unlockTitle": "Unlock Team Collaboration",
+    "unlockDescription": "You've been invited to view team features. Upgrade to Team or Agency to create your own organization.",
+    "benefitCollaborationTitle": "Team Collaboration",
+    "benefitCollaborationDesc": "Invite up to 5 members (Team) or 20 members (Agency) to collaborate on audits",
+    "benefitHistoryTitle": "Shared Audit History",
+    "benefitHistoryDesc": "Access a unified audit history across your entire team",
+    "benefitKnowledgeTitle": "Organization Knowledge Base",
+    "benefitKnowledgeDesc": "Upload industry-specific documents for context-aware audits",
+    "benefitReportsTitle": "White-Label Reports",
+    "benefitReportsDesc": "Agency tier includes custom branding for professional client deliverables",
+    "teamPlan": "Team",
+    "agencyPlan": "Agency",
+    "perMonth": "/month",
+    "teamSeats5": "5 team seats",
+    "teamSeats20": "20 team seats",
+    "sharedAudits1500": "1,500 shared audits/month",
+    "sharedAudits5000": "5,000 shared audits/month",
+    "sharedHistory": "Shared audit history",
+    "knowledgeBase": "Organization knowledge base",
+    "whitelabelReports": "White-labeled reports",
+    "prioritySupport": "Priority support",
+    "viewAllPlans": "View All Plans",
+    "continueCurrentPlan": "Continue with Current Plan",
+    "invitationNote": "Already been invited to a team? Check your email for an invitation link."
   }
 }

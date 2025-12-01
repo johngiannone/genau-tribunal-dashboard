@@ -166,5 +166,32 @@
     "cancel": "Annulla",
     "delete": "Elimina",
     "edit": "Modifica"
+  },
+  "teamUpgrade": {
+    "title": "Funzionalità Team",
+    "unlockTitle": "Sblocca la collaborazione di team",
+    "unlockDescription": "Sei stato invitato a visualizzare le funzionalità team. Passa a Team o Agency per creare la tua organizzazione.",
+    "benefitCollaborationTitle": "Collaborazione di team",
+    "benefitCollaborationDesc": "Invita fino a 5 membri (Team) o 20 membri (Agency) a collaborare sugli audit",
+    "benefitHistoryTitle": "Cronologia audit condivisa",
+    "benefitHistoryDesc": "Accedi a una cronologia audit unificata per tutto il tuo team",
+    "benefitKnowledgeTitle": "Knowledge Base organizzativa",
+    "benefitKnowledgeDesc": "Carica documenti specifici del settore per audit contestuali",
+    "benefitReportsTitle": "Report in white label",
+    "benefitReportsDesc": "Il livello Agency include branding personalizzato per deliverable professionali ai clienti",
+    "teamPlan": "Team",
+    "agencyPlan": "Agenzia",
+    "perMonth": "/mese",
+    "teamSeats5": "5 posti team",
+    "teamSeats20": "20 posti team",
+    "sharedAudits1500": "1.500 audit condivisi/mese",
+    "sharedAudits5000": "5.000 audit condivisi/mese",
+    "sharedHistory": "Cronologia audit condivisa",
+    "knowledgeBase": "Knowledge Base organizzativa",
+    "whitelabelReports": "Report in white label",
+    "prioritySupport": "Supporto prioritario",
+    "viewAllPlans": "Visualizza tutti i piani",
+    "continueCurrentPlan": "Continua con il piano attuale",
+    "invitationNote": "Sei già stato invitato a un team? Controlla la tua email per un link di invito."
   }
 }

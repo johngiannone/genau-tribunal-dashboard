@@ -166,5 +166,32 @@
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "edit": "Bearbeiten"
+  },
+  "teamUpgrade": {
+    "title": "Team-Funktionen",
+    "unlockTitle": "Team-Zusammenarbeit freischalten",
+    "unlockDescription": "Sie wurden eingeladen, Team-Funktionen anzusehen. Upgraden Sie auf Team oder Agency, um Ihre eigene Organisation zu erstellen.",
+    "benefitCollaborationTitle": "Team-Zusammenarbeit",
+    "benefitCollaborationDesc": "Laden Sie bis zu 5 Mitglieder (Team) oder 20 Mitglieder (Agency) zur Zusammenarbeit bei Audits ein",
+    "benefitHistoryTitle": "Gemeinsame Audit-Historie",
+    "benefitHistoryDesc": "Greifen Sie auf eine einheitliche Audit-Historie für Ihr gesamtes Team zu",
+    "benefitKnowledgeTitle": "Organisations-Wissensdatenbank",
+    "benefitKnowledgeDesc": "Laden Sie branchenspezifische Dokumente für kontextbewusste Audits hoch",
+    "benefitReportsTitle": "White-Label-Berichte",
+    "benefitReportsDesc": "Agency-Stufe enthält individuelles Branding für professionelle Kundenlieferungen",
+    "teamPlan": "Team",
+    "agencyPlan": "Agentur",
+    "perMonth": "/Monat",
+    "teamSeats5": "5 Team-Plätze",
+    "teamSeats20": "20 Team-Plätze",
+    "sharedAudits1500": "1.500 gemeinsame Audits/Monat",
+    "sharedAudits5000": "5.000 gemeinsame Audits/Monat",
+    "sharedHistory": "Gemeinsame Audit-Historie",
+    "knowledgeBase": "Organisations-Wissensdatenbank",
+    "whitelabelReports": "White-Label-Berichte",
+    "prioritySupport": "Prioritäts-Support",
+    "viewAllPlans": "Alle Pläne anzeigen",
+    "continueCurrentPlan": "Mit aktuellem Plan fortfahren",
+    "invitationNote": "Wurden Sie bereits zu einem Team eingeladen? Überprüfen Sie Ihre E-Mails für einen Einladungslink."
   }
 }
