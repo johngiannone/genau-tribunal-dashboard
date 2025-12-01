@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Breadcrumb,
@@ -33,6 +43,7 @@ export default function Tickets() {
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [createTicketOpen, setCreateTicketOpen] = useState(false);
+  const [resolveTicketId, setResolveTicketId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -178,12 +189,14 @@ export default function Tickets() {
     }
   };
 
-  const handleMarkAsResolved = async (ticketId: string) => {
+  const handleMarkAsResolved = async () => {
+    if (!resolveTicketId) return;
+
     try {
       const { error } = await supabase
         .from("support_tickets")
         .update({ status: "resolved" })
-        .eq("id", ticketId);
+        .eq("id", resolveTicketId);
 
       if (error) throw error;
 
@@ -192,6 +205,8 @@ export default function Tickets() {
         description: "Thank you for confirming the issue is fixed",
       });
 
+      setResolveTicketId(null);
+      
       // Refetch tickets to show updated status
       window.location.reload();
     } catch (error: any) {
@@ -318,7 +333,7 @@ export default function Tickets() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleMarkAsResolved(ticket.id)}
+                            onClick={() => setResolveTicketId(ticket.id)}
                             className="text-green-600 border-green-600 hover:bg-green-50"
                           >
                             Mark as Resolved
@@ -418,6 +433,24 @@ export default function Tickets() {
           open={createTicketOpen}
           onOpenChange={setCreateTicketOpen}
         />
+
+        {/* Resolve Confirmation Dialog */}
+        <AlertDialog open={!!resolveTicketId} onOpenChange={() => setResolveTicketId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Mark ticket as resolved?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will mark your support ticket as resolved and close it. You can always create a new ticket if you need further assistance.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMarkAsResolved} className="bg-green-600 hover:bg-green-700">
+                Mark as Resolved
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
