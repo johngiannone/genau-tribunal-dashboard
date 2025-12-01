@@ -14,7 +14,8 @@ import { Zap, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useABTestingNotification } from "@/hooks/useABTestingNotification";
-import { Session } from "@supabase/supabase-js";
+import { useAuthState } from "@/hooks/useAuthState";
+import { AuthLoadingScreen } from "@/components/AuthLoadingScreen";
 
 interface Message {
   id: number;
@@ -41,7 +42,6 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [usage, setUsage] = useState<{ 
     audit_count: number; 
@@ -65,35 +65,28 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Use centralized auth state hook with loading state
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuthState();
+  
   // A/B Testing notification hook
   const { showNotification, performanceData, dismissNotification } = useABTestingNotification(session);
 
-  // Auth state management
+  // Redirect to auth if not authenticated (after loading completes)
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        if (!session) {
-          navigate("/auth");
-        } else if (window.location.pathname === "/") {
-          navigate("/app");
-        }
-      }
-    );
+    if (!isAuthLoading && !isAuthenticated) {
+      navigate("/auth");
+    }
+  }, [isAuthLoading, isAuthenticated, navigate]);
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (!session) {
-        navigate("/auth");
-      } else if (window.location.pathname === "/") {
-        navigate("/app");
-      }
-    });
+  // Show loading screen while checking auth
+  if (isAuthLoading) {
+    return <AuthLoadingScreen />;
+  }
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  // Don't render content if not authenticated
+  if (!isAuthenticated) {
+    return <AuthLoadingScreen />; 
+  }
 
   // Fetch usage when session is available
   useEffect(() => {
