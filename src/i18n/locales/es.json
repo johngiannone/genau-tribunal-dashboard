@@ -166,5 +166,32 @@
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar"
+  },
+  "teamUpgrade": {
+    "title": "Funciones de equipo",
+    "unlockTitle": "Desbloquear colaboración de equipo",
+    "unlockDescription": "Has sido invitado a ver las funciones de equipo. Actualiza a Team o Agency para crear tu propia organización.",
+    "benefitCollaborationTitle": "Colaboración de equipo",
+    "benefitCollaborationDesc": "Invita hasta 5 miembros (Team) o 20 miembros (Agency) a colaborar en auditorías",
+    "benefitHistoryTitle": "Historial de auditorías compartido",
+    "benefitHistoryDesc": "Accede a un historial de auditorías unificado para todo tu equipo",
+    "benefitKnowledgeTitle": "Base de conocimiento organizacional",
+    "benefitKnowledgeDesc": "Sube documentos específicos de tu industria para auditorías contextuales",
+    "benefitReportsTitle": "Informes de marca blanca",
+    "benefitReportsDesc": "El nivel Agency incluye marca personalizada para entregables profesionales a clientes",
+    "teamPlan": "Equipo",
+    "agencyPlan": "Agencia",
+    "perMonth": "/mes",
+    "teamSeats5": "5 puestos de equipo",
+    "teamSeats20": "20 puestos de equipo",
+    "sharedAudits1500": "1.500 auditorías compartidas/mes",
+    "sharedAudits5000": "5.000 auditorías compartidas/mes",
+    "sharedHistory": "Historial de auditorías compartido",
+    "knowledgeBase": "Base de conocimiento organizacional",
+    "whitelabelReports": "Informes de marca blanca",
+    "prioritySupport": "Soporte prioritario",
+    "viewAllPlans": "Ver todos los planes",
+    "continueCurrentPlan": "Continuar con el plan actual",
+    "invitationNote": "¿Ya has sido invitado a un equipo? Revisa tu correo electrónico para un enlace de invitación."
   }
 }

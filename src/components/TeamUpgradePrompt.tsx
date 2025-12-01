@@ -1,34 +1,36 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building2, FileText, Share2, Shield, ArrowLeft } from "lucide-react";
 
-const benefits = [
-  {
-    icon: Users,
-    title: "Team Collaboration",
-    description: "Invite up to 5 members (Team) or 20 members (Agency) to collaborate on audits"
-  },
-  {
-    icon: Share2,
-    title: "Shared Audit History",
-    description: "Access a unified audit history across your entire team"
-  },
-  {
-    icon: FileText,
-    title: "Organization Knowledge Base",
-    description: "Upload industry-specific documents for context-aware audits"
-  },
-  {
-    icon: Shield,
-    title: "White-Label Reports",
-    description: "Agency tier includes custom branding for professional client deliverables"
-  }
-];
-
 export const TeamUpgradePrompt = () => {
   const navigate = useNavigate();
   const { lang } = useParams();
+  const { t } = useTranslation();
+
+  const benefits = [
+    {
+      icon: Users,
+      title: t('teamUpgrade.benefitCollaborationTitle'),
+      description: t('teamUpgrade.benefitCollaborationDesc')
+    },
+    {
+      icon: Share2,
+      title: t('teamUpgrade.benefitHistoryTitle'),
+      description: t('teamUpgrade.benefitHistoryDesc')
+    },
+    {
+      icon: FileText,
+      title: t('teamUpgrade.benefitKnowledgeTitle'),
+      description: t('teamUpgrade.benefitKnowledgeDesc')
+    },
+    {
+      icon: Shield,
+      title: t('teamUpgrade.benefitReportsTitle'),
+      description: t('teamUpgrade.benefitReportsDesc')
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
@@ -44,17 +46,17 @@ export const TeamUpgradePrompt = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <Building2 className="w-8 h-8 text-[#0071E3]" />
-          <h1 className="text-3xl font-bold text-[#111111]">Team Features</h1>
+          <h1 className="text-3xl font-bold text-[#111111]">{t('teamUpgrade.title')}</h1>
         </div>
 
         {/* Main Card */}
         <Card className="border-[#E5E5EA] bg-white">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl text-[#111111]">
-              Unlock Team Collaboration
+              {t('teamUpgrade.unlockTitle')}
             </CardTitle>
             <CardDescription className="text-base text-[#86868B]">
-              You've been invited to view team features. Upgrade to Team or Agency to create your own organization.
+              {t('teamUpgrade.unlockDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -80,30 +82,30 @@ export const TeamUpgradePrompt = () => {
             <div className="grid md:grid-cols-2 gap-4 pt-4">
               <Card className="border-[#0071E3] bg-[#0071E3]/5">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-[#111111]">Team</CardTitle>
-                  <div className="text-2xl font-bold text-[#0071E3]">$149<span className="text-sm font-normal text-[#86868B]">/month</span></div>
+                  <CardTitle className="text-lg text-[#111111]">{t('teamUpgrade.teamPlan')}</CardTitle>
+                  <div className="text-2xl font-bold text-[#0071E3]">$149<span className="text-sm font-normal text-[#86868B]">{t('teamUpgrade.perMonth')}</span></div>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-sm text-[#86868B] space-y-1">
-                    <li>• 5 team seats</li>
-                    <li>• 1,500 shared audits/month</li>
-                    <li>• Shared audit history</li>
-                    <li>• Organization knowledge base</li>
+                    <li>• {t('teamUpgrade.teamSeats5')}</li>
+                    <li>• {t('teamUpgrade.sharedAudits1500')}</li>
+                    <li>• {t('teamUpgrade.sharedHistory')}</li>
+                    <li>• {t('teamUpgrade.knowledgeBase')}</li>
                   </ul>
                 </CardContent>
               </Card>
 
               <Card className="border-[#0071E3] bg-[#0071E3]/5">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-[#111111]">Agency</CardTitle>
-                  <div className="text-2xl font-bold text-[#0071E3]">$499<span className="text-sm font-normal text-[#86868B]">/month</span></div>
+                  <CardTitle className="text-lg text-[#111111]">{t('teamUpgrade.agencyPlan')}</CardTitle>
+                  <div className="text-2xl font-bold text-[#0071E3]">$499<span className="text-sm font-normal text-[#86868B]">{t('teamUpgrade.perMonth')}</span></div>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-sm text-[#86868B] space-y-1">
-                    <li>• 20 team seats</li>
-                    <li>• 5,000 shared audits/month</li>
-                    <li>• White-labeled reports</li>
-                    <li>• Priority support</li>
+                    <li>• {t('teamUpgrade.teamSeats20')}</li>
+                    <li>• {t('teamUpgrade.sharedAudits5000')}</li>
+                    <li>• {t('teamUpgrade.whitelabelReports')}</li>
+                    <li>• {t('teamUpgrade.prioritySupport')}</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -115,20 +117,20 @@ export const TeamUpgradePrompt = () => {
                 onClick={() => navigate(`/${lang || 'en'}/pricing`)}
                 className="flex-1 bg-[#0071E3] hover:bg-[#0077ED] text-white"
               >
-                View All Plans
+                {t('teamUpgrade.viewAllPlans')}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => navigate(`/${lang || 'en'}/app`)}
                 className="flex-1"
               >
-                Continue with Current Plan
+                {t('teamUpgrade.continueCurrentPlan')}
               </Button>
             </div>
 
             {/* Info Note */}
             <p className="text-center text-sm text-[#86868B]">
-              Already been invited to a team? Check your email for an invitation link.
+              {t('teamUpgrade.invitationNote')}
             </p>
           </CardContent>
         </Card>
