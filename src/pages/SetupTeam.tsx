@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ const industries = [
 
 export default function SetupTeam() {
   const navigate = useNavigate();
+  const { lang } = useParams();
   const [step, setStep] = useState<Step>(1);
   const [teamName, setTeamName] = useState("");
   const [industry, setIndustry] = useState("");
@@ -70,7 +71,7 @@ export default function SetupTeam() {
 
     localStorage.removeItem('session_start');
     await supabase.auth.signOut();
-    navigate("/auth");
+    navigate(`/${lang || 'en'}/auth`);
   };
 
   const handleBack = () => {
@@ -78,7 +79,7 @@ export default function SetupTeam() {
   };
 
   const handleSkip = () => {
-    navigate("/app");
+    navigate(`/${lang || 'en'}/app`);
   };
 
   const handleCreateOrganization = async () => {
@@ -128,7 +129,7 @@ export default function SetupTeam() {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       toast.success(`${teamName} created successfully!`);
-      navigate("/team");
+      navigate(`/${lang || 'en'}/team`);
     } catch (error) {
       console.error("Error creating organization:", error);
       toast.error("Failed to create team");
