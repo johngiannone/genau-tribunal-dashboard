@@ -451,6 +451,30 @@ export type Database = {
         }
         Relationships: []
       }
+      deletion_warnings: {
+        Row: {
+          data_type: string
+          id: string
+          scheduled_deletion_date: string
+          user_id: string
+          warning_sent_at: string
+        }
+        Insert: {
+          data_type: string
+          id?: string
+          scheduled_deletion_date: string
+          user_id: string
+          warning_sent_at?: string
+        }
+        Update: {
+          data_type?: string
+          id?: string
+          scheduled_deletion_date?: string
+          user_id?: string
+          warning_sent_at?: string
+        }
+        Relationships: []
+      }
       email_logs: {
         Row: {
           email_type: string

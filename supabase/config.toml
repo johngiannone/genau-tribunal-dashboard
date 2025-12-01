@@ -83,3 +83,6 @@ verify_jwt = true
 
 [functions.cleanup-old-data]
 verify_jwt = false
+
+[functions.send-deletion-warning]
+verify_jwt = false
