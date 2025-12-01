@@ -28,6 +28,7 @@ interface TrainingData {
   verdict_response: string;
   model_config: any;
   human_rating: number;
+  verdict_rating: number;
   created_at: string;
   council_source: string | null;
 }
@@ -171,6 +172,12 @@ export default function Vault() {
     if (rating === 1) return <Badge className="bg-primary">Good</Badge>;
     if (rating === -1) return <Badge variant="destructive">Bad</Badge>;
     return <Badge variant="secondary">Unrated</Badge>;
+  };
+
+  const getVerdictRatingBadge = (rating: number) => {
+    if (rating === 1) return <Badge className="bg-emerald-500">👍</Badge>;
+    if (rating === -1) return <Badge variant="destructive">👎</Badge>;
+    return <Badge variant="outline">—</Badge>;
   };
 
   const getModelShortName = (modelId: string) => {
@@ -441,11 +448,12 @@ export default function Vault() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40%]">Prompt</TableHead>
-                      <TableHead className="w-[20%]">Models</TableHead>
-                      <TableHead className="w-[15%]">Rating</TableHead>
-                      <TableHead className="w-[20%]">Date</TableHead>
-                      <TableHead className="w-[5%]"></TableHead>
+                      <TableHead className="w-[35%]">Prompt</TableHead>
+                      <TableHead className="w-[15%]">Models</TableHead>
+                      <TableHead className="w-[12%]">Human Rating</TableHead>
+                      <TableHead className="w-[12%]">Verdict Rating</TableHead>
+                      <TableHead className="w-[18%]">Date</TableHead>
+                      <TableHead className="w-[8%]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -460,6 +468,7 @@ export default function Vault() {
                           {item.draft_a_model?.split("/")[1] || item.draft_a_model || "Unknown"}
                         </TableCell>
                         <TableCell>{getRatingBadge(item.human_rating)}</TableCell>
+                        <TableCell>{getVerdictRatingBadge(item.verdict_rating)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
