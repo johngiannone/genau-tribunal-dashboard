@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TeamKnowledgeBase from "@/components/TeamKnowledgeBase";
+import { TeamOnboardingChecklist } from "@/components/TeamOnboardingChecklist";
 
 interface Organization {
   id: string;
@@ -52,6 +53,7 @@ interface Conversation {
 
 export default function Team() {
   const navigate = useNavigate();
+  const { lang } = useParams();
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -60,6 +62,7 @@ export default function Team() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
+  const [documentsCount, setDocumentsCount] = useState(0);
 
   useEffect(() => {
     fetchTeamData();
@@ -69,7 +72,7 @@ export default function Team() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/auth");
+        navigate(`/${lang || 'en'}/auth`);
         return;
       }
 
@@ -82,7 +85,7 @@ export default function Team() {
 
       if (!usage?.organization_id) {
         toast.error("You're not part of a team yet");
-        navigate("/setup-team");
+        navigate(`/${lang || 'en'}/setup-team`);
         return;
       }
 
@@ -113,6 +116,15 @@ export default function Team() {
         .limit(20);
 
       setSharedAudits(conversations || []);
+
+      // Fetch organization knowledge base documents count
+      const { count } = await supabase
+        .from("organization_knowledge_base")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", usage.organization_id)
+        .eq("is_active", true);
+
+      setDocumentsCount(count || 0);
     } catch (error) {
       console.error("Error fetching team data:", error);
       toast.error("Failed to load team data");
@@ -140,7 +152,7 @@ export default function Team() {
       setInviteDialogOpen(false);
       setInviteEmail("");
       setInviteRole("member");
-      fetchTeamData();
+      await fetchTeamData(); // Refresh data to update onboarding checklist
     } catch (error) {
       console.error("Error inviting member:", error);
       toast.error("Failed to send invitation");
@@ -179,7 +191,7 @@ export default function Team() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/app")}
+              onClick={() => navigate(`/${lang || 'en'}/app`)}
               className="text-[#86868B] hover:text-[#0071E3]"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -202,6 +214,20 @@ export default function Team() {
             Invite Member
           </Button>
         </div>
+
+        {/* Onboarding Checklist */}
+        <TeamOnboardingChecklist
+          hasMembersInvited={members.length > 0}
+          hasDocumentsUploaded={documentsCount > 0}
+          hasSharedAudits={sharedAudits.length > 0}
+          onInviteClick={() => setInviteDialogOpen(true)}
+          onDocumentsClick={() => {
+            // Scroll to knowledge base section
+            const kbSection = document.querySelector('[data-knowledge-base]');
+            kbSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          onCreateAuditClick={() => navigate(`/${lang || 'en'}/app`)}
+        />
 
         {/* Team Members */}
         <Card className="border-[#E5E5EA]">
@@ -254,7 +280,14 @@ export default function Team() {
         </Card>
 
         {/* Knowledge Base */}
-        {organization && <TeamKnowledgeBase organizationId={organization.id} />}
+        <div data-knowledge-base>
+          {organization && (
+            <TeamKnowledgeBase 
+              organizationId={organization.id}
+              onDocumentsChange={fetchTeamData}
+            />
+          )}
+        </div>
 
         {/* Shared Audit History */}
         <Card className="border-[#E5E5EA]">
@@ -286,7 +319,7 @@ export default function Team() {
                     <TableRow
                       key={audit.id}
                       className="cursor-pointer hover:bg-[#F9FAFB]"
-                      onClick={() => navigate(`/app?conversation=${audit.id}`)}
+                      onClick={() => navigate(`/${lang || 'en'}/app?conversation=${audit.id}`)}
                     >
                       <TableCell className="font-medium text-[#111111]">
                         {audit.title}

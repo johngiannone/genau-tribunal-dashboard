@@ -26,9 +26,10 @@ interface KnowledgeDocument {
 
 interface TeamKnowledgeBaseProps {
   organizationId: string;
+  onDocumentsChange?: () => void;
 }
 
-export default function TeamKnowledgeBase({ organizationId }: TeamKnowledgeBaseProps) {
+export default function TeamKnowledgeBase({ organizationId, onDocumentsChange }: TeamKnowledgeBaseProps) {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -121,7 +122,8 @@ export default function TeamKnowledgeBase({ organizationId }: TeamKnowledgeBaseP
       setSelectedFile(null);
       setDescription("");
       setDocumentType("other");
-      fetchDocuments();
+      await fetchDocuments();
+      onDocumentsChange?.(); // Notify parent component
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload document");
@@ -152,7 +154,8 @@ export default function TeamKnowledgeBase({ organizationId }: TeamKnowledgeBaseP
       if (dbError) throw dbError;
 
       toast.success("Document deleted");
-      fetchDocuments();
+      await fetchDocuments();
+      onDocumentsChange?.(); // Notify parent component
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete document");
