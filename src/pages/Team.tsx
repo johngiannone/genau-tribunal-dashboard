@@ -28,6 +28,7 @@ import {
 import TeamKnowledgeBase from "@/components/TeamKnowledgeBase";
 import { TeamOnboardingChecklist } from "@/components/TeamOnboardingChecklist";
 import { useUserRole } from "@/hooks/useUserRole";
+import { TeamUpgradePrompt } from "@/components/TeamUpgradePrompt";
 
 interface Organization {
   id: string;
@@ -87,14 +88,12 @@ export default function Team() {
 
       if (!usage?.organization_id) {
         // Check if user can create teams (Team/Agency tier or admin)
-        // If they can, redirect to setup-team; otherwise show message and go to app
+        // If they can, redirect to setup-team; otherwise show upgrade prompt
         if (canCreateTeam) {
           toast.info("Set up your team to get started");
           navigate(`/${lang || 'en'}/setup-team`);
-        } else {
-          toast.error("You haven't been invited to a team yet");
-          navigate(`/${lang || 'en'}/app`);
         }
+        // For Free/Pro/Max users without a team, we'll show the upgrade prompt
         return;
       }
 
@@ -180,7 +179,7 @@ export default function Team() {
     });
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-[#F5F5F7] p-8">
         <div className="max-w-6xl mx-auto space-y-6">
@@ -189,6 +188,11 @@ export default function Team() {
         </div>
       </div>
     );
+  }
+
+  // Show upgrade prompt for Free/Pro/Max users who aren't part of a team
+  if (!organization && !canCreateTeam) {
+    return <TeamUpgradePrompt />;
   }
 
   return (
