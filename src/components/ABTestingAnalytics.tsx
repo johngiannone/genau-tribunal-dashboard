@@ -64,16 +64,22 @@ export function ABTestingAnalytics({ trainingData }: ABTestingAnalyticsProps) {
       const avgRating = ratedCount > 0 ? stats.ratingSum / ratedCount : 0;
       const acceptanceRate = stats.total > 0 ? (stats.good / stats.total) * 100 : 0;
       
+      // Ensure avgRating is a valid finite number
+      const safeAvgRating = Number.isFinite(avgRating) ? Number(avgRating.toFixed(2)) : 0;
+      const safeAcceptanceRate = Number.isFinite(acceptanceRate) ? Number(acceptanceRate.toFixed(1)) : 0;
+      
       return {
         source: source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         count: stats.total,
-        avgRating: Number(avgRating.toFixed(2)),
+        avgRating: safeAvgRating,
         goodCount: stats.good,
         badCount: stats.bad,
         unratedCount: stats.unrated,
-        acceptanceRate: Number(acceptanceRate.toFixed(1))
+        acceptanceRate: safeAcceptanceRate
       };
-    }).sort((a, b) => b.avgRating - a.avgRating);
+    })
+    .filter(item => Number.isFinite(item.avgRating)) // Filter out invalid entries
+    .sort((a, b) => b.avgRating - a.avgRating);
   };
 
   const calculateUsageDistribution = () => {
@@ -175,26 +181,32 @@ export function ABTestingAnalytics({ trainingData }: ABTestingAnalyticsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={abStats} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" domain={[-1, 1]} stroke="hsl(var(--muted-foreground))" />
-                <YAxis dataKey="source" type="category" width={120} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                  formatter={(value: number) => [`${value > 0 ? '+' : ''}${value}`, 'Avg Rating']}
-                />
-                <Bar dataKey="avgRating" radius={[0, 8, 8, 0]}>
-                  {abStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getColor(entry.source)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {abStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={abStats} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" domain={[-1, 1]} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis dataKey="source" type="category" width={120} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: number) => [`${value > 0 ? '+' : ''}${value}`, 'Avg Rating']}
+                  />
+                  <Bar dataKey="avgRating" radius={[0, 8, 8, 0]}>
+                    {abStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getColor(entry.source)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-muted-foreground py-12">
+                No data available yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -210,31 +222,37 @@ export function ABTestingAnalytics({ trainingData }: ABTestingAnalyticsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={usageDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {usageDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {usageDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={usageDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {usageDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-muted-foreground py-12">
+                No distribution data yet
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
