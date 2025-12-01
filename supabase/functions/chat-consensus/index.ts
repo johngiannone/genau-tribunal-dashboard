@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
 const TOGETHER_API_KEY = Deno.env.get('TOGETHER_API_KEY')
 const BASTEN_API_KEY = Deno.env.get('BASTEN_API_KEY')
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -449,68 +449,94 @@ serve(async (req) => {
       )
     }
 
-    // 4. MODERATION CHECK - Before any LLM calls or quota usage
-    console.log("Running OpenAI moderation check...")
-    if (!OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY not configured")
-      return new Response(
-        JSON.stringify({ error: 'Moderation service unavailable' }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      )
-    }
-
+    // 4. MODERATION CHECK - Before any LLM calls or quota usage (using Lovable AI)
+    console.log("Running content moderation check via Lovable AI...")
+    
     try {
-      const moderationResponse = await fetch('https://api.openai.com/v1/moderations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: prompt
-        })
-      })
-
-      if (!moderationResponse.ok) {
-        console.error("Moderation API failed:", moderationResponse.status)
+      if (!LOVABLE_API_KEY) {
+        console.warn("LOVABLE_API_KEY not configured, skipping moderation")
       } else {
-        const moderationData = await moderationResponse.json()
-        const result = moderationData.results?.[0]
-        
-        if (result?.flagged) {
-          console.warn("Content flagged by moderation:", result.categories)
-          
-          // Find which category was flagged
-          const flaggedCategories = Object.entries(result.categories)
-            .filter(([_, flagged]) => flagged)
-            .map(([category]) => category)
-          
-          // Log to security_logs table
-          await adminSupabase
-            .from('security_logs')
-            .insert({
-              user_id: user.id,
-              prompt: prompt,
-              flag_category: flaggedCategories.join(', '),
-              metadata: {
-                category_scores: result.category_scores,
-                flagged_categories: result.categories
+        const moderationResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-lite',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a content moderation system. Analyze the user's message and determine if it violates any content policies.
+
+Check for these categories:
+- violence: Graphic violence, threats, or harm to others
+- hate_speech: Discrimination, slurs, or derogatory content targeting protected groups
+- self_harm: Content promoting self-injury or suicide
+- sexual_content: Explicit sexual content or solicitation
+- illegal_activity: Instructions for illegal activities, weapons, drugs
+- harassment: Bullying, intimidation, or targeted abuse
+
+Respond ONLY with a JSON object in this exact format (no markdown, no explanation):
+{"flagged": boolean, "categories": ["category1", "category2"], "reason": "brief explanation if flagged"}`
+              },
+              {
+                role: 'user',
+                content: prompt
               }
-            })
+            ],
+            temperature: 0.1,
+            max_tokens: 200
+          })
+        })
+
+        if (!moderationResponse.ok) {
+          console.error("Moderation API failed:", moderationResponse.status)
+          // Fail open - continue without moderation
+        } else {
+          const moderationData = await moderationResponse.json()
+          const content = moderationData.choices?.[0]?.message?.content || ''
           
-          console.log("Security violation logged for user:", user.id)
-          
-          // Reject the request WITHOUT charging quota
-          return new Response(
-            JSON.stringify({ 
-              error: 'Request rejected due to content policy violation.',
-              details: 'Your request was flagged for potential policy violations. Repeated violations may result in account suspension.'
-            }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          )
+          try {
+            // Parse the JSON response, handling potential markdown wrapping
+            const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim()
+            const result = JSON.parse(cleanContent)
+            
+            if (result?.flagged) {
+              console.warn("Content flagged by moderation:", result.categories, result.reason)
+              
+              // Log to security_logs table
+              await adminSupabase
+                .from('security_logs')
+                .insert({
+                  user_id: user.id,
+                  prompt: prompt,
+                  flag_category: (result.categories || []).join(', '),
+                  metadata: {
+                    reason: result.reason,
+                    flagged_categories: result.categories,
+                    moderation_provider: 'lovable_ai'
+                  }
+                })
+              
+              console.log("Security violation logged for user:", user.id)
+              
+              // Reject the request WITHOUT charging quota
+              return new Response(
+                JSON.stringify({ 
+                  error: 'Request rejected due to content policy violation.',
+                  details: 'Your request was flagged for potential policy violations. Repeated violations may result in account suspension.'
+                }),
+                { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              )
+            }
+            
+            console.log("Content passed moderation")
+          } catch (parseError) {
+            console.error("Failed to parse moderation response:", content)
+            // Fail open if we can't parse the response
+          }
         }
-        
-        console.log("Content passed moderation")
       }
     } catch (moderationError) {
       console.error("Moderation check failed:", moderationError)
