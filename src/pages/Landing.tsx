@@ -164,7 +164,7 @@ const Landing = () => {
       </section>
 
       {/* The Single-Model Trap Section */}
-      <section className="max-w-7xl mx-auto px-6 py-24 -mt-24 relative z-0">
+      <section className="max-w-7xl mx-auto px-6 py-24 -mt-16 relative z-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -329,7 +329,7 @@ const Landing = () => {
       </section>
 
       {/* Interactive Demo Section - Floating Glassmorphism Card */}
-      <section id="demo" className="max-w-6xl mx-auto px-6 -mt-32 relative z-30">
+      <section id="demo" className="max-w-6xl mx-auto px-6 -mt-16 relative z-30">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ 
