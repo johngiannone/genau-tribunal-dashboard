@@ -571,7 +571,9 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
       organizationBilling = newBilling
     }
 
-    // Initial balance check - reject if zero or negative
+    // Initial balance check - TEMPORARILY DISABLED FOR DEV TESTING
+    // TODO: Re-enable before production
+    /*
     if (organizationBilling.credit_balance <= 0) {
       console.warn("Zero or negative credit balance:", organizationBilling.credit_balance)
       return new Response(
@@ -583,8 +585,9 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
+    */
 
-    console.log(`Current credit balance: $${organizationBilling.credit_balance}`)
+    console.log(`Current credit balance: $${organizationBilling.credit_balance} (DEV MODE - credit check disabled)`)
 
     // 6. Check usage limits
     const { data: usage, error: usageError } = await supabase
