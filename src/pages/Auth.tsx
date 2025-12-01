@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain } from "lucide-react";
+import { Brain, ArrowLeft } from "lucide-react";
 import { isDisposableEmail, getDisposableEmailError } from "@/lib/disposableEmailDomains";
 import { useTranslation } from "react-i18next";
 
@@ -173,6 +173,19 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-md px-6">
+        {/* Back to Home Button */}
+        <div className="mb-8">
+          <Link to="/">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#86868B] hover:text-[#111111] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t("auth.backToHome")}
+            </Button>
+          </Link>
+        </div>
         {/* Logo & Title */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-6">

@@ -145,6 +145,7 @@
     "createAccount": "Crear cuenta",
     "freeAudits": "Comienza con 3 auditorías mensuales gratuitas",
     "viewMembership": "Ver opciones de membresía →",
+    "backToHome": "Volver al inicio",
     "invalidEmail": "Dirección de correo electrónico no válida",
     "invalidEmailDesc": "No se permiten direcciones de correo electrónico temporales. Por favor, utiliza una dirección de correo permanente.",
     "accountRestricted": "Creación de cuenta restringida",
