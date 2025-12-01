@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Mail, Bug, Search, CheckCircle, ArrowLeft, Ticket } from "lucide-react";
-import { BugReportModal } from "@/components/BugReportModal";
+import { CreateTicketModal } from "@/components/CreateTicketModal";
 
 const Support = () => {
   const navigate = useNavigate();
@@ -35,8 +35,8 @@ const Support = () => {
     },
     {
       icon: Bug,
-      title: "Report a Bug",
-      description: "Found a glitch in the Matrix?",
+      title: "Create Support Ticket",
+      description: "Submit a bug report, feature request, or get help",
       action: () => setBugReportOpen(true),
       color: "bg-purple-50 border-purple-200 hover:bg-purple-100"
     }
@@ -152,8 +152,8 @@ const Support = () => {
       {/* Footer Spacing */}
       <div className="h-20" />
 
-      {/* Bug Report Modal */}
-      <BugReportModal
+      {/* Create Ticket Modal */}
+      <CreateTicketModal
         open={bugReportOpen}
         onOpenChange={setBugReportOpen}
       />
