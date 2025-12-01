@@ -19,7 +19,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.log-activity]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-verdict-email]
 verify_jwt = false
