@@ -11,15 +11,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Ticket, Mail, Calendar, MessageSquare, Plus } from "lucide-react";
+import { Ticket, Mail, Calendar, MessageSquare, Plus, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateTicketModal } from "@/components/CreateTicketModal";
 
 export default function Tickets() {
   const navigate = useNavigate();
+  const { lang } = useParams();
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -173,15 +174,26 @@ export default function Tickets() {
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-black mb-2">My Support Tickets</h1>
-            <p className="text-gray-500">Track the status of your submitted tickets</p>
-          </div>
-          <Button onClick={() => setCreateTicketOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Ticket
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/${lang || 'en'}/app`)}
+            className="gap-2 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to App
           </Button>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-black mb-2">My Support Tickets</h1>
+              <p className="text-gray-500">Track the status of your submitted tickets</p>
+            </div>
+            <Button onClick={() => setCreateTicketOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              New Ticket
+            </Button>
+          </div>
         </div>
 
         {/* Tickets List */}
