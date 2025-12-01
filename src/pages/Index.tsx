@@ -352,7 +352,7 @@ const Index = () => {
     try {
       const { error } = await supabase
         .from('training_dataset')
-        .update({ verdict_rating: rating })
+        .update({ human_rating: rating })
         .eq('id', trainingDatasetId);
 
       if (error) {
