@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { X, CheckCircle2, Circle, UserPlus, FileText, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, CheckCircle2, Circle, UserPlus, FileText, Sparkles, PartyPopper } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import confetti from "canvas-confetti";
 
 interface ChecklistItem {
   id: string;
@@ -30,6 +31,8 @@ export const TeamOnboardingChecklist = ({
   onCreateAuditClick,
 }: TeamOnboardingChecklistProps) => {
   const [dismissed, setDismissed] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const previousCompletionRef = useRef(false);
 
   useEffect(() => {
     // Check if user has dismissed the checklist
@@ -38,6 +41,57 @@ export const TeamOnboardingChecklist = ({
       setDismissed(true);
     }
   }, []);
+
+  // Trigger confetti when all steps are completed
+  useEffect(() => {
+    const allCompleted = hasMembersInvited && hasDocumentsUploaded && hasSharedAudits;
+    
+    // Only trigger if this is a new completion (wasn't completed before)
+    if (allCompleted && !previousCompletionRef.current) {
+      triggerConfetti();
+      setShowCelebration(true);
+      
+      // Auto-dismiss after celebration
+      setTimeout(() => {
+        handleDismiss();
+      }, 5000);
+    }
+    
+    previousCompletionRef.current = allCompleted;
+  }, [hasMembersInvited, hasDocumentsUploaded, hasSharedAudits]);
+
+  const triggerConfetti = () => {
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+    const randomInRange = (min: number, max: number) => {
+      return Math.random() * (max - min) + min;
+    };
+
+    const interval = window.setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#0071E3', '#34D399', '#FBBF24', '#F472B6', '#A78BFA'],
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#0071E3', '#34D399', '#FBBF24', '#F472B6', '#A78BFA'],
+      });
+    }, 250);
+  };
 
   const handleDismiss = () => {
     localStorage.setItem("team_onboarding_dismissed", "true");
@@ -72,8 +126,8 @@ export const TeamOnboardingChecklist = ({
   const progress = (completedCount / items.length) * 100;
   const allCompleted = completedCount === items.length;
 
-  // Don't show if dismissed or all completed
-  if (dismissed || allCompleted) {
+  // Don't show if dismissed
+  if (dismissed) {
     return null;
   }
 
@@ -91,30 +145,64 @@ export const TeamOnboardingChecklist = ({
   };
 
   return (
-    <Card className="border-[#0071E3]/20 bg-gradient-to-br from-blue-50 to-white">
+    <Card className={`border-[#0071E3]/20 transition-all duration-500 ${
+      showCelebration 
+        ? 'bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 shadow-2xl animate-scale-in' 
+        : 'bg-gradient-to-br from-blue-50 to-white'
+    }`}>
       <CardHeader className="relative">
-        <button
-          onClick={handleDismiss}
-          className="absolute right-4 top-4 text-[#86868B] hover:text-[#111111] transition-colors"
-          aria-label="Dismiss checklist"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {!showCelebration && (
+          <button
+            onClick={handleDismiss}
+            className="absolute right-4 top-4 text-[#86868B] hover:text-[#111111] transition-colors"
+            aria-label="Dismiss checklist"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0071E3] flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${
+            showCelebration 
+              ? 'bg-gradient-to-br from-green-500 to-emerald-600 animate-bounce' 
+              : 'bg-[#0071E3]'
+          }`}>
+            {showCelebration ? (
+              <PartyPopper className="w-5 h-5 text-white" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-white" />
+            )}
           </div>
           <div>
-            <CardTitle className="text-xl text-[#111111]">Welcome to Your Team!</CardTitle>
+            <CardTitle className={`text-xl transition-colors duration-500 ${
+              showCelebration ? 'text-green-700' : 'text-[#111111]'
+            }`}>
+              {showCelebration ? '🎉 Congratulations!' : 'Welcome to Your Team!'}
+            </CardTitle>
             <CardDescription>
-              Get started with these essential steps ({completedCount}/{items.length} completed)
+              {showCelebration 
+                ? "You've completed your team onboarding!" 
+                : `Get started with these essential steps (${completedCount}/${items.length} completed)`
+              }
             </CardDescription>
           </div>
         </div>
         <Progress value={progress} className="mt-4" />
       </CardHeader>
       <CardContent className="space-y-3">
-        {items.map((item) => (
+        {showCelebration && allCompleted ? (
+          <div className="py-8 text-center space-y-4 animate-fade-in">
+            <div className="text-6xl animate-bounce">🎊</div>
+            <h3 className="text-2xl font-bold text-green-700">You're All Set!</h3>
+            <p className="text-[#86868B] max-w-md mx-auto">
+              Your team workspace is fully configured. You're ready to collaborate and create amazing audits together!
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-[#86868B] mt-4">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <span>All onboarding steps completed</span>
+            </div>
+          </div>
+        ) : (
+          items.map((item) => (
           <div
             key={item.id}
             className={`p-4 rounded-xl border-2 transition-all ${
@@ -170,7 +258,7 @@ export const TeamOnboardingChecklist = ({
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </CardContent>
     </Card>
   );
