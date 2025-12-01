@@ -72,6 +72,41 @@ export default function Tickets() {
     enabled: !!selectedTicket,
   });
 
+  // Real-time subscription for new comments
+  useEffect(() => {
+    if (!selectedTicket) return;
+
+    const channel = supabase
+      .channel('ticket-comments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_comments',
+          filter: `ticket_id=eq.${selectedTicket}`,
+        },
+        (payload) => {
+          console.log('New comment received:', payload);
+          // Refetch comments to show the new reply
+          refetchComments();
+          
+          // Show toast notification if it's from admin
+          if (payload.new?.is_admin) {
+            toast({
+              title: "New reply from support",
+              description: "Support team has replied to your ticket",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTicket, refetchComments, toast]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "open":
