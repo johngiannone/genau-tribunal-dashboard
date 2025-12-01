@@ -22,12 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface BugReportModalProps {
+interface CreateTicketModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
+export const CreateTicketModal = ({ open, onOpenChange }: CreateTicketModalProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -111,7 +111,7 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
           description: description.trim(),
           screenshot_url: screenshotUrl,
           status: 'open',
-          priority: subject === 'Bug' ? 'high' : 'medium',
+          priority: subject === 'Bug' ? 'high' : subject === 'General Inquiry' ? 'low' : 'medium',
         })
         .select('id')
         .single();
@@ -147,7 +147,7 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
       setScreenshot(null);
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error submitting bug report:", error);
+      console.error("Error submitting ticket:", error);
       toast({
         title: "Submission failed",
         description: error.message || "Please try again later",
@@ -162,9 +162,9 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Report a Bug</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">Create Support Ticket</DialogTitle>
           <DialogDescription>
-            Help us improve Genau by reporting issues you've encountered.
+            Submit a bug report, feature request, or get help from our support team.
           </DialogDescription>
         </DialogHeader>
 
@@ -191,6 +191,7 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
                 <SelectItem value="Bug">Bug</SelectItem>
                 <SelectItem value="Billing">Billing</SelectItem>
                 <SelectItem value="Feature Request">Feature Request</SelectItem>
+                <SelectItem value="General Inquiry">General Inquiry</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -259,7 +260,7 @@ export const BugReportModal = ({ open, onOpenChange }: BugReportModalProps) => {
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Submitting..." : "Submit Report"}
+              {loading ? "Submitting..." : "Submit Ticket"}
             </Button>
           </DialogFooter>
         </form>

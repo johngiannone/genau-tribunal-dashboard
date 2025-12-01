@@ -11,17 +11,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Ticket, Mail, Calendar, MessageSquare } from "lucide-react";
+import { Ticket, Mail, Calendar, MessageSquare, Plus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { CreateTicketModal } from "@/components/CreateTicketModal";
 
 export default function Tickets() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [createTicketOpen, setCreateTicketOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -136,9 +138,15 @@ export default function Tickets() {
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-black mb-2">My Support Tickets</h1>
-          <p className="text-gray-500">Track the status of your submitted tickets</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-black mb-2">My Support Tickets</h1>
+            <p className="text-gray-500">Track the status of your submitted tickets</p>
+          </div>
+          <Button onClick={() => setCreateTicketOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            New Ticket
+          </Button>
         </div>
 
         {/* Tickets List */}
@@ -157,8 +165,12 @@ export default function Tickets() {
             ) : tickets.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Ticket className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No tickets yet</p>
-                <p className="text-sm mt-2">You haven't submitted any support tickets.</p>
+                <p className="font-semibold text-lg text-black mb-1">No tickets yet</p>
+                <p className="text-sm mb-4">You haven't submitted any support tickets.</p>
+                <Button onClick={() => setCreateTicketOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Create Your First Ticket
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -290,6 +302,12 @@ export default function Tickets() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Create Ticket Modal */}
+        <CreateTicketModal
+          open={createTicketOpen}
+          onOpenChange={setCreateTicketOpen}
+        />
       </div>
     </div>
   );
