@@ -1,13 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye, AlertTriangle, ShieldCheck, MessageSquare, Network } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { Zap, Shield, Users, ArrowRight, Sparkles, Brain, Cpu, Eye, AlertTriangle, ShieldCheck, MessageSquare, Network, TrendingUp } from "lucide-react";
+import { motion, useScroll, useTransform, useInView, useMotionValue, useSpring } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+
+// Animated Counter Component
+const AnimatedCounter = ({ target, suffix = "", duration = 2 }: { target: number; suffix?: string; duration?: number }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const motionValue = useMotionValue(0);
+  const springValue = useSpring(motionValue, { duration: duration * 1000, bounce: 0 });
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (isInView) {
+      motionValue.set(target);
+    }
+  }, [isInView, motionValue, target]);
+
+  useEffect(() => {
+    const unsubscribe = springValue.on("change", (latest) => {
+      setDisplayValue(Math.round(latest));
+    });
+    return unsubscribe;
+  }, [springValue]);
+
+  return (
+    <span ref={ref}>
+      {displayValue}
+      {suffix}
+    </span>
+  );
+};
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -152,6 +181,73 @@ const Landing = () => {
               Consumer reports warn that chatbots like ChatGPT and Gemini can give risky, incomplete advice on critical issues. One model isn't enough.
             </p>
           </div>
+
+          {/* Animated Statistics */}
+          <div className="grid md:grid-cols-2 gap-6 mb-12">
+            {/* Consensus Accuracy */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-br from-green-50 to-green-100/30 border-2 border-green-200 rounded-2xl p-8 text-center relative overflow-hidden"
+            >
+              <div className="absolute top-4 right-4">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="mb-3">
+                <div className="text-6xl md:text-7xl font-black text-green-600 mb-2">
+                  <AnimatedCounter target={92} suffix="%" duration={2.5} />
+                </div>
+                <div className="text-sm font-semibold text-[#111111] uppercase tracking-wider">
+                  Consensus Accuracy
+                </div>
+              </div>
+              <p className="text-sm text-[#86868B]">
+                Multiple AI models cross-verify every answer
+              </p>
+            </motion.div>
+
+            {/* Single Model Accuracy */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-red-50 to-red-100/30 border-2 border-red-200 rounded-2xl p-8 text-center relative overflow-hidden"
+            >
+              <div className="absolute top-4 right-4">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="mb-3">
+                <div className="text-6xl md:text-7xl font-black text-red-600 mb-2">
+                  <AnimatedCounter target={64} suffix="%" duration={2.5} />
+                </div>
+                <div className="text-sm font-semibold text-[#111111] uppercase tracking-wider">
+                  Single-Model Accuracy
+                </div>
+              </div>
+              <p className="text-sm text-[#86868B]">
+                One perspective means higher error rates
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Improvement Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-lg">
+              <TrendingUp className="w-5 h-5" />
+              <span className="font-bold text-lg">
+                <AnimatedCounter target={28} suffix="%" duration={2} /> more accurate
+              </span>
+            </div>
+          </motion.div>
 
           {/* Comparison Visual */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
