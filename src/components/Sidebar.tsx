@@ -91,6 +91,13 @@ export const Sidebar = ({
     return () => subscription.unsubscribe();
   }, []);
 
+  // Refresh conversations when currentConversationId changes (new audit completed)
+  useEffect(() => {
+    if (session && currentConversationId) {
+      fetchConversations();
+    }
+  }, [currentConversationId, session]);
+
   const fetchConversations = async () => {
     if (!session?.user) return;
 
