@@ -205,19 +205,21 @@ export default function Vault() {
     return Array.from(comboMap.entries())
       .map(([key, data]) => {
         const validRatings = data.ratings.filter(r => typeof r === 'number' && !isNaN(r));
-        const avgRating = validRatings.length > 0 
-          ? validRatings.reduce((a, b) => a + b, 0) / validRatings.length 
-          : 0;
+        const sum = validRatings.reduce((a, b) => a + b, 0);
+        const avgRating = validRatings.length > 0 ? sum / validRatings.length : 0;
+        // Ensure avgRating is a valid finite number
+        const safeAvgRating = Number.isFinite(avgRating) ? Math.round(avgRating * 100) / 100 : 0;
         return {
           combination: `${getModelShortName(data.draftA)} + ${getModelShortName(data.draftB)}`,
           draftA: data.draftA,
           draftB: data.draftB,
           count: data.count,
-          avgRating: Math.round(avgRating * 100) / 100,
-          goodCount: data.ratings.filter(r => r === 1).length,
-          badCount: data.ratings.filter(r => r === -1).length,
+          avgRating: safeAvgRating,
+          goodCount: validRatings.filter(r => r === 1).length,
+          badCount: validRatings.filter(r => r === -1).length,
         };
       })
+      .filter(item => Number.isFinite(item.avgRating)) // Filter out any invalid entries
       .sort((a, b) => b.avgRating - a.avgRating)
       .slice(0, 5);
   };
