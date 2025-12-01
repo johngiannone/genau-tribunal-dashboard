@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import TeamKnowledgeBase from "@/components/TeamKnowledgeBase";
 import { TeamOnboardingChecklist } from "@/components/TeamOnboardingChecklist";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Organization {
   id: string;
@@ -63,6 +64,7 @@ export default function Team() {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
   const [documentsCount, setDocumentsCount] = useState(0);
+  const { canCreateTeam, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
     fetchTeamData();
@@ -84,8 +86,15 @@ export default function Team() {
         .single();
 
       if (!usage?.organization_id) {
-        toast.error("You're not part of a team yet");
-        navigate(`/${lang || 'en'}/setup-team`);
+        // Check if user can create teams (Team/Agency tier or admin)
+        // If they can, redirect to setup-team; otherwise show message and go to app
+        if (canCreateTeam) {
+          toast.info("Set up your team to get started");
+          navigate(`/${lang || 'en'}/setup-team`);
+        } else {
+          toast.error("You haven't been invited to a team yet");
+          navigate(`/${lang || 'en'}/app`);
+        }
         return;
       }
 

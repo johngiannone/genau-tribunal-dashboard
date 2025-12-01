@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useUserRole } from "@/hooks/useUserRole";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -40,6 +41,7 @@ export default function SetupTeam() {
   const [industry, setIndustry] = useState("");
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const { canCreateTeam, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -50,6 +52,14 @@ export default function SetupTeam() {
     };
     fetchUser();
   }, []);
+
+  // Redirect non-eligible users (Free/Pro/Max) to pricing
+  useEffect(() => {
+    if (!roleLoading && !canCreateTeam) {
+      toast.error("Team creation requires a Team or Agency subscription");
+      navigate(`/${lang || 'en'}/pricing`);
+    }
+  }, [roleLoading, canCreateTeam, navigate, lang]);
 
   const handleLogout = async () => {
     // Calculate session duration

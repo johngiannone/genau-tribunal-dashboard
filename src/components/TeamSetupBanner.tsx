@@ -4,12 +4,14 @@ import { X, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export const TeamSetupBanner = () => {
   const [visible, setVisible] = useState(false);
   const [hasOrganization, setHasOrganization] = useState(false);
   const navigate = useNavigate();
   const { lang } = useParams();
+  const { canCreateTeam, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
     const checkOrganizationStatus = async () => {
@@ -51,7 +53,8 @@ export const TeamSetupBanner = () => {
     navigate(`/${lang || 'en'}/setup-team`);
   };
 
-  if (!visible || hasOrganization) {
+  // Only show banner for users who can create teams (Team/Agency tier or admin)
+  if (roleLoading || !visible || hasOrganization || !canCreateTeam) {
     return null;
   }
 
