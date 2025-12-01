@@ -78,16 +78,6 @@ const Index = () => {
     }
   }, [isAuthLoading, isAuthenticated, navigate]);
 
-  // Show loading screen while checking auth
-  if (isAuthLoading) {
-    return <AuthLoadingScreen />;
-  }
-
-  // Don't render content if not authenticated
-  if (!isAuthenticated) {
-    return <AuthLoadingScreen />; 
-  }
-
   // Fetch usage when session is available
   useEffect(() => {
     if (session?.user) {
@@ -95,7 +85,7 @@ const Index = () => {
       fetchCouncilConfig();
       fetchPreferences();
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   // Refresh council config when window regains focus (after returning from settings)
   useEffect(() => {
@@ -107,7 +97,17 @@ const Index = () => {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [session]);
+  }, [session?.user?.id]);
+
+  // Show loading screen while checking auth
+  if (isAuthLoading) {
+    return <AuthLoadingScreen />;
+  }
+
+  // Don't render content if not authenticated
+  if (!isAuthenticated) {
+    return <AuthLoadingScreen />; 
+  }
 
   const fetchCouncilConfig = async () => {
     if (!session?.user) return;
