@@ -11,6 +11,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Ticket, Mail, Calendar, MessageSquare, Plus, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
@@ -173,17 +181,35 @@ export default function Tickets() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink 
+                onClick={() => navigate(`/${lang || 'en'}/app`)}
+                className="cursor-pointer hover:text-foreground"
+              >
+                Home
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink 
+                onClick={() => navigate(`/${lang || 'en'}/support`)}
+                className="cursor-pointer hover:text-foreground"
+              >
+                Support
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Tickets</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/${lang || 'en'}/app`)}
-            className="gap-2 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to App
-          </Button>
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-4xl font-bold text-black mb-2">My Support Tickets</h1>
