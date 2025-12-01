@@ -170,8 +170,10 @@ const Landing = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="bg-white border border-[#E5E5EA] rounded-3xl shadow-lg p-12"
+          className="bg-white border border-[#E5E5EA] rounded-3xl shadow-lg p-12 relative"
         >
+          {/* Fade-out gradient at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-background/80 pointer-events-none rounded-b-3xl" />
           {/* Header */}
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-[#111111] mb-4 tracking-tight">
