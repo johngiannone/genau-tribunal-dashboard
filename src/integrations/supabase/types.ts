@@ -657,6 +657,7 @@ export type Database = {
         Row: {
           council_config: Json | null
           created_at: string
+          data_retention_days: number | null
           deleted_at: string | null
           email: string | null
           enable_model_recommendations: boolean | null
@@ -667,6 +668,7 @@ export type Database = {
         Insert: {
           council_config?: Json | null
           created_at?: string
+          data_retention_days?: number | null
           deleted_at?: string | null
           email?: string | null
           enable_model_recommendations?: boolean | null
@@ -677,6 +679,7 @@ export type Database = {
         Update: {
           council_config?: Json | null
           created_at?: string
+          data_retention_days?: number | null
           deleted_at?: string | null
           email?: string | null
           enable_model_recommendations?: boolean | null

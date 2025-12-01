@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [enableRecommendations, setEnableRecommendations] = useState(true);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [dataRetentionDays, setDataRetentionDays] = useState<number | null>(null);
   const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
   const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -89,7 +91,7 @@ const Settings = () => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('enable_model_recommendations')
+      .select('enable_model_recommendations, data_retention_days')
       .eq('id', session.user.id)
       .maybeSingle();
 
@@ -100,6 +102,7 @@ const Settings = () => {
 
     if (data) {
       setEnableRecommendations(data.enable_model_recommendations ?? true);
+      setDataRetentionDays(data.data_retention_days ?? null);
     }
   };
 
@@ -132,6 +135,37 @@ const Settings = () => {
       description: checked 
         ? "AI will suggest optimal models before each audit" 
         : "You'll use your configured council for all audits",
+    });
+  };
+
+  const handleRetentionChange = async (value: string) => {
+    if (!session?.user) return;
+    
+    const retentionDays = value === "forever" ? null : parseInt(value);
+    setDataRetentionDays(retentionDays);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ data_retention_days: retentionDays })
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error("Error updating retention policy:", error);
+      toast({
+        title: "Failed to update retention policy",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const retentionLabel = value === "forever" ? "Forever" : 
+                          value === "30" ? "30 days" :
+                          value === "90" ? "90 days" : "1 year";
+
+    toast({
+      title: "Retention policy updated",
+      description: `Your audit history will be kept for ${retentionLabel}`,
     });
   };
 
@@ -509,6 +543,45 @@ const Settings = () => {
             <CardDescription>Manage your personal data and account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Data Retention Policy */}
+            <div className="p-4 rounded-lg border bg-muted/30">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-semibold">Data Retention Policy</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose how long to keep your audit history before automatic deletion
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label htmlFor="retention-select" className="text-sm whitespace-nowrap">
+                    Keep data for:
+                  </Label>
+                  <Select 
+                    value={dataRetentionDays === null ? "forever" : String(dataRetentionDays)} 
+                    onValueChange={handleRetentionChange}
+                  >
+                    <SelectTrigger id="retention-select" className="w-[180px]">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="365">1 year</SelectItem>
+                      <SelectItem value="forever">Forever</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {dataRetentionDays === null 
+                    ? "Your data will be kept indefinitely" 
+                    : `Data older than ${dataRetentionDays} days will be automatically deleted daily`
+                  }
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Export My Data */}
             <div className="flex items-start justify-between p-4 rounded-lg border bg-muted/30">
               <div className="flex items-start gap-3 flex-1">
