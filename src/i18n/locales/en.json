@@ -145,6 +145,7 @@
     "createAccount": "Create Account",
     "freeAudits": "Start with 3 free monthly audits",
     "viewMembership": "View Membership Options →",
+    "backToHome": "Back to Home",
     "invalidEmail": "Invalid Email Address",
     "invalidEmailDesc": "Temporary email addresses are not allowed. Please use a permanent email address.",
     "accountRestricted": "Account Creation Restricted",
