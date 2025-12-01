@@ -128,7 +128,12 @@ export default function SetupTeam() {
       setStep(4); // Show success
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast.success(`${teamName} created successfully!`);
+      toast.success(`${teamName} created! Taking you to your workspace...`, {
+        description: "You're staying logged in and ready to collaborate.",
+      });
+      
+      // Brief delay to let user see the toast before redirect
+      await new Promise((resolve) => setTimeout(resolve, 500));
       navigate(`/${lang || 'en'}/team`);
     } catch (error) {
       console.error("Error creating organization:", error);
