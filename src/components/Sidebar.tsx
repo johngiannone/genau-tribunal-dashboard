@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -55,6 +55,7 @@ export const Sidebar = ({
   currentConversationId,
 }: SidebarProps) => {
   const navigate = useNavigate();
+  const { lang } = useParams();
   const [session, setSession] = useState<Session | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
@@ -264,7 +265,7 @@ export const Sidebar = ({
 
     localStorage.removeItem('session_start');
     await supabase.auth.signOut();
-    navigate("/auth");
+    navigate(`/${lang || 'en'}/auth`);
   };
 
   return (
@@ -427,9 +428,9 @@ export const Sidebar = ({
             </div>
           )}
           <div className="grid grid-cols-6 gap-1">
-            {isAdmin && (
+          {isAdmin && (
               <button 
-                onClick={() => navigate("/admin")}
+                onClick={() => navigate(`/${lang || 'en'}/admin`)}
                 className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
                 title="Admin Panel"
               >
@@ -437,14 +438,14 @@ export const Sidebar = ({
               </button>
             )}
             <button 
-              onClick={() => navigate("/vault")}
+              onClick={() => navigate(`/${lang || 'en'}/vault`)}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Data Vault"
             >
               <Database className="w-5 h-5 mx-auto" />
             </button>
             <button 
-              onClick={() => navigate("/analytics")}
+              onClick={() => navigate(`/${lang || 'en'}/analytics`)}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Performance"
             >
@@ -452,7 +453,7 @@ export const Sidebar = ({
             </button>
             {canAccessBilling && (
               <button 
-                onClick={() => navigate("/settings/billing")}
+                onClick={() => navigate(`/${lang || 'en'}/settings/billing`)}
                 className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
                 title="Billing"
               >
@@ -461,7 +462,7 @@ export const Sidebar = ({
             )}
             {canAccessBilling && (
               <button 
-                onClick={() => navigate("/team")}
+                onClick={() => navigate(`/${lang || 'en'}/team`)}
                 className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
                 title="Team"
               >
@@ -469,21 +470,21 @@ export const Sidebar = ({
               </button>
             )}
             <button
-              onClick={() => navigate("/settings")}
+              onClick={() => navigate(`/${lang || 'en'}/settings`)}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Settings"
             >
               <Settings className="w-5 h-5 mx-auto" />
             </button>
             <button
-              onClick={() => navigate("/support")}
+              onClick={() => navigate(`/${lang || 'en'}/support`)}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="Support"
             >
               <HelpCircle className="w-5 h-5 mx-auto" />
             </button>
             <button
-              onClick={() => navigate("/tickets")}
+              onClick={() => navigate(`/${lang || 'en'}/tickets`)}
               className="p-3 rounded-xl hover:bg-white transition-all text-[#86868B] hover:text-[#0071E3]"
               title="My Tickets"
             >
