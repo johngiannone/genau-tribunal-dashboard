@@ -196,13 +196,17 @@ export default function Vault() {
       }
       const combo = comboMap.get(key)!;
       combo.count++;
-      combo.ratings.push(item.human_rating);
+      // Only push valid numeric ratings
+      if (typeof item.human_rating === 'number' && !isNaN(item.human_rating)) {
+        combo.ratings.push(item.human_rating);
+      }
     });
 
     return Array.from(comboMap.entries())
       .map(([key, data]) => {
-        const avgRating = data.ratings.length > 0 
-          ? data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length 
+        const validRatings = data.ratings.filter(r => typeof r === 'number' && !isNaN(r));
+        const avgRating = validRatings.length > 0 
+          ? validRatings.reduce((a, b) => a + b, 0) / validRatings.length 
           : 0;
         return {
           combination: `${getModelShortName(data.draftA)} + ${getModelShortName(data.draftB)}`,
