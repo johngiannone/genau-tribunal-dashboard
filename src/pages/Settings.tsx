@@ -1,8 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen, Sparkles, Users, Palette } from "lucide-react";
+import { ArrowLeft, Mail, Key, CreditCard, User, Trash2, Settings2, BookOpen, Sparkles, Users, Palette, Shield, Download, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +33,9 @@ const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [enableRecommendations, setEnableRecommendations] = useState(true);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [deleteDataDialogOpen, setDeleteDataDialogOpen] = useState(false);
+  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { tier } = useUserRole();
@@ -163,19 +176,121 @@ const Settings = () => {
     setConfirmPassword("");
   };
 
+  const handleExportData = async () => {
+    if (!session?.user) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('export-user-data', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      // Convert data to JSON blob and trigger download
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `genau-data-export-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export successful",
+        description: "Your data has been downloaded",
+      });
+    } catch (error: any) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export failed",
+        description: error.message || "Failed to export data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteData = async () => {
+    if (!session?.user) return;
+
+    try {
+      // Delete conversations and messages
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (conversationsError) throw conversationsError;
+
+      // Delete training dataset (audit history)
+      const { error: auditsError } = await supabase
+        .from('training_dataset')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (auditsError) throw auditsError;
+
+      // Reset usage counters
+      const { error: usageError } = await supabase
+        .from('user_usage')
+        .update({ audit_count: 0, audits_this_month: 0, files_this_month: 0 })
+        .eq('user_id', session.user.id);
+
+      if (usageError) throw usageError;
+
+      toast({
+        title: "Data deleted",
+        description: "Your audit history and conversations have been cleared",
+      });
+
+      setDeleteDataDialogOpen(false);
+      
+      // Reload to reflect changes
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      console.error("Delete data error:", error);
+      toast({
+        title: "Failed to delete data",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This action cannot be undone."
-    );
+    if (!session?.user) return;
+    
+    if (deleteConfirmation !== "DELETE") {
+      toast({
+        title: "Confirmation required",
+        description: "Please type DELETE to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (!confirmed) return;
+    try {
+      // Sign out the user
+      await supabase.auth.signOut();
+      
+      toast({
+        title: "Account deletion requested",
+        description: "Please contact support@genau.io to complete account deletion",
+      });
 
-    // Note: Account deletion would typically be handled by a backend function
-    // For now, we'll just sign out
-    toast({
-      title: "Notice",
-      description: "Please contact support to delete your account",
-    });
+      setDeleteAccountDialogOpen(false);
+      navigate("/auth");
+    } catch (error: any) {
+      console.error("Delete account error:", error);
+      toast({
+        title: "Failed to process request",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -384,25 +499,136 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Danger Zone */}
-        <Card className="border-destructive/50">
+        {/* Privacy & Data */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="w-5 h-5" />
-              Danger Zone
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Privacy & Data
             </CardTitle>
-            <CardDescription>Irreversible account actions</CardDescription>
+            <CardDescription>Manage your personal data and account</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              className="w-full"
-            >
-              Delete Account
-            </Button>
+          <CardContent className="space-y-4">
+            {/* Export My Data */}
+            <div className="flex items-start justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-start gap-3 flex-1">
+                <Download className="w-5 h-5 mt-0.5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold">Export My Data</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Download a copy of all your data including audit history, conversations, and settings
+                  </p>
+                </div>
+              </div>
+              <Button onClick={handleExportData} variant="outline" size="sm">
+                Export Data
+              </Button>
+            </div>
+
+            {/* Delete My Data */}
+            <div className="flex items-start justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-start gap-3 flex-1">
+                <Eraser className="w-5 h-5 mt-0.5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold">Delete My Data</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Clear your audit history and conversations while keeping your account active
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => setDeleteDataDialogOpen(true)} 
+                variant="outline" 
+                size="sm"
+              >
+                Delete Data
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Delete Account */}
+            <div className="flex items-start justify-between p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+              <div className="flex items-start gap-3 flex-1">
+                <Trash2 className="w-5 h-5 mt-0.5 text-destructive" />
+                <div>
+                  <h3 className="font-semibold text-destructive">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete your account and all associated data
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => setDeleteAccountDialogOpen(true)} 
+                variant="outline" 
+                size="sm"
+                className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+              >
+                Delete Account
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Delete Data Confirmation Dialog */}
+        <AlertDialog open={deleteDataDialogOpen} onOpenChange={setDeleteDataDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete all your data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>All audit history</li>
+                  <li>All conversations and messages</li>
+                  <li>Usage statistics</li>
+                </ul>
+                <br />
+                Your account will remain active, but all your data will be cleared. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteData}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Delete My Data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Account Confirmation Dialog */}
+        <AlertDialog open={deleteAccountDialogOpen} onOpenChange={setDeleteAccountDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete your account and all associated data. This action cannot be undone.
+                <br /><br />
+                Type <strong>DELETE</strong> to confirm:
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="Type DELETE to confirm"
+              className="mt-2"
+            />
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeleteConfirmation("")}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation !== "DELETE"}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Delete Account
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
