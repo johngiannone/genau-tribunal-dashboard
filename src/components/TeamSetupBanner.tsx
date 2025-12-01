@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { X, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,6 +9,7 @@ export const TeamSetupBanner = () => {
   const [visible, setVisible] = useState(false);
   const [hasOrganization, setHasOrganization] = useState(false);
   const navigate = useNavigate();
+  const { lang } = useParams();
 
   useEffect(() => {
     const checkOrganizationStatus = async () => {
@@ -47,7 +48,7 @@ export const TeamSetupBanner = () => {
   };
 
   const handleSetupTeam = () => {
-    navigate("/setup-team");
+    navigate(`/${lang || 'en'}/setup-team`);
   };
 
   if (!visible || hasOrganization) {
